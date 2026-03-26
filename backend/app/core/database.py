@@ -19,6 +19,16 @@ class Base(DeclarativeBase):
 
 
 async def get_db() -> AsyncSession:
+    """
+    Bas-dependency: returnerar en db-session utan RLS-context.
+
+    Används av:
+      - Interna tjänster och tester som inte behöver org-isolering
+      - get_rls_db (app/core/rls.py) som sedan sätter RLS-context
+      - get_superadmin_db för DigIT-adminvyer
+
+    För org-isolerade endpoints: använd Depends(get_rls_db) istället.
+    """
     async with async_session() as session:
         try:
             yield session

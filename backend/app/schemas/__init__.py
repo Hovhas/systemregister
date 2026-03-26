@@ -114,10 +114,22 @@ class SystemUpdate(BaseModel):
     extended_attributes: dict | None = None
 
 
+class ClassificationCreate(BaseModel):
+    system_id: UUID
+    confidentiality: int = Field(ge=0, le=4)
+    integrity: int = Field(ge=0, le=4)
+    availability: int = Field(ge=0, le=4)
+    traceability: int | None = Field(None, ge=0, le=4)
+    classified_by: str = Field(max_length=255)
+    valid_until: date | None = None
+    notes: str | None = None
+
+
 class ClassificationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    system_id: UUID
     confidentiality: int
     integrity: int
     availability: int
@@ -125,17 +137,74 @@ class ClassificationResponse(BaseModel):
     classified_by: str
     classified_at: datetime
     valid_until: date | None
+    notes: str | None
+
+
+class OwnerCreate(BaseModel):
+    system_id: UUID
+    organization_id: UUID
+    role: OwnerRole
+    name: str = Field(max_length=255)
+    email: str | None = Field(None, max_length=255)
+    phone: str | None = Field(None, max_length=50)
+
+
+class OwnerUpdate(BaseModel):
+    role: OwnerRole | None = None
+    name: str | None = Field(None, max_length=255)
+    email: str | None = Field(None, max_length=255)
+    phone: str | None = Field(None, max_length=50)
 
 
 class OwnerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    system_id: UUID
     role: OwnerRole
     name: str
     email: str | None
     phone: str | None
     organization_id: UUID
+    created_at: datetime
+
+
+class IntegrationCreate(BaseModel):
+    source_system_id: UUID
+    target_system_id: UUID
+    integration_type: IntegrationType
+    data_types: str | None = None
+    frequency: str | None = Field(None, max_length=100)
+    description: str | None = None
+    criticality: Criticality | None = None
+    is_external: bool = False
+    external_party: str | None = Field(None, max_length=255)
+
+
+class IntegrationUpdate(BaseModel):
+    integration_type: IntegrationType | None = None
+    data_types: str | None = None
+    frequency: str | None = Field(None, max_length=100)
+    description: str | None = None
+    criticality: Criticality | None = None
+    is_external: bool | None = None
+    external_party: str | None = Field(None, max_length=255)
+
+
+class IntegrationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    source_system_id: UUID
+    target_system_id: UUID
+    integration_type: IntegrationType
+    data_types: str | None
+    frequency: str | None
+    description: str | None
+    criticality: Criticality | None
+    is_external: bool
+    external_party: str | None
+    created_at: datetime
 
 
 class SystemResponse(BaseModel):

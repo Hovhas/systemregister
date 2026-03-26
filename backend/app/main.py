@@ -7,6 +7,11 @@ from app.core.config import get_settings
 from app.core.audit import register_audit_listeners
 from app.api.organizations import router as org_router
 from app.api.systems import router as sys_router
+from app.api.classifications import router as classification_router
+from app.api.owners import router as owner_router
+from app.api.integrations import router as integration_router, system_router as integration_system_router
+from app.api.export import router as export_router
+from app.api.imports import router as import_router
 
 settings = get_settings()
 
@@ -38,6 +43,12 @@ app.add_middleware(
 # Routers
 app.include_router(org_router, prefix="/api/v1")
 app.include_router(sys_router, prefix="/api/v1")
+app.include_router(classification_router, prefix="/api/v1")
+app.include_router(owner_router, prefix="/api/v1")
+app.include_router(integration_router, prefix="/api/v1")
+app.include_router(integration_system_router, prefix="/api/v1")
+app.include_router(export_router, prefix="/api/v1")
+app.include_router(import_router, prefix="/api/v1")
 
 
 @app.get("/health")
@@ -54,6 +65,13 @@ async def api_root():
             "organizations": "/api/v1/organizations",
             "systems": "/api/v1/systems",
             "system_stats": "/api/v1/systems/stats/overview",
+            "classifications": "/api/v1/systems/{system_id}/classifications",
+            "owners": "/api/v1/systems/{system_id}/owners",
+            "integrations": "/api/v1/integrations",
+            "export_xlsx": "/api/v1/export/systems.xlsx",
+            "export_csv": "/api/v1/export/systems.csv",
+            "export_json": "/api/v1/export/systems.json",
+            "import_systems": "/api/v1/import/systems",
             "docs": "/docs",
         },
     }
