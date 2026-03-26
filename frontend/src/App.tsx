@@ -1,0 +1,155 @@
+import { useState } from "react"
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+  Navigate,
+} from "react-router-dom"
+import {
+  LayoutDashboardIcon,
+  ServerIcon,
+  GitForkIcon,
+  MenuIcon,
+} from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+
+import DashboardPage from "@/pages/DashboardPage"
+import SystemsPage from "@/pages/SystemsPage"
+import SystemDetailPage from "@/pages/SystemDetailPage"
+import DependenciesPage from "@/pages/DependenciesPage"
+
+// --- Navigationsstruktur ---
+
+const navItems = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
+  { to: "/systems", label: "System", icon: ServerIcon },
+  { to: "/dependencies", label: "Beroenden", icon: GitForkIcon },
+]
+
+// --- Sidofält (desktop) ---
+
+function Sidebar() {
+  return (
+    <aside className="hidden md:flex flex-col w-56 shrink-0 border-r bg-sidebar min-h-screen">
+      <div className="px-4 py-4 border-b">
+        <span className="font-semibold text-sm tracking-tight">
+          Systemregister
+        </span>
+      </div>
+      <nav className="flex flex-col gap-1 p-2 flex-1">
+        {navItems.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              [
+                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              ].join(" ")
+            }
+          >
+            <Icon className="size-4 shrink-0" />
+            {label}
+          </NavLink>
+        ))}
+      </nav>
+    </aside>
+  )
+}
+
+// --- Mobil-meny ---
+
+function MobileNav({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="left" className="w-56 p-0">
+        <SheetHeader className="px-4 py-4 border-b">
+          <SheetTitle className="text-sm font-semibold tracking-tight">
+            Systemregister
+          </SheetTitle>
+        </SheetHeader>
+        <nav className="flex flex-col gap-1 p-2">
+          {navItems.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={() => onOpenChange(false)}
+              className={({ isActive }) =>
+                [
+                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                  isActive
+                    ? "bg-accent text-accent-foreground font-medium"
+                    : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                ].join(" ")
+              }
+            >
+              <Icon className="size-4 shrink-0" />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+// --- Layout ---
+
+function Layout({ children }: { children: React.ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <Sidebar />
+      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen} />
+
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Mobil-header */}
+        <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon-sm">
+                <MenuIcon className="size-5" />
+                <span className="sr-only">Öppna meny</span>
+              </Button>
+            </SheetTrigger>
+          </Sheet>
+          <span className="font-semibold text-sm">Systemregister</span>
+        </header>
+
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+// --- App ---
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/systems" element={<SystemsPage />} />
+          <Route path="/systems/:id" element={<SystemDetailPage />} />
+          <Route path="/dependencies" element={<DependenciesPage />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  )
+}
