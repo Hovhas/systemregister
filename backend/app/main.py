@@ -12,6 +12,9 @@ from app.api.owners import router as owner_router
 from app.api.integrations import router as integration_router, system_router as integration_system_router
 from app.api.export import router as export_router
 from app.api.imports import router as import_router
+from app.api.gdpr import router as gdpr_router
+from app.api.contracts import router as contracts_router
+from app.api.reports import router as reports_router
 
 settings = get_settings()
 
@@ -49,6 +52,9 @@ app.include_router(integration_router, prefix="/api/v1")
 app.include_router(integration_system_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
 app.include_router(import_router, prefix="/api/v1")
+app.include_router(gdpr_router, prefix="/api/v1")
+app.include_router(contracts_router, prefix="/api/v1")
+app.include_router(reports_router, prefix="/api/v1")
 
 
 @app.get("/health")

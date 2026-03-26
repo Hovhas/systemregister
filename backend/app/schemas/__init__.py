@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 from app.models.enums import (
     OrganizationType, SystemCategory, LifecycleStatus, Criticality,
-    OwnerRole, IntegrationType, NIS2Classification,
+    OwnerRole, IntegrationType, NIS2Classification, ProcessorAgreementStatus,
 )
 
 
@@ -280,3 +280,148 @@ class PaginatedResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+# --- GDPRTreatment ---
+
+class GDPRTreatmentCreate(BaseModel):
+    ropa_reference_id: str | None = Field(None, max_length=100)
+    data_categories: list[str] | None = None
+    categories_of_data_subjects: str | None = None
+    legal_basis: str | None = Field(None, max_length=255)
+    data_processor: str | None = Field(None, max_length=255)
+    processor_agreement_status: ProcessorAgreementStatus | None = None
+    sub_processors: list[str] | None = None
+    third_country_transfer_details: str | None = None
+    retention_policy: str | None = None
+    dpia_conducted: bool = False
+    dpia_date: date | None = None
+    dpia_link: str | None = None
+
+
+class GDPRTreatmentUpdate(BaseModel):
+    ropa_reference_id: str | None = Field(None, max_length=100)
+    data_categories: list[str] | None = None
+    categories_of_data_subjects: str | None = None
+    legal_basis: str | None = Field(None, max_length=255)
+    data_processor: str | None = Field(None, max_length=255)
+    processor_agreement_status: ProcessorAgreementStatus | None = None
+    sub_processors: list[str] | None = None
+    third_country_transfer_details: str | None = None
+    retention_policy: str | None = None
+    dpia_conducted: bool | None = None
+    dpia_date: date | None = None
+    dpia_link: str | None = None
+
+
+class GDPRTreatmentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    system_id: UUID
+    ropa_reference_id: str | None
+    data_categories: list[str] | None
+    categories_of_data_subjects: str | None
+    legal_basis: str | None
+    data_processor: str | None
+    processor_agreement_status: ProcessorAgreementStatus | None
+    sub_processors: list[str] | None
+    third_country_transfer_details: str | None
+    retention_policy: str | None
+    dpia_conducted: bool
+    dpia_date: date | None
+    dpia_link: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+# --- Contract ---
+
+class ContractCreate(BaseModel):
+    supplier_name: str = Field(max_length=255)
+    supplier_org_number: str | None = Field(None, max_length=20)
+    contract_id_external: str | None = Field(None, max_length=100)
+    contract_start: date | None = None
+    contract_end: date | None = None
+    auto_renewal: bool = False
+    notice_period_months: int | None = None
+    sla_description: str | None = None
+    license_model: str | None = Field(None, max_length=100)
+    annual_license_cost: int | None = None
+    annual_operations_cost: int | None = None
+    procurement_type: str | None = Field(None, max_length=100)
+    support_level: str | None = Field(None, max_length=255)
+
+
+class ContractUpdate(BaseModel):
+    supplier_name: str | None = Field(None, max_length=255)
+    supplier_org_number: str | None = Field(None, max_length=20)
+    contract_id_external: str | None = Field(None, max_length=100)
+    contract_start: date | None = None
+    contract_end: date | None = None
+    auto_renewal: bool | None = None
+    notice_period_months: int | None = None
+    sla_description: str | None = None
+    license_model: str | None = Field(None, max_length=100)
+    annual_license_cost: int | None = None
+    annual_operations_cost: int | None = None
+    procurement_type: str | None = Field(None, max_length=100)
+    support_level: str | None = Field(None, max_length=255)
+
+
+class ContractResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    system_id: UUID
+    supplier_name: str
+    supplier_org_number: str | None
+    contract_id_external: str | None
+    contract_start: date | None
+    contract_end: date | None
+    auto_renewal: bool
+    notice_period_months: int | None
+    sla_description: str | None
+    license_model: str | None
+    annual_license_cost: int | None
+    annual_operations_cost: int | None
+    procurement_type: str | None
+    support_level: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+# --- Reports ---
+
+class NIS2SystemEntry(BaseModel):
+    """Single system entry in NIS2 report."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    nis2_classification: NIS2Classification | None
+    criticality: Criticality
+    last_risk_assessment_date: date | None
+    has_gdpr_treatment: bool
+    owner_names: list[str]
+
+
+class NIS2ReportSummary(BaseModel):
+    total_applicable: int
+    without_classification: int
+    without_risk_assessment: int
+
+
+class NIS2ReportResponse(BaseModel):
+    generated_at: datetime
+    summary: NIS2ReportSummary
+    systems: list[NIS2SystemEntry]
+
+
+class ComplianceGapResponse(BaseModel):
+    generated_at: datetime
+    systems_without_classification: list[dict]
+    systems_without_owner: list[dict]
+    systems_with_personal_data_no_gdpr: list[dict]
+    nis2_systems_without_risk_assessment: list[dict]
+    contracts_expiring_soon: list[dict]
