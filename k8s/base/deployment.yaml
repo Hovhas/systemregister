@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: systemregister
+  labels:
+    app: systemregister
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: systemregister
+  template:
+    metadata:
+      labels:
+        app: systemregister
+    spec:
+      containers:
+        - name: systemregister
+          image: ghcr.io/hovhas/systemregister:latest  # Uppdatera till din registry
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: systemregister-config
+            - secretRef:
+                name: systemregister-secrets
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: systemregister-secrets
+                  key: DATABASE_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: systemregister-secrets
+                  key: SECRET_KEY
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

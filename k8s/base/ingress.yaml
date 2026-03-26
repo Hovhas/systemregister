@@ -1,0 +1,17 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: systemregister
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`systemregister.hovhas.se`)
+      kind: Rule
+      services:
+        - name: systemregister
+          port: 8000
+  tls:
+    secretName: systemregister-tls
