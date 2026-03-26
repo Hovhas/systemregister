@@ -47,7 +47,7 @@ Inga aktiva blockers.
 
 ## Nasta steg
 
-Fas 3 — Frontend (React + shadcn/ui)
+Fas 5 — K8s deploy (Kustomize, Flux, Traefik, SOPS, backup)
 
 ---
 
