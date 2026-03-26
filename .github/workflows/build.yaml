@@ -1,0 +1,63 @@
+name: Build and Push
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: systemregister_test
+          POSTGRES_USER: systemregister
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install uv
+          cd backend && uv pip install --system -r pyproject.toml
+          uv pip install --system pytest pytest-asyncio httpx aiosqlite
+      - name: Run tests
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://systemregister:testpassword@localhost:5432/systemregister_test
+          DATABASE_URL: postgresql+asyncpg://systemregister:testpassword@localhost:5432/systemregister_test
+        run: cd backend && pytest -v
+
+  build:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/hovhas/systemregister:latest
+            ghcr.io/hovhas/systemregister:${{ github.sha }}

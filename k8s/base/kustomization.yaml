@@ -8,7 +8,9 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-  - pvc.yaml
+  - database.yaml
+  - secrets.yaml
+  - backup-cronjob.yaml
 
 configMapGenerator:
   - name: systemregister-config
