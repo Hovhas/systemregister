@@ -150,9 +150,126 @@ export interface Integration {
   created_at: string
 }
 
+// --- GDPR ---
+
+export interface GDPRTreatment {
+  id: string
+  system_id: string
+  ropa_reference_id: string | null
+  data_categories: string[] | null
+  categories_of_data_subjects: string | null
+  legal_basis: string | null
+  data_processor: string | null
+  processor_agreement_status: string | null
+  sub_processors: string[] | null
+  third_country_transfer_details: string | null
+  retention_policy: string | null
+  dpia_conducted: boolean
+  dpia_date: string | null
+  dpia_link: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface GDPRTreatmentCreate {
+  ropa_reference_id?: string
+  data_categories?: string[]
+  categories_of_data_subjects?: string
+  legal_basis?: string
+  data_processor?: string
+  processor_agreement_status?: string
+  retention_policy?: string
+  dpia_conducted?: boolean
+  dpia_date?: string
+}
+
+// --- Contract ---
+
+export interface Contract {
+  id: string
+  system_id: string
+  supplier_name: string
+  supplier_org_number: string | null
+  contract_id_external: string | null
+  contract_start: string | null
+  contract_end: string | null
+  auto_renewal: boolean
+  notice_period_months: number | null
+  sla_description: string | null
+  license_model: string | null
+  annual_license_cost: number | null
+  annual_operations_cost: number | null
+  procurement_type: string | null
+  support_level: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ContractCreate {
+  supplier_name: string
+  contract_start?: string
+  contract_end?: string
+  auto_renewal?: boolean
+  notice_period_months?: number
+  sla_description?: string
+  license_model?: string
+  annual_license_cost?: number
+  annual_operations_cost?: number
+}
+
+// --- System Create/Update ---
+
+export interface SystemCreate {
+  organization_id: string
+  name: string
+  description: string
+  system_category: SystemCategory
+  business_area?: string
+  criticality?: Criticality
+  lifecycle_status?: LifecycleStatus
+  hosting_model?: string
+  cloud_provider?: string
+  nis2_applicable?: boolean
+  treats_personal_data?: boolean
+}
+
+export interface SystemUpdate {
+  name?: string
+  description?: string
+  system_category?: SystemCategory
+  business_area?: string
+  criticality?: Criticality
+  lifecycle_status?: LifecycleStatus
+  hosting_model?: string
+  cloud_provider?: string
+  nis2_applicable?: boolean
+  treats_personal_data?: boolean
+}
+
+// --- Integration Create ---
+
+export interface IntegrationCreate {
+  source_system_id: string
+  target_system_id: string
+  integration_type: IntegrationType
+  description?: string
+  criticality?: Criticality
+  frequency?: string
+}
+
+// --- Import ---
+
+export interface ImportResult {
+  imported: number
+  errors: Array<{ row: number; error: string | object }>
+}
+
 export interface SystemDetail extends System {
   classifications: Classification[]
   owners: Owner[]
+  integrations?: Integration[]
+  gdpr_treatments?: GDPRTreatment[]
+  contracts?: Contract[]
 }
 
 export interface PaginatedResponse<T> {

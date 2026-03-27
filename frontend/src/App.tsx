@@ -11,6 +11,8 @@ import {
   ServerIcon,
   GitForkIcon,
   MenuIcon,
+  UploadIcon,
+  FileTextIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -24,7 +26,10 @@ import {
 import DashboardPage from "@/pages/DashboardPage"
 import SystemsPage from "@/pages/SystemsPage"
 import SystemDetailPage from "@/pages/SystemDetailPage"
+import SystemFormPage from "@/pages/SystemFormPage"
 import DependenciesPage from "@/pages/DependenciesPage"
+import ImportPage from "@/pages/ImportPage"
+import ReportsPage from "@/pages/ReportsPage"
 
 // --- Navigationsstruktur ---
 
@@ -32,6 +37,8 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
   { to: "/systems", label: "System", icon: ServerIcon },
   { to: "/dependencies", label: "Beroenden", icon: GitForkIcon },
+  { to: "/import", label: "Import", icon: UploadIcon },
+  { to: "/reports", label: "Rapporter", icon: FileTextIcon },
 ]
 
 // --- Sidofält (desktop) ---
@@ -141,8 +148,12 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/systems" element={<SystemsPage />} />
+          <Route path="/systems/new" element={<SystemFormPage />} />
           <Route path="/systems/:id" element={<SystemDetailPage />} />
+          <Route path="/systems/:id/edit" element={<SystemFormPage />} />
           <Route path="/dependencies" element={<DependenciesPage />} />
+          <Route path="/import" element={<ImportPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

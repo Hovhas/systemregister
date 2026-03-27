@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { SearchIcon } from "lucide-react"
+import { SearchIcon, PlusIcon } from "lucide-react"
 
 import { getSystems } from "@/lib/api"
 import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
@@ -133,11 +133,16 @@ export default function SystemsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-xl font-semibold">System</h1>
-        <p className="text-sm text-muted-foreground">
-          {total > 0 ? `${total} system totalt` : "Inga system hittade"}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">System</h1>
+          <p className="text-sm text-muted-foreground">
+            {total > 0 ? `${total} system totalt` : "Inga system hittade"}
+          </p>
+        </div>
+        <Button onClick={() => navigate("/systems/new")} size="sm">
+          <PlusIcon className="mr-1 size-4" /> Nytt system
+        </Button>
       </div>
 
       {/* Filter-rad */}

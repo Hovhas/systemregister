@@ -1,8 +1,10 @@
+import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
-import { ArrowLeftIcon } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { ArrowLeftIcon, PencilIcon, TrashIcon } from "lucide-react"
 
-import { getSystem } from "@/lib/api"
+import { getSystem, deleteSystem } from "@/lib/api"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { Criticality, LifecycleStatus, SystemCategory } from "@/types"
 import type { Classification, Owner, Integration } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -380,8 +382,18 @@ function useSystemDetail(id: string) {
 export default function SystemDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const { data: system, isLoading, isError } = useSystemDetail(id ?? "")
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteSystem(system!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["systems"] })
+      navigate("/systems")
+    },
+  })
 
   if (isLoading) {
     return (
@@ -433,7 +445,32 @@ export default function SystemDetailPage() {
             )}
           </div>
         </div>
+        <div className="ml-auto flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/systems/${system.id}/edit`)}
+          >
+            <PencilIcon className="mr-1 size-4" /> Redigera
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <TrashIcon className="mr-1 size-4" /> Ta bort
+          </Button>
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Ta bort system"
+        description={`Är du säker på att du vill ta bort "${system.name}"? Alla kopplingar (klassningar, ägare, integrationer) raderas.`}
+        onConfirm={() => deleteMutation.mutate()}
+        loading={deleteMutation.isPending}
+      />
 
       {/* Flikar */}
       <Tabs defaultValue="oversikt">

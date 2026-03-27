@@ -2,6 +2,8 @@ import axios from "axios"
 import type {
   Organization,
   System,
+  SystemCreate,
+  SystemUpdate,
   SystemDetail,
   SystemStats,
   Classification,
@@ -9,6 +11,12 @@ import type {
   Owner,
   OwnerCreate,
   Integration,
+  IntegrationCreate,
+  GDPRTreatment,
+  GDPRTreatmentCreate,
+  Contract,
+  ContractCreate,
+  ImportResult,
   PaginatedResponse,
   SystemSearchParams,
   IntegrationSearchParams,
@@ -101,6 +109,93 @@ export async function getSystemIntegrations(
   systemId: string
 ): Promise<Integration[]> {
   const res = await api.get<Integration[]>(`/systems/${systemId}/integrations`)
+  return res.data
+}
+
+// --- System CRUD ---
+
+export async function createSystem(data: SystemCreate): Promise<System> {
+  const res = await api.post<System>("/systems", data)
+  return res.data
+}
+
+export async function updateSystem(id: string, data: SystemUpdate): Promise<System> {
+  const res = await api.patch<System>(`/systems/${id}`, data)
+  return res.data
+}
+
+export async function deleteSystem(id: string): Promise<void> {
+  await api.delete(`/systems/${id}`)
+}
+
+// --- Owner CRUD ---
+
+export async function deleteOwner(ownerId: string): Promise<void> {
+  await api.delete(`/owners/${ownerId}`)
+}
+
+// --- Integration CRUD ---
+
+export async function createIntegration(data: IntegrationCreate): Promise<Integration> {
+  const res = await api.post<Integration>("/integrations", data)
+  return res.data
+}
+
+export async function deleteIntegration(id: string): Promise<void> {
+  await api.delete(`/integrations/${id}`)
+}
+
+// --- GDPR ---
+
+export async function getGDPRTreatments(systemId: string): Promise<GDPRTreatment[]> {
+  const res = await api.get<GDPRTreatment[]>(`/systems/${systemId}/gdpr`)
+  return res.data
+}
+
+export async function createGDPRTreatment(
+  systemId: string,
+  data: GDPRTreatmentCreate
+): Promise<GDPRTreatment> {
+  const res = await api.post<GDPRTreatment>(`/systems/${systemId}/gdpr`, data)
+  return res.data
+}
+
+export async function deleteGDPRTreatment(id: string): Promise<void> {
+  await api.delete(`/gdpr/${id}`)
+}
+
+// --- Contracts ---
+
+export async function getContracts(systemId: string): Promise<Contract[]> {
+  const res = await api.get<Contract[]>(`/systems/${systemId}/contracts`)
+  return res.data
+}
+
+export async function createContract(
+  systemId: string,
+  data: ContractCreate
+): Promise<Contract> {
+  const res = await api.post<Contract>(`/systems/${systemId}/contracts`, data)
+  return res.data
+}
+
+export async function deleteContract(id: string): Promise<void> {
+  await api.delete(`/contracts/${id}`)
+}
+
+// --- Import ---
+
+export async function importFile(
+  type: "systems" | "classifications" | "owners",
+  file: File,
+  organizationId?: string
+): Promise<ImportResult> {
+  const formData = new FormData()
+  formData.append("file", file)
+  const params = organizationId ? `?organization_id=${organizationId}` : ""
+  const res = await api.post<ImportResult>(`/import/${type}${params}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
   return res.data
 }
 
