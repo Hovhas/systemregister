@@ -38,6 +38,7 @@ app = FastAPI(
     description="IT-systemregister med stöd för NIS2/CSL, ISO 27001, MSB/MCF och GDPR.",
     version=settings.app_version,
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 # CORS
@@ -99,14 +100,8 @@ if STATIC_DIR.is_dir():
 
     @app.exception_handler(404)
     async def spa_fallback(request, exc):
-        path = request.url.path
-        # API-requests: redirect utan trailing slash → med, annars JSON 404
-        if path.startswith("/api/"):
-            if not path.endswith("/") and request.method == "GET":
-                from starlette.responses import RedirectResponse
-                query = str(request.url.query)
-                target = path + "/" + ("?" + query if query else "")
-                return RedirectResponse(url=target, status_code=307)
+        # API-requests → JSON 404
+        if request.url.path.startswith("/api/"):
             from fastapi.responses import JSONResponse
             return JSONResponse(status_code=404, content={"detail": "Not found"})
         # Allt annat → SPA index.html
