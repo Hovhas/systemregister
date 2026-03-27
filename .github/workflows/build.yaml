@@ -38,6 +38,7 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
+          TEST_DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
         run: cd backend && pytest -v
 
   build:
