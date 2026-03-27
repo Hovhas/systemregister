@@ -593,7 +593,7 @@ export default function SystemDetailPage() {
         </TabsContent>
 
         <TabsContent value="integrationer" className="mt-4">
-          <IntegrationerTab integrations={[]} systemId={system.id} />
+          <IntegrationerTab integrations={system.integrations ?? []} systemId={system.id} />
         </TabsContent>
 
         <TabsContent value="ovrigt" className="mt-4">

@@ -26,7 +26,7 @@ async def list_systems(
     nis2_applicable: bool | None = Query(None),
     treats_personal_data: bool | None = Query(None),
     extended_search: str | None = Query(None, description="Sök i extended_attributes (JSONB)"),
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
