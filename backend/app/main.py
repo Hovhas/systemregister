@@ -38,8 +38,11 @@ app = FastAPI(
     description="IT-systemregister med stöd för NIS2/CSL, ISO 27001, MSB/MCF och GDPR.",
     version=settings.app_version,
     lifespan=lifespan,
-    redirect_slashes=False,
 )
+
+# Trusted proxy headers (Traefik sätter X-Forwarded-Proto)
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # CORS
 app.add_middleware(
