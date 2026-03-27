@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { SearchIcon, PlusIcon } from "lucide-react"
 
-import { getSystems } from "@/lib/api"
+import { getSystems, getOrganizations } from "@/lib/api"
 import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
 import {
   Table,
@@ -106,6 +106,14 @@ export default function SystemsPage() {
     setSearchInput(e.target.value)
     debounceRef(e.target.value)
   }
+
+  const { data: orgs } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: getOrganizations,
+  })
+  const orgNameMap = Object.fromEntries(
+    (orgs ?? []).map((o) => [o.id, o.name])
+  )
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [
@@ -258,7 +266,7 @@ export default function SystemsPage() {
                   >
                     <TableCell className="font-medium">{system.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {system.organization_id}
+                      {orgNameMap[system.organization_id] ?? system.organization_id}
                     </TableCell>
                     <TableCell>
                       {categoryLabels[system.system_category]}
