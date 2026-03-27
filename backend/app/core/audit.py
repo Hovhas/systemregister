@@ -13,7 +13,7 @@ Skipped: AuditLog itself (prevents recursion)
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from sqlalchemy import event, inspect
@@ -46,6 +46,8 @@ def _serialize_instance(instance: Any) -> dict[str, Any]:
             val = val.value
         elif isinstance(val, datetime):
             val = val.isoformat()
+        elif isinstance(val, date):
+            val = val.isoformat()
         result[col.key] = val
     return result
 
@@ -77,6 +79,8 @@ def _get_changed_fields(
             if hasattr(val, "value"):
                 return val.value
             if isinstance(val, datetime):
+                return val.isoformat()
+            if isinstance(val, date):
                 return val.isoformat()
             return val
 
