@@ -19,7 +19,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet"
 
 import DashboardPage from "@/pages/DashboardPage"
@@ -117,14 +116,10 @@ function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col flex-1 min-w-0">
         {/* Mobil-header */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b">
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
-                <MenuIcon className="size-5" />
-                <span className="sr-only">Öppna meny</span>
-              </Button>
-            </SheetTrigger>
-          </Sheet>
+          <Button variant="ghost" size="icon-sm" onClick={() => setMobileOpen(true)}>
+            <MenuIcon className="size-5" />
+            <span className="sr-only">Öppna meny</span>
+          </Button>
           <span className="font-semibold text-sm">Systemregister</span>
         </header>
 

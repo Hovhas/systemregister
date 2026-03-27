@@ -162,7 +162,7 @@ export default function DashboardPage() {
         </div>
 
         {orgs && orgs.length > 0 && (
-          <Select value={selectedOrg} onValueChange={setSelectedOrg}>
+          <Select value={selectedOrg} onValueChange={(val) => setSelectedOrg(val ?? "alla")}>
             <SelectTrigger className="w-56">
               <SelectValue placeholder="Filtrera organisation" />
             </SelectTrigger>

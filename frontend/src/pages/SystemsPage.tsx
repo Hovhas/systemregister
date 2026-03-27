@@ -153,7 +153,7 @@ export default function SystemsPage() {
         </div>
 
         <Select
-          value={category}
+          value={category as string}
           onValueChange={(val) => {
             setCategory(val as SystemCategory | "")
             setOffset(0)
@@ -173,7 +173,7 @@ export default function SystemsPage() {
         </Select>
 
         <Select
-          value={lifecycle}
+          value={lifecycle as string}
           onValueChange={(val) => {
             setLifecycle(val as LifecycleStatus | "")
             setOffset(0)
@@ -193,7 +193,7 @@ export default function SystemsPage() {
         </Select>
 
         <Select
-          value={criticality}
+          value={criticality as string}
           onValueChange={(val) => {
             setCriticality(val as Criticality | "")
             setOffset(0)
