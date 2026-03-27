@@ -367,6 +367,89 @@ function IntegrationerTab({
   )
 }
 
+function ExtendedAttributesTab({ attributes }: { attributes: Record<string, unknown> | null }) {
+  if (!attributes || Object.keys(attributes).length === 0) {
+    return <p className="text-sm text-muted-foreground py-4">Ingen övrig data registrerad</p>
+  }
+
+  const entries = Object.entries(attributes).sort(([a], [b]) => a.localeCompare(b, "sv"))
+
+  return (
+    <div className="rounded-xl ring-1 ring-foreground/10">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Fält</TableHead>
+            <TableHead>Värde</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map(([key, value]) => (
+            <TableRow key={key}>
+              <TableCell className="font-medium text-sm">{key}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {value === null || value === undefined ? "—" : String(value)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+// --- Audit API ---
+
+async function getAuditForRecord(recordId: string) {
+  const res = await fetch(`/api/v1/audit/record/${recordId}`)
+  if (!res.ok) throw new Error("Kunde inte hämta ändringslogg")
+  return res.json()
+}
+
+// --- Ändringslogg-komponent ---
+
+function AuditTimeline({ systemId }: { systemId: string }) {
+  const { data: entries, isLoading } = useQuery({
+    queryKey: ["audit", systemId],
+    queryFn: () => getAuditForRecord(systemId),
+  })
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Laddar...</p>
+  if (!entries?.length) return <p className="text-sm text-muted-foreground py-4">Inga ändringar registrerade</p>
+
+  return (
+    <div className="space-y-3">
+      {entries.map((entry: any) => (
+        <Card key={entry.id}>
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant={entry.action === "create" ? "default" : entry.action === "delete" ? "destructive" : "secondary"}>
+                {entry.action === "create" ? "Skapad" : entry.action === "update" ? "Ändrad" : "Borttagen"}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {new Date(entry.changed_at).toLocaleString("sv-SE")}
+              </span>
+              {entry.changed_by && <span className="text-xs">av {entry.changed_by}</span>}
+            </div>
+            {entry.action === "update" && entry.old_values && entry.new_values && (
+              <div className="text-xs space-y-1 mt-2">
+                {Object.keys(entry.new_values).map((key: string) => (
+                  <div key={key} className="flex gap-2">
+                    <span className="font-medium min-w-24">{key}:</span>
+                    <span className="text-red-600 line-through">{String(entry.old_values[key] ?? "—")}</span>
+                    <span>→</span>
+                    <span className="text-green-600">{String(entry.new_values[key] ?? "—")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
 // --- Hjälp-hook ---
 
 function useSystemDetail(id: string) {
@@ -493,6 +576,8 @@ export default function SystemDetailPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="integrationer">Integrationer</TabsTrigger>
+          <TabsTrigger value="ovrigt">Övrig data</TabsTrigger>
+          <TabsTrigger value="andringslogg">Ändringslogg</TabsTrigger>
         </TabsList>
 
         <TabsContent value="oversikt" className="mt-4">
@@ -509,6 +594,14 @@ export default function SystemDetailPage() {
 
         <TabsContent value="integrationer" className="mt-4">
           <IntegrationerTab integrations={[]} systemId={system.id} />
+        </TabsContent>
+
+        <TabsContent value="ovrigt" className="mt-4">
+          <ExtendedAttributesTab attributes={system.extended_attributes} />
+        </TabsContent>
+
+        <TabsContent value="andringslogg" className="mt-4">
+          <AuditTimeline systemId={system.id} />
         </TabsContent>
       </Tabs>
     </div>

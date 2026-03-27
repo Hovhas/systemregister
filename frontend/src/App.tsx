@@ -13,7 +13,9 @@ import {
   MenuIcon,
   UploadIcon,
   FileTextIcon,
+  BellIcon,
 } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -31,6 +33,33 @@ import DependenciesPage from "@/pages/DependenciesPage"
 import ImportPage from "@/pages/ImportPage"
 import ReportsPage from "@/pages/ReportsPage"
 
+// --- Notifikationsklockla ---
+
+function NotificationBell() {
+  const { data } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/notifications")
+      if (!res.ok) return { total: 0 }
+      return res.json()
+    },
+    refetchInterval: 60000, // Uppdatera varje minut
+  })
+
+  const count = data?.total ?? 0
+
+  return (
+    <div className="relative">
+      <BellIcon className="size-5 text-muted-foreground" />
+      {count > 0 && (
+        <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // --- Navigationsstruktur ---
 
 const navItems = [
@@ -46,10 +75,11 @@ const navItems = [
 function Sidebar() {
   return (
     <aside className="hidden md:flex flex-col w-56 shrink-0 border-r bg-sidebar min-h-screen">
-      <div className="px-4 py-4 border-b">
+      <div className="px-4 py-4 border-b flex items-center justify-between">
         <span className="font-semibold text-sm tracking-tight">
           Systemregister
         </span>
+        <NotificationBell />
       </div>
       <nav className="flex flex-col gap-1 p-2 flex-1">
         {navItems.map(({ to, label, icon: Icon }) => (
@@ -128,6 +158,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <span className="sr-only">Öppna meny</span>
           </Button>
           <span className="font-semibold text-sm">Systemregister</span>
+          <NotificationBell />
         </header>
 
         <main className="flex-1 p-4 md:p-6 overflow-auto">
