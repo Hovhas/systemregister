@@ -91,3 +91,4 @@ async def delete_gdpr_treatment(
     if not treatment:
         raise HTTPException(status_code=404, detail="GDPR treatment not found")
     await db.delete(treatment)
+    await db.flush()

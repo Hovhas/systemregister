@@ -116,6 +116,7 @@ async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_db)):
     if not system:
         raise HTTPException(status_code=404, detail="System hittades inte")
     await db.delete(system)
+    await db.flush()
 
 
 # --- Dashboard/stats ---

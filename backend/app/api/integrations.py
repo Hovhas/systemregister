@@ -104,6 +104,7 @@ async def delete_integration(
     if not integration:
         raise HTTPException(status_code=404, detail="Integration not found")
     await db.delete(integration)
+    await db.flush()
 
 
 @system_router.get(

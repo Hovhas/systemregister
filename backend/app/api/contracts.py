@@ -92,6 +92,7 @@ async def delete_contract(
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     await db.delete(contract)
+    await db.flush()
 
 
 @router.get("/contracts/expiring", response_model=list[ContractResponse])

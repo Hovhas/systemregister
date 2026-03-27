@@ -45,7 +45,7 @@ export async function getSystem(id: string): Promise<SystemDetail> {
 export async function getSystemStats(
   organization_id?: string
 ): Promise<SystemStats> {
-  const res = await api.get<SystemStats>("/systems/stats", {
+  const res = await api.get<SystemStats>("/systems/stats/overview", {
     params: organization_id ? { organization_id } : undefined,
   })
   return res.data

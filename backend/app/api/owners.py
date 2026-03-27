@@ -90,3 +90,4 @@ async def delete_owner(
     if not owner:
         raise HTTPException(status_code=404, detail="Owner not found")
     await db.delete(owner)
+    await db.flush()

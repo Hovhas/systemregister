@@ -62,3 +62,4 @@ async def delete_organization(org_id: UUID, db: AsyncSession = Depends(get_db)):
             detail=f"Kan inte radera organisation med {system_count} kopplade system"
         )
     await db.delete(org)
+    await db.flush()
