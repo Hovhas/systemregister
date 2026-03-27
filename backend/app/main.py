@@ -92,7 +92,18 @@ async def api_root():
 
 
 # Serve frontend static files (built React SPA copied to /app/static by Dockerfile)
-# Uses StaticFiles with html=True as a fallback mount — MUST be last
+# Mounts static assets on /assets, then uses exception handler for SPA fallback
 STATIC_DIR = Path("/app/static")
 if STATIC_DIR.is_dir():
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="spa")
+    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="static-assets")
+
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+
+    @app.exception_handler(404)
+    async def spa_fallback(request, exc):
+        # API-requests ska ge JSON 404
+        if request.url.path.startswith("/api/"):
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=404, content={"detail": "Not found"})
+        # Allt annat → SPA index.html
+        return FileResponse(STATIC_DIR / "index.html")
