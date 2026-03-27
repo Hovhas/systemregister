@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,6 +25,7 @@ async def list_systems(
     criticality: Criticality | None = Query(None),
     nis2_applicable: bool | None = Query(None),
     treats_personal_data: bool | None = Query(None),
+    extended_search: str | None = Query(None, description="Sök i extended_attributes (JSONB)"),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -54,6 +55,11 @@ async def list_systems(
         stmt = stmt.where(System.nis2_applicable == nis2_applicable)
     if treats_personal_data is not None:
         stmt = stmt.where(System.treats_personal_data == treats_personal_data)
+    if extended_search:
+        # Textsökning i JSONB — cast till text och sök med ILIKE
+        stmt = stmt.where(
+            cast(System.extended_attributes, String).ilike(f"%{extended_search}%")
+        )
 
     # Count
     count_stmt = select(func.count()).select_from(stmt.subquery())

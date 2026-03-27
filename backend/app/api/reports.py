@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import HTMLResponse, StreamingResponse
 from openpyxl import Workbook
+from weasyprint import HTML as WeasyHTML
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -106,10 +107,28 @@ async def nis2_report_xlsx(db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.get("/nis2.html", response_class=HTMLResponse)
-async def nis2_report_html(db: AsyncSession = Depends(get_db)):
-    """Print-vanlig HTML-rapport over NIS2-system."""
-    systems = await _get_nis2_systems(db)
+_REPORT_CSS = """
+    body { font-family: Arial, sans-serif; font-size: 12px; margin: 2cm; color: #000; }
+    h1 { font-size: 18px; margin-bottom: 4px; }
+    h2 { font-size: 15px; margin-top: 24px; margin-bottom: 8px; }
+    .meta { color: #555; margin-bottom: 16px; }
+    .summary { background: #f5f5f5; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; }
+    .summary h2 { font-size: 14px; margin: 0 0 8px 0; }
+    .summary ul { margin: 0; padding-left: 18px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th { background: #2c5282; color: #fff; text-align: left; padding: 6px 8px; }
+    td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    tr:nth-child(even) { background: #f7fafc; }
+    .no-gaps { color: #276749; font-style: italic; }
+    @media print {
+        body { margin: 1cm; }
+        .summary { break-inside: avoid; }
+        tr { break-inside: avoid; }
+    }
+"""
+
+
+def _render_nis2_html(systems: list[System]) -> str:
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     total = len(systems)
     without_classification = sum(1 for s in systems if s.nis2_classification is None)
@@ -131,28 +150,12 @@ async def nis2_report_html(db: AsyncSession = Depends(get_db)):
             <td>{owners}</td>
         </tr>"""
 
-    html = f"""<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
     <title>NIS2-rapport — Sundsvalls kommunkoncern</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; font-size: 12px; margin: 2cm; color: #000; }}
-        h1 {{ font-size: 18px; margin-bottom: 4px; }}
-        .meta {{ color: #555; margin-bottom: 16px; }}
-        .summary {{ background: #f5f5f5; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; }}
-        .summary h2 {{ font-size: 14px; margin: 0 0 8px 0; }}
-        .summary ul {{ margin: 0; padding-left: 18px; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th {{ background: #2c5282; color: #fff; text-align: left; padding: 6px 8px; }}
-        td {{ padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }}
-        tr:nth-child(even) {{ background: #f7fafc; }}
-        @media print {{
-            body {{ margin: 1cm; }}
-            .summary {{ break-inside: avoid; }}
-            tr {{ break-inside: avoid; }}
-        }}
-    </style>
+    <style>{_REPORT_CSS}</style>
 </head>
 <body>
     <h1>NIS2-compliance-rapport</h1>
@@ -184,13 +187,109 @@ async def nis2_report_html(db: AsyncSession = Depends(get_db)):
     </table>
 </body>
 </html>"""
-    return HTMLResponse(content=html)
 
 
-@router.get("/compliance-gap")
-async def compliance_gap(db: AsyncSession = Depends(get_db)):
-    """Compliance-gap-analys — identifierar system med ofullstandig dokumentation."""
-    # System utan klassning
+def _render_compliance_gap_html(gap_data: dict) -> str:
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    total_gaps = gap_data["summary"]["total_gaps"]
+    gaps = gap_data["gaps"]
+
+    def _system_rows(items: list[dict]) -> str:
+        if not items:
+            return '<tr><td colspan="2" class="no-gaps">Inga gap hittades</td></tr>'
+        return "".join(
+            f"<tr><td>{i['name']}</td><td>{i['organization_id']}</td></tr>"
+            for i in items
+        )
+
+    def _contract_rows(items: list[dict]) -> str:
+        if not items:
+            return '<tr><td colspan="3" class="no-gaps">Inga utgaende avtal</td></tr>'
+        return "".join(
+            f"<tr><td>{c['supplier_name'] or '—'}</td>"
+            f"<td>{c['system_id']}</td>"
+            f"<td>{c['contract_end'] or '—'}</td></tr>"
+            for c in items
+        )
+
+    return f"""<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Compliance-gap-rapport — Sundsvalls kommunkoncern</title>
+    <style>{_REPORT_CSS}</style>
+</head>
+<body>
+    <h1>Compliance-gap-rapport</h1>
+    <p class="meta">Sundsvalls kommunkoncern &mdash; Genererad: {generated_at}</p>
+
+    <div class="summary">
+        <h2>Sammanfattning</h2>
+        <ul>
+            <li>Totalt antal gap: <strong>{total_gaps}</strong></li>
+            <li>System utan klassning: <strong>{len(gaps['missing_classification'])}</strong></li>
+            <li>System utan agare: <strong>{len(gaps['missing_owner'])}</strong></li>
+            <li>Personuppgifter utan GDPR-behandling: <strong>{len(gaps['personal_data_without_gdpr'])}</strong></li>
+            <li>NIS2-system utan riskbedomning: <strong>{len(gaps['nis2_without_risk_assessment'])}</strong></li>
+            <li>Utgaende avtal (90 dagar): <strong>{len(gaps['expiring_contracts'])}</strong></li>
+        </ul>
+    </div>
+
+    <h2>System utan klassning</h2>
+    <table>
+        <thead><tr><th>Namn</th><th>Organisation-ID</th></tr></thead>
+        <tbody>{_system_rows(gaps['missing_classification'])}</tbody>
+    </table>
+
+    <h2>System utan agare</h2>
+    <table>
+        <thead><tr><th>Namn</th><th>Organisation-ID</th></tr></thead>
+        <tbody>{_system_rows(gaps['missing_owner'])}</tbody>
+    </table>
+
+    <h2>Personuppgifter utan GDPR-behandling</h2>
+    <table>
+        <thead><tr><th>Namn</th><th>Organisation-ID</th></tr></thead>
+        <tbody>{_system_rows(gaps['personal_data_without_gdpr'])}</tbody>
+    </table>
+
+    <h2>NIS2-system utan riskbedomning</h2>
+    <table>
+        <thead><tr><th>Namn</th><th>Organisation-ID</th></tr></thead>
+        <tbody>{_system_rows(gaps['nis2_without_risk_assessment'])}</tbody>
+    </table>
+
+    <h2>Utgaende avtal (inom 90 dagar)</h2>
+    <table>
+        <thead><tr><th>Leverantor</th><th>System-ID</th><th>Avtalsslutt</th></tr></thead>
+        <tbody>{_contract_rows(gaps['expiring_contracts'])}</tbody>
+    </table>
+</body>
+</html>"""
+
+
+@router.get("/nis2.html", response_class=HTMLResponse)
+async def nis2_report_html(db: AsyncSession = Depends(get_db)):
+    """Print-vanlig HTML-rapport over NIS2-system."""
+    systems = await _get_nis2_systems(db)
+    return HTMLResponse(content=_render_nis2_html(systems))
+
+
+@router.get("/nis2.pdf")
+async def nis2_report_pdf(db: AsyncSession = Depends(get_db)):
+    """NIS2-compliance-rapport som PDF."""
+    systems = await _get_nis2_systems(db)
+    html = _render_nis2_html(systems)
+    pdf_bytes = WeasyHTML(string=html).write_pdf()
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=nis2-rapport.pdf"},
+    )
+
+
+async def _get_compliance_gap_data(db: AsyncSession) -> dict:
+    """Samlar compliance-gap-data. Återanvänds av JSON- och PDF-endpoints."""
     stmt_no_class = select(System).where(~System.classifications.any())
     result = await db.execute(stmt_no_class.options(selectinload(System.classifications)))
     systems_no_class = [
@@ -198,7 +297,6 @@ async def compliance_gap(db: AsyncSession = Depends(get_db)):
         for s in result.scalars().all()
     ]
 
-    # System utan agare
     stmt_no_owner = select(System).where(~System.owners.any())
     result = await db.execute(stmt_no_owner.options(selectinload(System.owners)))
     systems_no_owner = [
@@ -206,7 +304,6 @@ async def compliance_gap(db: AsyncSession = Depends(get_db)):
         for s in result.scalars().all()
     ]
 
-    # System med personuppgifter men utan GDPR-behandling
     stmt_personal_no_gdpr = (
         select(System)
         .where(System.treats_personal_data == True)  # noqa: E712
@@ -218,7 +315,6 @@ async def compliance_gap(db: AsyncSession = Depends(get_db)):
         for s in result.scalars().all()
     ]
 
-    # NIS2-system utan riskbedomning
     stmt_nis2_no_risk = (
         select(System)
         .where(System.nis2_applicable == True)  # noqa: E712
@@ -230,7 +326,6 @@ async def compliance_gap(db: AsyncSession = Depends(get_db)):
         for s in result.scalars().all()
     ]
 
-    # Avtal som loper ut inom 90 dagar
     cutoff = date.today() + timedelta(days=90)
     stmt_expiring = (
         select(Contract)
@@ -271,3 +366,22 @@ async def compliance_gap(db: AsyncSession = Depends(get_db)):
             "total_gaps": total_gaps,
         },
     }
+
+
+@router.get("/compliance-gap")
+async def compliance_gap(db: AsyncSession = Depends(get_db)):
+    """Compliance-gap-analys — identifierar system med ofullstandig dokumentation."""
+    return await _get_compliance_gap_data(db)
+
+
+@router.get("/compliance-gap.pdf")
+async def compliance_gap_pdf(db: AsyncSession = Depends(get_db)):
+    """Compliance-gap-rapport som PDF."""
+    gap_data = await _get_compliance_gap_data(db)
+    html = _render_compliance_gap_html(gap_data)
+    pdf_bytes = WeasyHTML(string=html).write_pdf()
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=compliance-gap-rapport.pdf"},
+    )

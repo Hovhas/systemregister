@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models import System
+from app.models.enums import OwnerRole
+from app.models.models import SystemClassification, SystemOwner
 from app.schemas import SystemCreate
 
 router = APIRouter(prefix="/import", tags=["Import"])
@@ -120,6 +122,17 @@ async def _system_exists(
     return result.scalar_one_or_none() is not None
 
 
+async def _resolve_system(
+    db: AsyncSession, name: str, organization_id: UUID | None = None
+) -> System | None:
+    """Slå upp system via namn (och optionellt org_id)."""
+    stmt = select(System).where(System.name == name)
+    if organization_id:
+        stmt = stmt.where(System.organization_id == organization_id)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 @router.post("/systems")
 async def import_systems(
     organization_id: UUID = Query(..., description="Organisation att importera till"),
@@ -170,6 +183,149 @@ async def import_systems(
 
         system = System(**data.model_dump())
         db.add(system)
+        imported += 1
+
+    if imported > 0:
+        await db.flush()
+
+    return {"imported": imported, "errors": errors}
+
+
+@router.post("/classifications")
+async def import_classifications(
+    organization_id: UUID | None = Query(None, description="Begränsa systemuppslagning till organisation"),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Importera klassificeringar från Excel eller CSV.
+
+    Kolumner: system_name, confidentiality (0-4), integrity (0-4),
+    availability (0-4), traceability (0-4, valfri), classified_by.
+    """
+    fmt = _detect_format(file.filename or "", file.content_type)
+    content = await file.read()
+
+    if fmt == "excel":
+        rows = _rows_from_excel(content)
+    elif fmt == "csv":
+        rows = _rows_from_csv(content)
+    else:
+        rows = _rows_from_json(content)
+
+    imported = 0
+    errors = []
+
+    for index, raw_row in enumerate(rows, start=2):
+        system_name = raw_row.get("system_name") or raw_row.get("System name")
+        if not system_name:
+            errors.append({"row": index, "error": "Saknar kolumn 'system_name'."})
+            continue
+
+        system = await _resolve_system(db, str(system_name).strip(), organization_id)
+        if system is None:
+            errors.append({
+                "row": index,
+                "error": f"System '{system_name}' hittades inte.",
+            })
+            continue
+
+        try:
+            confidentiality = int(raw_row.get("confidentiality") or 0)
+            integrity = int(raw_row.get("integrity") or 0)
+            availability = int(raw_row.get("availability") or 0)
+            traceability_raw = raw_row.get("traceability")
+            traceability = int(traceability_raw) if traceability_raw not in (None, "", "None") else None
+            classified_by = raw_row.get("classified_by") or None
+        except (ValueError, TypeError) as exc:
+            errors.append({"row": index, "error": f"Ogiltigt värde: {exc}"})
+            continue
+
+        classification = SystemClassification(
+            system_id=system.id,
+            confidentiality=confidentiality,
+            integrity=integrity,
+            availability=availability,
+            traceability=traceability,
+            classified_by=classified_by,
+        )
+        db.add(classification)
+        imported += 1
+
+    if imported > 0:
+        await db.flush()
+
+    return {"imported": imported, "errors": errors}
+
+
+_OWNER_ROLE_MAP = {role.value: role for role in OwnerRole}
+
+
+@router.post("/owners")
+async def import_owners(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Importera systemägare från Excel eller CSV.
+
+    Kolumner: system_name, name, email, phone, role, organization_id.
+    Tillåtna roller: systemägare, informationsägare, systemförvaltare,
+    teknisk_förvaltare, it_kontakt, dataskyddsombud.
+    """
+    fmt = _detect_format(file.filename or "", file.content_type)
+    content = await file.read()
+
+    if fmt == "excel":
+        rows = _rows_from_excel(content)
+    elif fmt == "csv":
+        rows = _rows_from_csv(content)
+    else:
+        rows = _rows_from_json(content)
+
+    imported = 0
+    errors = []
+
+    for index, raw_row in enumerate(rows, start=2):
+        system_name = raw_row.get("system_name") or raw_row.get("System name")
+        if not system_name:
+            errors.append({"row": index, "error": "Saknar kolumn 'system_name'."})
+            continue
+
+        org_id_raw = raw_row.get("organization_id")
+        try:
+            row_org_id = UUID(str(org_id_raw).strip()) if org_id_raw not in (None, "", "None") else None
+        except ValueError:
+            errors.append({"row": index, "error": f"Ogiltigt organization_id: '{org_id_raw}'."})
+            continue
+
+        system = await _resolve_system(db, str(system_name).strip(), row_org_id)
+        if system is None:
+            errors.append({
+                "row": index,
+                "error": f"System '{system_name}' hittades inte.",
+            })
+            continue
+
+        role_raw = str(raw_row.get("role") or "").strip().lower()
+        role = _OWNER_ROLE_MAP.get(role_raw)
+        if role is None:
+            allowed = ", ".join(_OWNER_ROLE_MAP.keys())
+            errors.append({
+                "row": index,
+                "error": f"Okänd roll '{role_raw}'. Tillåtna värden: {allowed}.",
+            })
+            continue
+
+        owner = SystemOwner(
+            system_id=system.id,
+            name=raw_row.get("name") or None,
+            email=raw_row.get("email") or None,
+            phone=raw_row.get("phone") or None,
+            role=role,
+            organization_id=row_org_id,
+        )
+        db.add(owner)
         imported += 1
 
     if imported > 0:

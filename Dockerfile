@@ -27,6 +27,11 @@ COPY backend/ .
 # Kopiera frontend build till static dir
 COPY --from=frontend-build /app/dist /app/static
 
+# Weasyprint system-dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Non-root user
 RUN useradd -r -s /bin/false appuser && chown -R appuser:appuser /app
 USER appuser
