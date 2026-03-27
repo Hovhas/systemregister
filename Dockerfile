@@ -29,7 +29,8 @@ COPY --from=frontend-build /app/dist /app/static
 
 # Weasyprint system-dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpango-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 libffi-dev \
+    libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 \
+    libcairo2 libgdk-pixbuf-2.0-0 libharfbuzz0b libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user
