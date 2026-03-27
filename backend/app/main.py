@@ -92,14 +92,7 @@ async def api_root():
 
 
 # Serve frontend static files (built React SPA copied to /app/static by Dockerfile)
-# MUST be last — catch-all route for SPA client-side routing
+# Uses StaticFiles with html=True as a fallback mount — MUST be last
 STATIC_DIR = Path("/app/static")
 if STATIC_DIR.is_dir():
-    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="static-assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        file_path = STATIC_DIR / full_path
-        if file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(STATIC_DIR / "index.html")
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="spa")
