@@ -70,20 +70,6 @@ async def health():
     return {"status": "ok", "version": settings.app_version}
 
 
-# Serve frontend static files (built React SPA copied to /app/static by Dockerfile)
-STATIC_DIR = Path("/app/static")
-if STATIC_DIR.is_dir():
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="Not found")
-        file_path = STATIC_DIR / full_path
-        if file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(STATIC_DIR / "index.html")
-
-
-
 @app.get("/api/v1")
 async def api_root():
     return {
@@ -103,3 +89,17 @@ async def api_root():
             "docs": "/docs",
         },
     }
+
+
+# Serve frontend static files (built React SPA copied to /app/static by Dockerfile)
+# MUST be last — catch-all route for SPA client-side routing
+STATIC_DIR = Path("/app/static")
+if STATIC_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="static-assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        file_path = STATIC_DIR / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(STATIC_DIR / "index.html")
