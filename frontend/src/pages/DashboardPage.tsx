@@ -164,7 +164,11 @@ export default function DashboardPage() {
         {orgs && orgs.length > 0 && (
           <Select value={selectedOrg} onValueChange={(val) => setSelectedOrg(val ?? "alla")}>
             <SelectTrigger className="w-56">
-              <SelectValue placeholder="Filtrera organisation" />
+              <SelectValue placeholder="Filtrera organisation">
+                {selectedOrg === "alla"
+                  ? "Alla organisationer"
+                  : orgs?.find((o) => o.id === selectedOrg)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="alla">Alla organisationer</SelectItem>
