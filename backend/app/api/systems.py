@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, or_, cast, String
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -99,7 +100,14 @@ async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
 async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_db)):
     system = System(**data.model_dump())
     db.add(system)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=422,
+            detail="Organisationen finns inte eller databaskonflikt"
+        )
     await db.refresh(system)
     return system
 
@@ -121,10 +129,9 @@ async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db))
     system = await db.get(System, system_id)
     if not system:
         raise HTTPException(status_code=404, detail="System hittades inte")
-    # Kör DELETE via SQL istället för session.delete() så att
-    # ON DELETE CASCADE i DB triggas korrekt
-    from sqlalchemy import delete as sa_delete
-    await db.execute(sa_delete(System).where(System.id == system_id))
+    # session.delete() triggar after_flush-listenern → audit_log
+    # ON DELETE CASCADE i PostgreSQL hanterar barnrader (classifications, owners, etc.)
+    await db.delete(system)
     await db.flush()
 
 
