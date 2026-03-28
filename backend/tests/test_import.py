@@ -645,7 +645,7 @@ async def test_import_classifications_basic(client):
     system = sys_resp.json()
 
     rows = [{
-        "system_id": system["id"],
+        "system_name": "ClassImportSys",
         "confidentiality": 2,
         "integrity": 3,
         "availability": 2,
@@ -658,15 +658,10 @@ async def test_import_classifications_basic(client):
         params={"organization_id": org["id"]},
         files={"file": ("classifications.json", io.BytesIO(content), "application/json")},
     )
-    # Acceptabelt: 200 (import lyckas) eller 404/422 om endpoint ej finns ännu
-    if resp.status_code == 200:
-        body = resp.json()
-        assert "imported" in body
-    else:
-        # Endpoint kan saknas — dokumenterar beteende
-        assert resp.status_code in (404, 405, 422), (
-            f"Oväntat svar på classifications import: {resp.status_code}: {resp.text}"
-        )
+    assert resp.status_code == 200, f"Oväntat svar: {resp.status_code}: {resp.text}"
+    body = resp.json()
+    assert "imported" in body
+    assert body["imported"] >= 1, f"Förväntade minst 1 importerad klassning, fick {body['imported']}. Fel: {body.get('errors')}"
 
 
 # --- Owners import ---
@@ -685,7 +680,7 @@ async def test_import_owners_basic(client):
     system = sys_resp.json()
 
     rows = [{
-        "system_id": system["id"],
+        "system_name": "OwnerImportSys",
         "organization_id": org["id"],
         "role": "systemägare",
         "name": "Importerad Ägare",
@@ -695,14 +690,12 @@ async def test_import_owners_basic(client):
 
     resp = await client.post(
         "/api/v1/import/owners",
-        params={"organization_id": org["id"]},
         files={"file": ("owners.json", io.BytesIO(content), "application/json")},
     )
-    if resp.status_code == 200:
-        body = resp.json()
-        assert "imported" in body
-    else:
-        assert resp.status_code in (404, 405, 422)
+    assert resp.status_code == 200, f"Oväntat svar: {resp.status_code}: {resp.text}"
+    body = resp.json()
+    assert "imported" in body
+    assert body["imported"] >= 1, f"Förväntade minst 1 importerad ägare, fick {body['imported']}. Fel: {body.get('errors')}"
 
 
 # --- Stora dataset ---

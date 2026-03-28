@@ -248,9 +248,7 @@ async def test_audit_update_creates_update_entry(client):
     assert resp.status_code == 200
     entries = resp.json()
     update_entries = [e for e in entries if e["action"] == "update"]
-    # NOTE: Audit may or may not be implemented for PATCH — document behavior
-    # If not implemented, this is informational, not a block
-    _ = update_entries  # Observed but not asserted as mandatory
+    assert len(update_entries) >= 1, "PATCH borde generera audit update-entry"
 
 
 @pytest.mark.asyncio
@@ -263,7 +261,9 @@ async def test_audit_delete_creates_delete_entry(client):
 
     resp = await client.get(f"/api/v1/audit/record/{sys_id}")
     assert resp.status_code == 200
-    # Audit may or may not log the delete — just verify no crash
+    entries = resp.json()
+    delete_entries = [e for e in entries if e["action"] == "delete"]
+    assert len(delete_entries) >= 1, "DELETE borde generera audit delete-entry"
 
 
 @pytest.mark.asyncio
@@ -275,7 +275,8 @@ async def test_audit_contract_create_logged(client):
 
     resp = await client.get("/api/v1/audit/", params={"record_id": contract["id"]})
     assert resp.status_code == 200
-    # Audit logs should work without error
+    body = resp.json()
+    assert body["total"] >= 1, "Contract create borde generera audit-entry"
 
 
 @pytest.mark.asyncio
@@ -287,6 +288,8 @@ async def test_audit_classification_logged(client):
 
     resp = await client.get("/api/v1/audit/", params={"record_id": clf["id"]})
     assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] >= 1, "Classification create borde generera audit-entry"
 
 
 @pytest.mark.asyncio
@@ -298,6 +301,8 @@ async def test_audit_owner_create_logged(client):
 
     resp = await client.get("/api/v1/audit/", params={"record_id": owner["id"]})
     assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] >= 1, "Owner create borde generera audit-entry"
 
 
 @pytest.mark.asyncio
@@ -309,6 +314,8 @@ async def test_audit_gdpr_create_logged(client):
 
     resp = await client.get("/api/v1/audit/", params={"record_id": gdpr["id"]})
     assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] >= 1, "GDPR treatment create borde generera audit-entry"
 
 
 # ---------------------------------------------------------------------------
