@@ -159,14 +159,14 @@ export default function IntegrationDialog({
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <FormField label="Källsystem" required>
             <Select
-              value={form.source_system_id}
+              value={form.source_system_id || undefined}
               onValueChange={(v) => setForm((f) => ({ ...f, source_system_id: v ?? "" }))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue>
+                <SelectValue placeholder="Välj källsystem...">
                   {form.source_system_id
                     ? (systemNameMap[form.source_system_id] ?? form.source_system_id)
-                    : "Välj källsystem..."}
+                    : undefined}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -181,14 +181,14 @@ export default function IntegrationDialog({
 
           <FormField label="Målsystem" required>
             <Select
-              value={form.target_system_id}
+              value={form.target_system_id || undefined}
               onValueChange={(v) => setForm((f) => ({ ...f, target_system_id: v ?? "" }))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue>
+                <SelectValue placeholder="Välj målsystem...">
                   {form.target_system_id
                     ? (systemNameMap[form.target_system_id] ?? form.target_system_id)
-                    : "Välj målsystem..."}
+                    : undefined}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -204,14 +204,14 @@ export default function IntegrationDialog({
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Typ" required>
               <Select
-                value={form.integration_type}
+                value={form.integration_type || undefined}
                 onValueChange={(v) => setForm((f) => ({ ...f, integration_type: v ?? "" }))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue>
+                  <SelectValue placeholder="Välj typ...">
                     {form.integration_type
                       ? (integrationTypeLabels[form.integration_type] ?? form.integration_type)
-                      : "Välj typ..."}
+                      : undefined}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -226,14 +226,14 @@ export default function IntegrationDialog({
 
             <FormField label="Kritikalitet">
               <Select
-                value={form.criticality}
+                value={form.criticality || undefined}
                 onValueChange={(v) => setForm((f) => ({ ...f, criticality: v ?? "" }))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue>
+                  <SelectValue placeholder="Välj...">
                     {form.criticality
                       ? (criticalityLabels[form.criticality as Criticality] ?? form.criticality)
-                      : "Välj..."}
+                      : undefined}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
