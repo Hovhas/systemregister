@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
 
-import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
+import { SystemCategory, LifecycleStatus, Criticality, NIS2Classification } from "@/types"
 import type { SystemCreate, SystemUpdate } from "@/types"
 import { createSystem, updateSystem, getSystem, getOrganizations } from "@/lib/api"
 import {
@@ -22,6 +22,12 @@ import {
 } from "@/components/ui/select"
 
 // --- Etiketter ---
+
+const nis2ClassificationLabels: Record<NIS2Classification, string> = {
+  [NIS2Classification.ESSENTIAL]: "Väsentlig",
+  [NIS2Classification.IMPORTANT]: "Viktig",
+  [NIS2Classification.NOT_APPLICABLE]: "Ej tillämplig",
+}
 
 const categoryLabels: Record<SystemCategory, string> = {
   [SystemCategory.VERKSAMHETSSYSTEM]: "Verksamhetssystem",
@@ -49,17 +55,41 @@ const criticalityLabels: Record<Criticality, string> = {
 // --- Formulärtillstånd ---
 
 interface FormState {
+  // Grundinformation
   name: string
   organization_id: string
   description: string
   system_category: SystemCategory
+  business_area: string
+  aliases: string
+  // Status och kritikalitet
   lifecycle_status: LifecycleStatus
   criticality: Criticality
-  business_area: string
+  // Driftmiljö
   hosting_model: string
   cloud_provider: string
+  data_location_country: string
+  product_name: string
+  product_version: string
+  // Livscykel
+  deployment_date: string
+  planned_decommission_date: string
+  end_of_support_date: string
+  // Backup och DR
+  backup_frequency: string
+  rpo: string
+  rto: string
+  dr_plan_exists: boolean
+  // Compliance
   nis2_applicable: boolean
+  nis2_classification: NIS2Classification | ""
   treats_personal_data: boolean
+  treats_sensitive_data: boolean
+  third_country_transfer: boolean
+  has_elevated_protection: boolean
+  security_protection: boolean
+  last_risk_assessment_date: string
+  klassa_reference_id: string
 }
 
 const defaultForm: FormState = {
@@ -70,10 +100,28 @@ const defaultForm: FormState = {
   lifecycle_status: LifecycleStatus.ACTIVE,
   criticality: Criticality.MEDIUM,
   business_area: "",
+  aliases: "",
   hosting_model: "",
   cloud_provider: "",
+  data_location_country: "Sverige",
+  product_name: "",
+  product_version: "",
+  deployment_date: "",
+  planned_decommission_date: "",
+  end_of_support_date: "",
+  backup_frequency: "",
+  rpo: "",
+  rto: "",
+  dr_plan_exists: false,
   nis2_applicable: false,
+  nis2_classification: "",
   treats_personal_data: false,
+  treats_sensitive_data: false,
+  third_country_transfer: false,
+  has_elevated_protection: false,
+  security_protection: false,
+  last_risk_assessment_date: "",
+  klassa_reference_id: "",
 }
 
 // --- Hjälpkomponent ---
@@ -132,10 +180,28 @@ export default function SystemFormPage() {
         lifecycle_status: existingSystem.lifecycle_status,
         criticality: existingSystem.criticality,
         business_area: existingSystem.business_area ?? "",
+        aliases: existingSystem.aliases ?? "",
         hosting_model: existingSystem.hosting_model ?? "",
         cloud_provider: existingSystem.cloud_provider ?? "",
+        data_location_country: existingSystem.data_location_country ?? "Sverige",
+        product_name: existingSystem.product_name ?? "",
+        product_version: existingSystem.product_version ?? "",
+        deployment_date: existingSystem.deployment_date ?? "",
+        planned_decommission_date: existingSystem.planned_decommission_date ?? "",
+        end_of_support_date: existingSystem.end_of_support_date ?? "",
+        backup_frequency: existingSystem.backup_frequency ?? "",
+        rpo: existingSystem.rpo ?? "",
+        rto: existingSystem.rto ?? "",
+        dr_plan_exists: existingSystem.dr_plan_exists,
         nis2_applicable: existingSystem.nis2_applicable,
+        nis2_classification: existingSystem.nis2_classification ?? "",
         treats_personal_data: existingSystem.treats_personal_data,
+        treats_sensitive_data: existingSystem.treats_sensitive_data,
+        third_country_transfer: existingSystem.third_country_transfer,
+        has_elevated_protection: existingSystem.has_elevated_protection,
+        security_protection: existingSystem.security_protection,
+        last_risk_assessment_date: existingSystem.last_risk_assessment_date ?? "",
+        klassa_reference_id: existingSystem.klassa_reference_id ?? "",
       })
     }
   }, [existingSystem])
@@ -166,10 +232,28 @@ export default function SystemFormPage() {
       lifecycle_status: form.lifecycle_status,
       criticality: form.criticality,
       business_area: form.business_area || undefined,
+      aliases: form.aliases || undefined,
       hosting_model: form.hosting_model || undefined,
       cloud_provider: form.cloud_provider || undefined,
+      data_location_country: form.data_location_country || undefined,
+      product_name: form.product_name || undefined,
+      product_version: form.product_version || undefined,
+      deployment_date: form.deployment_date || undefined,
+      planned_decommission_date: form.planned_decommission_date || undefined,
+      end_of_support_date: form.end_of_support_date || undefined,
+      backup_frequency: form.backup_frequency || undefined,
+      rpo: form.rpo || undefined,
+      rto: form.rto || undefined,
+      dr_plan_exists: form.dr_plan_exists,
       nis2_applicable: form.nis2_applicable,
+      nis2_classification: form.nis2_classification || undefined,
       treats_personal_data: form.treats_personal_data,
+      treats_sensitive_data: form.treats_sensitive_data,
+      third_country_transfer: form.third_country_transfer,
+      has_elevated_protection: form.has_elevated_protection,
+      security_protection: form.security_protection,
+      last_risk_assessment_date: form.last_risk_assessment_date || undefined,
+      klassa_reference_id: form.klassa_reference_id || undefined,
     }
 
     if (isEdit) {
@@ -274,6 +358,16 @@ export default function SystemFormPage() {
                 placeholder="t.ex. HR, Ekonomi, Vård"
               />
             </FormField>
+
+            <div className="md:col-span-2">
+              <FormField label="Alternativa namn">
+                <Input
+                  value={form.aliases}
+                  onChange={(e) => set("aliases", e.target.value)}
+                  placeholder="Alternativa namn, kommaseparerat"
+                />
+              </FormField>
+            </div>
           </CardContent>
         </Card>
 
@@ -346,6 +440,106 @@ export default function SystemFormPage() {
                 placeholder="t.ex. Azure, AWS, GCP"
               />
             </FormField>
+
+            <FormField label="Datalagringsland">
+              <Input
+                value={form.data_location_country}
+                onChange={(e) => set("data_location_country", e.target.value)}
+                placeholder="t.ex. Sverige, EU"
+              />
+            </FormField>
+
+            <FormField label="Produktnamn">
+              <Input
+                value={form.product_name}
+                onChange={(e) => set("product_name", e.target.value)}
+                placeholder="t.ex. Visma, SAP, Agresso"
+              />
+            </FormField>
+
+            <FormField label="Produktversion">
+              <Input
+                value={form.product_version}
+                onChange={(e) => set("product_version", e.target.value)}
+                placeholder="t.ex. 2024.1"
+              />
+            </FormField>
+          </CardContent>
+        </Card>
+
+        {/* Livscykel */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Livscykel</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <FormField label="Driftsättningsdatum">
+              <Input
+                type="date"
+                value={form.deployment_date}
+                onChange={(e) => set("deployment_date", e.target.value)}
+              />
+            </FormField>
+
+            <FormField label="Planerat avvecklingsdatum">
+              <Input
+                type="date"
+                value={form.planned_decommission_date}
+                onChange={(e) => set("planned_decommission_date", e.target.value)}
+              />
+            </FormField>
+
+            <FormField label="Slut på support">
+              <Input
+                type="date"
+                value={form.end_of_support_date}
+                onChange={(e) => set("end_of_support_date", e.target.value)}
+              />
+            </FormField>
+          </CardContent>
+        </Card>
+
+        {/* Backup och DR */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Backup och DR</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <FormField label="Backupfrekvens">
+              <Input
+                value={form.backup_frequency}
+                onChange={(e) => set("backup_frequency", e.target.value)}
+                placeholder="t.ex. Dagligen, Timvis"
+              />
+            </FormField>
+
+            <FormField label="RPO (Recovery Point Objective)">
+              <Input
+                value={form.rpo}
+                onChange={(e) => set("rpo", e.target.value)}
+                placeholder="t.ex. 1 timme, 24 timmar"
+              />
+            </FormField>
+
+            <FormField label="RTO (Recovery Time Objective)">
+              <Input
+                value={form.rto}
+                onChange={(e) => set("rto", e.target.value)}
+                placeholder="t.ex. 4 timmar, 1 dygn"
+              />
+            </FormField>
+
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.dr_plan_exists}
+                  onChange={(e) => set("dr_plan_exists", e.target.checked)}
+                />
+                <span className="text-sm">DR-plan finns</span>
+              </label>
+            </div>
           </CardContent>
         </Card>
 
@@ -354,26 +548,111 @@ export default function SystemFormPage() {
           <CardHeader>
             <CardTitle>Compliance</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-input accent-primary"
-                checked={form.nis2_applicable}
-                onChange={(e) => set("nis2_applicable", e.target.checked)}
-              />
-              <span className="text-sm">NIS2-tillämplig</span>
-            </label>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.nis2_applicable}
+                  onChange={(e) => set("nis2_applicable", e.target.checked)}
+                />
+                <span className="text-sm">NIS2-tillämplig</span>
+              </label>
 
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-input accent-primary"
-                checked={form.treats_personal_data}
-                onChange={(e) => set("treats_personal_data", e.target.checked)}
-              />
-              <span className="text-sm">Behandlar personuppgifter</span>
-            </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.treats_personal_data}
+                  onChange={(e) => set("treats_personal_data", e.target.checked)}
+                />
+                <span className="text-sm">Behandlar personuppgifter</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.treats_sensitive_data}
+                  onChange={(e) => set("treats_sensitive_data", e.target.checked)}
+                />
+                <span className="text-sm">Behandlar känsliga personuppgifter (Art. 9)</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.third_country_transfer}
+                  onChange={(e) => set("third_country_transfer", e.target.checked)}
+                />
+                <span className="text-sm">Tredjelandsöverföring</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.has_elevated_protection}
+                  onChange={(e) => set("has_elevated_protection", e.target.checked)}
+                />
+                <span className="text-sm">Förhöjt skyddsbehov (MSBFS 2020:7)</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.security_protection}
+                  onChange={(e) => set("security_protection", e.target.checked)}
+                />
+                <span className="text-sm">Säkerhetsskyddsklassat</span>
+              </label>
+            </div>
+
+            {form.nis2_applicable && (
+              <FormField label="NIS2-klassificering">
+                <Select
+                  value={form.nis2_classification}
+                  onValueChange={(val) => set("nis2_classification", val as NIS2Classification)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Välj klassificering">
+                      {form.nis2_classification
+                        ? nis2ClassificationLabels[form.nis2_classification as NIS2Classification]
+                        : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NIS2Classification.ESSENTIAL}>
+                      {nis2ClassificationLabels[NIS2Classification.ESSENTIAL]}
+                    </SelectItem>
+                    <SelectItem value={NIS2Classification.IMPORTANT}>
+                      {nis2ClassificationLabels[NIS2Classification.IMPORTANT]}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField label="Senaste riskbedömning">
+                <Input
+                  type="date"
+                  value={form.last_risk_assessment_date}
+                  onChange={(e) => set("last_risk_assessment_date", e.target.value)}
+                />
+              </FormField>
+
+              <FormField label="KLASSA-referens-ID">
+                <Input
+                  value={form.klassa_reference_id}
+                  onChange={(e) => set("klassa_reference_id", e.target.value)}
+                  placeholder="KLASSA-referens-ID"
+                />
+              </FormField>
+            </div>
           </CardContent>
         </Card>
 

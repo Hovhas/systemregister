@@ -231,6 +231,29 @@ export interface SystemCreate {
   cloud_provider?: string
   nis2_applicable?: boolean
   treats_personal_data?: boolean
+  // Grundinformation
+  aliases?: string
+  // Driftmiljö
+  data_location_country?: string
+  product_name?: string
+  product_version?: string
+  // Livscykel
+  deployment_date?: string
+  planned_decommission_date?: string
+  end_of_support_date?: string
+  // Backup och DR
+  backup_frequency?: string
+  rpo?: string
+  rto?: string
+  dr_plan_exists?: boolean
+  // Compliance
+  nis2_classification?: NIS2Classification
+  treats_sensitive_data?: boolean
+  third_country_transfer?: boolean
+  has_elevated_protection?: boolean
+  security_protection?: boolean
+  last_risk_assessment_date?: string
+  klassa_reference_id?: string
 }
 
 export interface SystemUpdate {
@@ -244,6 +267,29 @@ export interface SystemUpdate {
   cloud_provider?: string
   nis2_applicable?: boolean
   treats_personal_data?: boolean
+  // Grundinformation
+  aliases?: string
+  // Driftmiljö
+  data_location_country?: string
+  product_name?: string
+  product_version?: string
+  // Livscykel
+  deployment_date?: string
+  planned_decommission_date?: string
+  end_of_support_date?: string
+  // Backup och DR
+  backup_frequency?: string
+  rpo?: string
+  rto?: string
+  dr_plan_exists?: boolean
+  // Compliance
+  nis2_classification?: NIS2Classification
+  treats_sensitive_data?: boolean
+  third_country_transfer?: boolean
+  has_elevated_protection?: boolean
+  security_protection?: boolean
+  last_risk_assessment_date?: string
+  klassa_reference_id?: string
 }
 
 // --- Integration Create ---
