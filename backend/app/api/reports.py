@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.models.models import Contract, GDPRTreatment, System, SystemClassification, SystemOwner
+from app.schemas import ComplianceGapResponse, NIS2ReportResponse
 
 router = APIRouter(prefix="/reports", tags=["Rapporter"])
 
@@ -30,7 +31,7 @@ async def _get_nis2_systems(db: AsyncSession) -> list[System]:
     return list(result.scalars().all())
 
 
-@router.get("/nis2")
+@router.get("/nis2", response_model=NIS2ReportResponse)
 async def nis2_report(db: AsyncSession = Depends(get_db)):
     """NIS2-compliance-rapport med sammanfattning och systemlista."""
     systems = await _get_nis2_systems(db)
@@ -368,7 +369,7 @@ async def _get_compliance_gap_data(db: AsyncSession) -> dict:
     }
 
 
-@router.get("/compliance-gap")
+@router.get("/compliance-gap", response_model=ComplianceGapResponse)
 async def compliance_gap(db: AsyncSession = Depends(get_db)):
     """Compliance-gap-analys — identifierar system med ofullstandig dokumentation."""
     return await _get_compliance_gap_data(db)

@@ -17,7 +17,7 @@ from app.schemas import (
 router = APIRouter(prefix="/systems", tags=["System"])
 
 
-@router.get("/", response_model=PaginatedResponse)
+@router.get("/", response_model=PaginatedResponse[SystemResponse])
 async def list_systems(
     q: str | None = Query(None, description="Fritextsökning i namn och beskrivning"),
     organization_id: UUID | None = Query(None),
@@ -72,7 +72,7 @@ async def list_systems(
     systems = result.scalars().all()
 
     return PaginatedResponse(
-        items=[SystemResponse.model_validate(s) for s in systems],
+        items=systems,
         total=total,
         limit=limit,
         offset=offset,

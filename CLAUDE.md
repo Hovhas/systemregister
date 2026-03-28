@@ -61,8 +61,8 @@ ROPA-koppling. Fält: id, system_id (FK), treats_personal_data (bool), data_cate
 ### contracts
 Avtal/leverantörer. Fält: id, system_id (FK), supplier_name, supplier_org_number, contract_id_external, contract_start, contract_end, sla_description, license_model, procurement_type.
 
-### compliance_status
-Regelefterlevnad. Fält: id, system_id (FK), nis2_applicable (bool), nis2_classification (enum), last_risk_assessment_date, risk_assessment_link, klassa_reference_id.
+### NIS2/compliance (på systems-tabellen)
+NIS2- och compliance-attribut lagras direkt på systems: nis2_applicable (bool), nis2_classification (enum), last_risk_assessment_date, klassa_reference_id.
 
 ### audit_log
 Ändringshistorik. Fält: id, table_name, record_id (UUID), action (enum: create/update/delete), changed_by, changed_at, old_values (JSONB), new_values (JSONB), ip_address.

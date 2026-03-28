@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from typing import Generic, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator
@@ -277,22 +278,11 @@ class SystemDetailResponse(SystemResponse):
     owners: list[OwnerResponse] = []
 
 
-# --- Sök/filter ---
-
-class SystemSearchParams(BaseModel):
-    q: str | None = None  # Fritext
-    organization_id: UUID | None = None
-    system_category: SystemCategory | None = None
-    lifecycle_status: LifecycleStatus | None = None
-    criticality: Criticality | None = None
-    nis2_applicable: bool | None = None
-    treats_personal_data: bool | None = None
-    limit: int = Field(default=50, le=200)
-    offset: int = Field(default=0, ge=0)
+T = TypeVar("T")
 
 
-class PaginatedResponse(BaseModel):
-    items: list
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
     total: int
     limit: int
     offset: int
@@ -439,7 +429,7 @@ class NIS2SystemEntry(BaseModel):
 
 
 class NIS2ReportSummary(BaseModel):
-    total_applicable: int
+    total: int
     without_classification: int
     without_risk_assessment: int
 
@@ -450,10 +440,20 @@ class NIS2ReportResponse(BaseModel):
     systems: list[NIS2SystemEntry]
 
 
+class ComplianceGaps(BaseModel):
+    """Kategoriserade gap-listor — matchar faktisk API-respons från _get_compliance_gap_data."""
+    missing_classification: list[dict]
+    missing_owner: list[dict]
+    personal_data_without_gdpr: list[dict]
+    nis2_without_risk_assessment: list[dict]
+    expiring_contracts: list[dict]
+
+
+class ComplianceGapSummary(BaseModel):
+    total_gaps: int
+
+
 class ComplianceGapResponse(BaseModel):
     generated_at: datetime
-    systems_without_classification: list[dict]
-    systems_without_owner: list[dict]
-    systems_with_personal_data_no_gdpr: list[dict]
-    nis2_systems_without_risk_assessment: list[dict]
-    contracts_expiring_soon: list[dict]
+    gaps: ComplianceGaps
+    summary: ComplianceGapSummary

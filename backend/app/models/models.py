@@ -101,17 +101,20 @@ class System(Base):
     # Relationships
     organization: Mapped["Organization"] = relationship(back_populates="systems")
     classifications: Mapped[list["SystemClassification"]] = relationship(
-        back_populates="system", order_by="desc(SystemClassification.classified_at)"
+        back_populates="system", order_by="desc(SystemClassification.classified_at)",
+        passive_deletes=True,
     )
-    owners: Mapped[list["SystemOwner"]] = relationship(back_populates="system")
+    owners: Mapped[list["SystemOwner"]] = relationship(back_populates="system", passive_deletes=True)
     integrations_out: Mapped[list["SystemIntegration"]] = relationship(
-        back_populates="source_system", foreign_keys="SystemIntegration.source_system_id"
+        back_populates="source_system", foreign_keys="SystemIntegration.source_system_id",
+        passive_deletes=True,
     )
     integrations_in: Mapped[list["SystemIntegration"]] = relationship(
-        back_populates="target_system", foreign_keys="SystemIntegration.target_system_id"
+        back_populates="target_system", foreign_keys="SystemIntegration.target_system_id",
+        passive_deletes=True,
     )
-    gdpr_treatments: Mapped[list["GDPRTreatment"]] = relationship(back_populates="system")
-    contracts: Mapped[list["Contract"]] = relationship(back_populates="system")
+    gdpr_treatments: Mapped[list["GDPRTreatment"]] = relationship(back_populates="system", passive_deletes=True)
+    contracts: Mapped[list["Contract"]] = relationship(back_populates="system", passive_deletes=True)
 
     __table_args__ = (
         Index("ix_systems_org_name", "organization_id", "name"),
@@ -169,7 +172,9 @@ class SystemIntegration(Base):
     data_types: Mapped[str | None] = mapped_column(Text)
     frequency: Mapped[str | None] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(Text)
-    criticality: Mapped[Criticality | None] = mapped_column(SAEnum(Criticality, name="integration_criticality", values_callable=lambda e: [x.value for x in e]))
+    criticality: Mapped[Criticality | None] = mapped_column(
+        SAEnum(Criticality, name="criticality", values_callable=lambda e: [x.value for x in e])
+    )
     is_external: Mapped[bool] = mapped_column(Boolean, default=False)  # MSBFS 2020:7 §4 p.2
     external_party: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
