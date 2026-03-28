@@ -5,7 +5,6 @@ from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.database import get_db
 from app.core.rls import get_rls_db
 from app.models import System, SystemClassification, SystemOwner
 from app.models.enums import SystemCategory, LifecycleStatus, Criticality
@@ -97,7 +96,7 @@ async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
 
 
 @router.post("/", response_model=SystemResponse, status_code=status.HTTP_201_CREATED)
-async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_db)):
+async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_db)):
     system = System(**data.model_dump())
     db.add(system)
     await db.flush()
@@ -106,7 +105,7 @@ async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/{system_id}", response_model=SystemResponse)
-async def update_system(system_id: UUID, data: SystemUpdate, db: AsyncSession = Depends(get_db)):
+async def update_system(system_id: UUID, data: SystemUpdate, db: AsyncSession = Depends(get_rls_db)):
     system = await db.get(System, system_id)
     if not system:
         raise HTTPException(status_code=404, detail="System hittades inte")
@@ -118,7 +117,7 @@ async def update_system(system_id: UUID, data: SystemUpdate, db: AsyncSession = 
 
 
 @router.delete("/{system_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
     system = await db.get(System, system_id)
     if not system:
         raise HTTPException(status_code=404, detail="System hittades inte")

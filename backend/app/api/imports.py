@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.rls import get_rls_db
 from app.models import System
 from app.models.enums import OwnerRole
 from app.models.models import Organization, SystemClassification, SystemOwner
@@ -137,7 +137,7 @@ async def _resolve_system(
 async def import_systems(
     organization_id: UUID = Query(..., description="Organisation att importera till"),
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """
     Importera system från Excel, CSV eller JSON.
@@ -199,7 +199,7 @@ async def import_systems(
 async def import_classifications(
     organization_id: UUID | None = Query(None, description="Begränsa systemuppslagning till organisation"),
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """
     Importera klassificeringar från Excel eller CSV.
@@ -268,7 +268,7 @@ _OWNER_ROLE_MAP = {role.value: role for role in OwnerRole}
 @router.post("/owners")
 async def import_owners(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """
     Importera systemägare från Excel eller CSV.
