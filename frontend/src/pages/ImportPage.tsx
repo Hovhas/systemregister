@@ -75,7 +75,9 @@ function ImportTabPanel({ type }: TabPanelProps) {
           <label className="text-sm font-medium">Organisation (obligatorisk)</label>
           <Select value={organizationId} onValueChange={(val) => setOrganizationId(val ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Välj organisation..." />
+              <SelectValue placeholder="Välj organisation...">
+                {organizations?.find((o) => o.id === organizationId)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {organizations?.map((org) => (

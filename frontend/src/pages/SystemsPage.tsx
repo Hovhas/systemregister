@@ -173,7 +173,9 @@ export default function SystemsPage() {
           }}
         >
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Kategori" />
+            <SelectValue placeholder="Kategori">
+              {category ? categoryLabels[category as SystemCategory] : undefined}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Alla kategorier</SelectItem>
@@ -193,7 +195,9 @@ export default function SystemsPage() {
           }}
         >
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Livscykelstatus" />
+            <SelectValue placeholder="Livscykelstatus">
+              {lifecycle ? lifecycleLabels[lifecycle as LifecycleStatus] : undefined}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Alla statusar</SelectItem>
@@ -213,7 +217,9 @@ export default function SystemsPage() {
           }}
         >
           <SelectTrigger className="w-36">
-            <SelectValue placeholder="Kritikalitet" />
+            <SelectValue placeholder="Kritikalitet">
+              {criticality ? criticalityLabels[criticality as Criticality] : undefined}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="">Alla nivåer</SelectItem>

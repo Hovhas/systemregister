@@ -221,7 +221,9 @@ export default function SystemFormPage() {
                 required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {organizations.find((o) => o.id === form.organization_id)?.name}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {organizations.map((org) => (
@@ -251,7 +253,9 @@ export default function SystemFormPage() {
                 onValueChange={(val) => set("system_category", val as SystemCategory)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {categoryLabels[form.system_category]}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(SystemCategory).map((cat) => (
@@ -285,7 +289,9 @@ export default function SystemFormPage() {
                 onValueChange={(val) => set("lifecycle_status", val as LifecycleStatus)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {lifecycleLabels[form.lifecycle_status]}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(LifecycleStatus).map((s) => (
@@ -303,7 +309,9 @@ export default function SystemFormPage() {
                 onValueChange={(val) => set("criticality", val as Criticality)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {criticalityLabels[form.criticality]}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(Criticality).map((c) => (
