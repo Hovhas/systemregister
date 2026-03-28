@@ -614,8 +614,8 @@ export default function SystemFormPage() {
             {form.nis2_applicable && (
               <FormField label="NIS2-klassificering">
                 <Select
-                  value={form.nis2_classification}
-                  onValueChange={(val) => set("nis2_classification", val as NIS2Classification)}
+                  value={form.nis2_classification || undefined}
+                  onValueChange={(val) => set("nis2_classification", (val as NIS2Classification) || "")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Välj klassificering">
