@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { AlertTriangleIcon } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -22,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getExpiringContracts } from "@/lib/api"
+import type { ExpiringContract } from "@/types"
 
 // ---------------------------------------------------------------------------
 // Typer
@@ -146,6 +149,11 @@ export default function DashboardPage() {
       getSystemStats(selectedOrg !== "alla" ? selectedOrg : undefined),
   })
 
+  const { data: expiringContracts } = useQuery<ExpiringContract[]>({
+    queryKey: ["expiring-contracts"],
+    queryFn: () => getExpiringContracts(90),
+  })
+
   const total = stats?.total_systems ?? 0
 
   const kritiskCount = stats?.by_criticality?.["kritisk"] ?? 0
@@ -191,6 +199,75 @@ export default function DashboardPage() {
           Kunde inte hämta statistik. Kontrollera att API:et är tillgängligt.
         </p>
       )}
+
+      {/* Utgående avtal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangleIcon className="size-4 text-amber-500" />
+            Avtal som går ut inom 90 dagar
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!expiringContracts || expiringContracts.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Inga avtal som går ut snart
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Leverantör</TableHead>
+                  <TableHead>System</TableHead>
+                  <TableHead>Slutdatum</TableHead>
+                  <TableHead className="text-right">Dagar kvar</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {expiringContracts.map((contract) => {
+                  const isUrgent = contract.days_remaining < 30
+                  const isWarning = contract.days_remaining < 90
+                  return (
+                    <TableRow
+                      key={contract.id}
+                      className={
+                        isUrgent
+                          ? "bg-red-50 dark:bg-red-950/20"
+                          : isWarning
+                            ? "bg-orange-50 dark:bg-orange-950/20"
+                            : ""
+                      }
+                    >
+                      <TableCell className="font-medium">
+                        {contract.supplier_name}
+                      </TableCell>
+                      <TableCell>{contract.system_name}</TableCell>
+                      <TableCell>
+                        {new Date(contract.contract_end).toLocaleDateString(
+                          "sv-SE"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge
+                          variant={
+                            isUrgent
+                              ? "destructive"
+                              : isWarning
+                                ? "default"
+                                : "outline"
+                          }
+                        >
+                          {contract.days_remaining} dagar
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {stats && (
         <>

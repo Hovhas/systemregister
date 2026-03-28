@@ -385,6 +385,37 @@ export interface OrganizationUpdate {
   parent_org_id?: string | null
 }
 
+// --- Audit ---
+
+export interface AuditEntry {
+  id: string
+  table_name: string
+  record_id: string
+  action: "INSERT" | "UPDATE" | "DELETE"
+  changed_by: string | null
+  changed_at: string
+  old_values: Record<string, unknown> | null
+  new_values: Record<string, unknown> | null
+}
+
+export interface AuditResponse {
+  items: AuditEntry[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// --- Utgående avtal ---
+
+export interface ExpiringContract {
+  id: string
+  system_id: string
+  system_name: string
+  supplier_name: string
+  contract_end: string
+  days_remaining: number
+}
+
 // --- Skapa-typer ---
 
 export interface ClassificationCreate {

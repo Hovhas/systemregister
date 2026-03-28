@@ -23,6 +23,8 @@ import type {
   SystemSearchParams,
   IntegrationSearchParams,
   NotificationsResponse,
+  ExpiringContract,
+  AuditResponse,
 } from "@/types"
 
 const api = axios.create({
@@ -213,6 +215,25 @@ export async function importFile(
   const res = await api.post<ImportResult>(`/import/${type}${params}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   })
+  return res.data
+}
+
+// --- Utgående avtal ---
+
+export async function getExpiringContracts(days = 90): Promise<ExpiringContract[]> {
+  const res = await api.get<ExpiringContract[]>("/contracts/expiring", { params: { days } })
+  return res.data
+}
+
+// --- Audit-logg ---
+
+export async function getAuditLog(params?: {
+  table_name?: string
+  action?: string
+  limit?: number
+  offset?: number
+}): Promise<AuditResponse> {
+  const res = await api.get<AuditResponse>("/audit/", { params })
   return res.data
 }
 

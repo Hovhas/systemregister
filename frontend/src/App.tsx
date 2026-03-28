@@ -15,6 +15,7 @@ import {
   FileTextIcon,
   BellIcon,
   BuildingIcon,
+  ClipboardListIcon,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
@@ -36,6 +37,7 @@ import ImportPage from "@/pages/ImportPage"
 import ReportsPage from "@/pages/ReportsPage"
 import NotificationsPage from "@/pages/NotificationsPage"
 import OrganizationsPage from "@/pages/OrganizationsPage"
+import AuditPage from "@/pages/AuditPage"
 
 // --- Notifikationsklockla ---
 
@@ -74,6 +76,7 @@ const navItems = [
   { to: "/notifications", label: "Notifikationer", icon: BellIcon },
   { to: "/import", label: "Import", icon: UploadIcon },
   { to: "/reports", label: "Rapporter", icon: FileTextIcon },
+  { to: "/audit", label: "Ändringslogg", icon: ClipboardListIcon },
 ]
 
 // --- Sidofält (desktop) ---
@@ -193,6 +196,7 @@ export default function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/audit" element={<AuditPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>
