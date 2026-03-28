@@ -108,4 +108,6 @@ if STATIC_DIR.is_dir():
             from fastapi.responses import JSONResponse
             return JSONResponse(status_code=404, content={"detail": "Not found"})
         # Allt annat → SPA index.html
-        return FileResponse(STATIC_DIR / "index.html")
+        response = FileResponse(STATIC_DIR / "index.html")
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
