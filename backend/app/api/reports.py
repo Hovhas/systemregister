@@ -16,7 +16,7 @@ from app.schemas import ComplianceGapResponse, NIS2ReportResponse
 router = APIRouter(prefix="/reports", tags=["Rapporter"])
 
 
-async def _get_nis2_systems(db: AsyncSession) -> list[System]:
+async def _get_nis2_systems(db: AsyncSession, organization_id: UUID | None = None) -> list[System]:
     stmt = (
         select(System)
         .where(System.nis2_applicable == True)  # noqa: E712
@@ -27,14 +27,19 @@ async def _get_nis2_systems(db: AsyncSession) -> list[System]:
         )
         .order_by(System.name)
     )
+    if organization_id:
+        stmt = stmt.where(System.organization_id == organization_id)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
 @router.get("/nis2", response_model=NIS2ReportResponse)
-async def nis2_report(db: AsyncSession = Depends(get_db)):
+async def nis2_report(
+    organization_id: UUID | None = Query(None, description="Filtrera per organisation"),
+    db: AsyncSession = Depends(get_db),
+):
     """NIS2-compliance-rapport med sammanfattning och systemlista."""
-    systems = await _get_nis2_systems(db)
+    systems = await _get_nis2_systems(db, organization_id)
 
     without_classification = sum(1 for s in systems if s.nis2_classification is None)
     without_risk_assessment = sum(1 for s in systems if s.last_risk_assessment_date is None)

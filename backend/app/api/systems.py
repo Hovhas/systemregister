@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, or_, cast, String
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -26,6 +26,7 @@ async def list_systems(
     criticality: Criticality | None = Query(None),
     nis2_applicable: bool | None = Query(None),
     treats_personal_data: bool | None = Query(None),
+    hosting_model: str | None = Query(None, description="Filter på driftmodell (on-premise, cloud, hybrid)"),
     extended_search: str | None = Query(None, description="Sök i extended_attributes (JSONB)"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -35,7 +36,12 @@ async def list_systems(
 
     # Filters
     if q:
-        search = f"%{q}%"
+        # Sanitera söksträng — null bytes crashar PostgreSQL
+        q_clean = q.replace("\x00", "")
+        if not q_clean:
+            # Söksträng bestod enbart av null bytes — returnera tomt resultat direkt
+            return PaginatedResponse(items=[], total=0, limit=limit, offset=offset)
+        search = f"%{q_clean}%"
         stmt = stmt.where(
             or_(
                 System.name.ilike(search),
@@ -56,6 +62,8 @@ async def list_systems(
         stmt = stmt.where(System.nis2_applicable == nis2_applicable)
     if treats_personal_data is not None:
         stmt = stmt.where(System.treats_personal_data == treats_personal_data)
+    if hosting_model:
+        stmt = stmt.where(System.hosting_model == hosting_model)
     if extended_search:
         # Textsökning i JSONB — cast till text och sök med ILIKE
         stmt = stmt.where(
@@ -86,6 +94,7 @@ async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
         .options(
             selectinload(System.classifications),
             selectinload(System.owners),
+            selectinload(System.gdpr_treatments),
         )
         .where(System.id == system_id)
     )
@@ -108,6 +117,14 @@ async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_d
             status_code=422,
             detail="Organisationen finns inte eller databaskonflikt"
         )
+    except ProgrammingError as e:
+        await db.rollback()
+        if "row-level security" in str(e).lower() or "insufficient_privilege" in str(e).lower():
+            raise HTTPException(
+                status_code=403,
+                detail="Åtkomst nekad: systemet tillhör en annan organisation"
+            )
+        raise
     await db.refresh(system)
     return system
 

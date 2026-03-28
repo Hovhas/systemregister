@@ -44,7 +44,11 @@ TEST_DATABASE_URL = os.getenv(
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     """Create async engine for the test database (session-scoped)."""
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    engine = create_async_engine(
+        TEST_DATABASE_URL, echo=False,
+        pool_size=20, max_overflow=10,
+        pool_pre_ping=True, pool_recycle=300, pool_timeout=30,
+    )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -110,6 +114,13 @@ async def test_engine():
         ]:
             await conn.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;"))
             await conn.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;"))
+
+        # Drop existing policies first (idempotent setup)
+        for table in [
+            "systems", "system_owners", "system_classifications",
+            "system_integrations", "gdpr_treatments", "contracts",
+        ]:
+            await conn.execute(text(f"DROP POLICY IF EXISTS org_isolation ON {table};"))
 
         # Policies med NULL-bypass: utan org-context ser man allt (bypass-mode)
         await conn.execute(text("""

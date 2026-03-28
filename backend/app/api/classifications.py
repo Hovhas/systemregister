@@ -32,6 +32,19 @@ async def create_classification(
     db.add(classification)
     await db.flush()
     await db.refresh(classification)
+
+    # MSBFS 2020:7: Auto-flagga förhöjt skyddsbehov vid K/R/T >= 3
+    if (
+        classification.confidentiality >= 3
+        or classification.integrity >= 3
+        or classification.availability >= 3
+    ):
+        from app.models.models import System
+        system = await db.get(System, system_id)
+        if system and not system.has_elevated_protection:
+            system.has_elevated_protection = True
+            await db.flush()
+
     return classification
 
 

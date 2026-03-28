@@ -2,11 +2,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models import Organization
-from app.schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse
+from app.schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse, SystemResponse
 
 router = APIRouter(prefix="/organizations", tags=["Organisationer"])
 
@@ -29,7 +30,11 @@ async def get_organization(org_id: UUID, db: AsyncSession = Depends(get_db)):
 async def create_organization(data: OrganizationCreate, db: AsyncSession = Depends(get_db)):
     org = Organization(**data.model_dump())
     db.add(org)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Organisation med detta org-nummer finns redan")
     await db.refresh(org)
     return org
 
@@ -44,6 +49,19 @@ async def update_organization(org_id: UUID, data: OrganizationUpdate, db: AsyncS
     await db.flush()
     await db.refresh(org)
     return org
+
+
+@router.get("/{org_id}/systems", response_model=list[SystemResponse])
+async def list_organization_systems(org_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Hämta alla system för en organisation."""
+    from app.models import System
+    org = await db.get(Organization, org_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation hittades inte")
+    result = await db.execute(
+        select(System).where(System.organization_id == org_id).order_by(System.name)
+    )
+    return result.scalars().all()
 
 
 @router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)

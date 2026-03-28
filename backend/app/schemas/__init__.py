@@ -16,8 +16,12 @@ class SafeStringMixin(BaseModel):
     def reject_null_bytes_all_fields(cls, data):
         if isinstance(data, dict):
             for key, value in data.items():
-                if isinstance(value, str) and "\x00" in value:
-                    raise ValueError(f"Null-tecken (\\x00) är inte tillåtna i fältet '{key}'")
+                if isinstance(value, str):
+                    if "\x00" in value:
+                        raise ValueError(f"Null-tecken (\\x00) är inte tillåtna i fältet '{key}'")
+                    # Avvisa strängar som enbart består av whitespace i namnfält
+                    if key == "name" and value and not value.strip():
+                        raise ValueError(f"Fältet '{key}' får inte enbart innehålla blanksteg")
         return data
 
 
@@ -32,7 +36,7 @@ class OrganizationCreate(SafeStringMixin):
 
 
 class OrganizationUpdate(SafeStringMixin):
-    name: str | None = Field(None, max_length=255)
+    name: str | None = Field(None, min_length=1, max_length=255)
     org_number: str | None = Field(None, max_length=20)
     org_type: OrganizationType | None = None
     parent_org_id: UUID | None = None
@@ -95,7 +99,7 @@ class SystemCreate(SafeStringMixin):
 
 
 class SystemUpdate(BaseModel):
-    name: str | None = Field(None, max_length=255)
+    name: str | None = Field(None, min_length=1, max_length=255)
     aliases: str | None = None
     description: str | None = None
     system_category: SystemCategory | None = None
@@ -124,6 +128,8 @@ class SystemUpdate(BaseModel):
     last_risk_assessment_date: date | None = None
     klassa_reference_id: str | None = None
     extended_attributes: dict | None = None
+    last_reviewed_by: str | None = None
+    last_reviewed_at: datetime | None = None
 
 
 class ClassificationCreate(BaseModel):
@@ -276,6 +282,7 @@ class SystemDetailResponse(SystemResponse):
     """Systemrespons med inkluderade relationer."""
     classifications: list[ClassificationResponse] = []
     owners: list[OwnerResponse] = []
+    gdpr_treatments: list["GDPRTreatmentResponse"] = []
 
 
 T = TypeVar("T")
@@ -350,11 +357,11 @@ class ContractCreate(SafeStringMixin):
     contract_start: date | None = None
     contract_end: date | None = None
     auto_renewal: bool = False
-    notice_period_months: int | None = None
+    notice_period_months: int | None = Field(None, ge=0)
     sla_description: str | None = None
     license_model: str | None = Field(None, max_length=100)
-    annual_license_cost: int | None = None
-    annual_operations_cost: int | None = None
+    annual_license_cost: int | None = Field(None, ge=0)
+    annual_operations_cost: int | None = Field(None, ge=0)
     procurement_type: str | None = Field(None, max_length=100)
     support_level: str | None = Field(None, max_length=255)
 
@@ -374,11 +381,11 @@ class ContractUpdate(BaseModel):
     contract_start: date | None = None
     contract_end: date | None = None
     auto_renewal: bool | None = None
-    notice_period_months: int | None = None
+    notice_period_months: int | None = Field(None, ge=0)
     sla_description: str | None = None
     license_model: str | None = Field(None, max_length=100)
-    annual_license_cost: int | None = None
-    annual_operations_cost: int | None = None
+    annual_license_cost: int | None = Field(None, ge=0)
+    annual_operations_cost: int | None = Field(None, ge=0)
     procurement_type: str | None = Field(None, max_length=100)
     support_level: str | None = Field(None, max_length=255)
 

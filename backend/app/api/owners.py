@@ -92,3 +92,20 @@ async def delete_owner(
         raise HTTPException(status_code=404, detail="Owner not found")
     await db.delete(owner)
     await db.flush()
+
+
+@router.delete(
+    "/systems/{system_id}/owners/{owner_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_owner_from_system(
+    system_id: UUID,
+    owner_id: UUID,
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """Remove an owner from a specific system (verifiera att ägaren tillhör systemet)."""
+    owner = await db.get(SystemOwner, owner_id)
+    if not owner or owner.system_id != system_id:
+        raise HTTPException(status_code=404, detail="Owner not found")
+    await db.delete(owner)
+    await db.flush()

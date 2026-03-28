@@ -71,7 +71,12 @@ def _rows_from_csv(content: bytes) -> list[dict]:
 
 
 def _rows_from_json(content: bytes) -> list[dict]:
-    data = json.loads(content.decode("utf-8"))
+    try:
+        data = json.loads(content.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Ogiltig JSON-syntax: {exc}"
+        )
     if not isinstance(data, list):
         raise HTTPException(
             status_code=422, detail="JSON måste vara en array av objekt."

@@ -83,13 +83,14 @@ async def get_notifications(
             "system_id": str(s.id),
         })
 
-    # 5. Klassningar äldre än 12 månader
+    # 5. Klassningar äldre än 12 månader eller med passerat valid_until (MSBFS 2020:6 §14)
     twelve_months_ago = datetime.now(timezone.utc) - timedelta(days=365)
-    from sqlalchemy import and_  # noqa: F401
+    from sqlalchemy import and_, or_ as sa_or  # noqa: F401
     subq = (
         select(
             SystemClassification.system_id,
-            func.max(SystemClassification.classified_at).label("latest")
+            func.max(SystemClassification.classified_at).label("latest"),
+            func.min(SystemClassification.valid_until).label("earliest_valid_until")
         )
         .group_by(SystemClassification.system_id)
         .subquery()
@@ -97,7 +98,15 @@ async def get_notifications(
     stmt_stale = (
         select(System)
         .join(subq, System.id == subq.c.system_id)
-        .where(subq.c.latest < twelve_months_ago)
+        .where(
+            sa_or(
+                subq.c.latest < twelve_months_ago,
+                and_(
+                    subq.c.earliest_valid_until.is_not(None),
+                    subq.c.earliest_valid_until < today,
+                )
+            )
+        )
     )
     result = await db.execute(stmt_stale)
     for s in result.scalars().all():
@@ -105,7 +114,23 @@ async def get_notifications(
             "type": "stale_classification",
             "severity": "info",
             "title": f"{s.name} behöver omklassas",
-            "description": "Senaste klassning är äldre än 12 månader",
+            "description": "Senaste klassning är äldre än 12 månader eller har passerat giltighetsdatum",
+            "system_id": str(s.id),
+        })
+
+    # 6. NIS2-system utan riskbedömning (NIS2 Art. 21)
+    stmt_nis2 = (
+        select(System)
+        .where(System.nis2_applicable == True)  # noqa: E712
+        .where(System.last_risk_assessment_date == None)  # noqa: E711
+    )
+    result_nis2 = await db.execute(stmt_nis2)
+    for s in result_nis2.scalars().all():
+        notifications.append({
+            "type": "missing_risk_assessment",
+            "severity": "warning",
+            "title": f"{s.name} saknar riskbedömning",
+            "description": "NIS2-tillämpligt system utan registrerad riskbedömning",
             "system_id": str(s.id),
         })
 
