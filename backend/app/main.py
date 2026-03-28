@@ -103,11 +103,16 @@ if STATIC_DIR.is_dir():
 
     @app.exception_handler(404)
     async def spa_fallback(request, exc):
+        path = request.url.path
         # API-requests → JSON 404
-        if request.url.path.startswith("/api/"):
+        if path.startswith("/api/"):
             from fastapi.responses import JSONResponse
             return JSONResponse(status_code=404, content={"detail": "Not found"})
-        # Allt annat → SPA index.html
+        # Statiska filer som inte finns → riktig 404 (inte index.html)
+        if path.startswith("/assets/") or "." in path.split("/")[-1]:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=404, content={"detail": "Not found"})
+        # SPA-routes → index.html
         response = FileResponse(STATIC_DIR / "index.html")
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response
