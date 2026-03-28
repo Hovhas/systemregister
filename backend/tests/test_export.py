@@ -33,8 +33,8 @@ async def create_org(client, name: str = "Sundsvalls kommun", org_number: str = 
     return resp.json()
 
 
-async def create_system(client, org_id: str, name: str) -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name}
+async def create_system(client, org_id: str, name: str, **kwargs) -> dict:
+    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name, **kwargs}
     resp = await client.post("/api/v1/systems/", json=payload)
     assert resp.status_code == 201, f"System creation failed: {resp.text}"
     return resp.json()
@@ -248,3 +248,276 @@ async def test_export_sorted_by_name(client):
     data = resp.json()
     names = [row["name"] for row in data]
     assert names == sorted(names), f"Export should be sorted by name, got: {names}"
+
+
+# ---------------------------------------------------------------------------
+# Utökade exporttester — Kategori 8
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_export_csv_parses_all_rows(client):
+    """CSV-export innehåller en rad per system, inga extra rader."""
+    org = await create_org(client, name="CSVParseOrg", org_number="111222-3333")
+    for i in range(3):
+        await create_system(client, org["id"], f"CSV Row Sys {i}")
+
+    resp = await client.get("/api/v1/export/systems.csv", params={"organization_id": org["id"]})
+    assert resp.status_code == 200
+
+    reader = csv.DictReader(io.StringIO(resp.text))
+    rows = list(reader)
+    assert len(rows) == 3, f"Förväntade 3 rader, fick {len(rows)}"
+
+
+@pytest.mark.asyncio
+async def test_export_csv_contains_expected_columns(client):
+    """CSV-exporten innehåller alla förväntade kolumner."""
+    org = await create_org(client, name="ColCheckOrg", org_number="555666-7777")
+    await create_system(client, org["id"], "ColCheckSys")
+
+    resp = await client.get("/api/v1/export/systems.csv")
+    assert resp.status_code == 200
+
+    reader = csv.DictReader(io.StringIO(resp.text))
+    list(reader)  # consume rows
+    fieldnames = reader.fieldnames or []
+
+    expected_cols = ["name", "system_category", "criticality", "lifecycle_status"]
+    for col in expected_cols:
+        assert col in fieldnames, f"Kolumn '{col}' saknas i CSV-exporten"
+
+
+@pytest.mark.asyncio
+async def test_export_json_contains_required_fields(client):
+    """JSON-exporterade objekt innehåller alla nödvändiga fält."""
+    org = await create_org(client, name="JSONFieldOrg", org_number="888999-0000")
+    await create_system(client, org["id"], "JSONFieldSys")
+
+    resp = await client.get("/api/v1/export/systems.json")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) >= 1
+
+    first = data[0]
+    required_fields = ["id", "name", "system_category", "criticality",
+                       "lifecycle_status", "organization_id", "created_at"]
+    for field in required_fields:
+        assert field in first, f"Fält '{field}' saknas i JSON-exporten"
+
+
+@pytest.mark.asyncio
+async def test_export_json_nis2_fields_present(client):
+    """JSON-export innehåller NIS2-relaterade fält."""
+    org = await create_org(client, name="NIS2ExportOrg", org_number="100200-3004")
+    await create_system(client, org["id"], "NIS2ExportSys")
+
+    resp = await client.get("/api/v1/export/systems.json")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) >= 1
+
+    first = data[0]
+    nis2_fields = ["nis2_applicable", "nis2_classification"]
+    for field in nis2_fields:
+        assert field in first, f"NIS2-fält '{field}' saknas i JSON-exporten"
+
+
+@pytest.mark.asyncio
+async def test_export_json_gdpr_fields_present(client):
+    """JSON-export innehåller GDPR-relaterade flaggor."""
+    org = await create_org(client, name="GDPRExportOrg", org_number="100200-3005")
+    await create_system(client, org["id"], "GDPRExportSys")
+
+    resp = await client.get("/api/v1/export/systems.json")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) >= 1
+
+    first = data[0]
+    gdpr_fields = ["treats_personal_data", "treats_sensitive_data"]
+    for field in gdpr_fields:
+        assert field in first, f"GDPR-fält '{field}' saknas i JSON-exporten"
+
+
+@pytest.mark.asyncio
+async def test_export_xlsx_org_filter(client):
+    """XLSX-export med organization_id filter returnerar enbart org:s system."""
+    org1 = await create_org(client, name="XLSXOrgA", org_number="XA1-001")
+    org2 = await create_org(client, name="XLSXOrgB", org_number="XB2-002")
+
+    await create_system(client, org1["id"], "XLSX Org1 Sys")
+    await create_system(client, org2["id"], "XLSX Org2 Sys")
+
+    resp = await client.get("/api/v1/export/systems.xlsx",
+                             params={"organization_id": org1["id"]})
+    assert resp.status_code == 200
+
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        pytest.skip("openpyxl not installed")
+
+    wb = load_workbook(filename=io.BytesIO(resp.content))
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+
+    assert len(rows) >= 2, "Skall ha minst header + 1 datarad"
+    # Verifiera att enbart Org1:s system finns
+    header = list(rows[0])
+    name_idx = header.index("name") if "name" in header else None
+    if name_idx is not None:
+        data_names = [row[name_idx] for row in rows[1:] if row[name_idx]]
+        assert "XLSX Org1 Sys" in data_names
+        assert "XLSX Org2 Sys" not in data_names
+
+
+@pytest.mark.asyncio
+async def test_export_xlsx_empty_database(client):
+    """XLSX-export med tom databas returnerar fil med enbart header-rad."""
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        pytest.skip("openpyxl not installed")
+
+    resp = await client.get("/api/v1/export/systems.xlsx")
+    assert resp.status_code == 200
+
+    wb = load_workbook(filename=io.BytesIO(resp.content))
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+
+    # Skall ha header-rad men inga datarader
+    assert len(rows) >= 1, "XLSX skall alltid ha header-rad"
+
+
+@pytest.mark.asyncio
+async def test_export_json_invalid_org_filter_returns_empty(client):
+    """JSON-export med okänt organization_id returnerar tom lista."""
+    fake_org = "00000000-0000-0000-0000-000000000000"
+    resp = await client.get("/api/v1/export/systems.json",
+                             params={"organization_id": fake_org})
+    assert resp.status_code == 200
+    assert resp.json() == [], "Okänt organization_id borde ge tom lista"
+
+
+@pytest.mark.asyncio
+async def test_export_csv_invalid_org_filter_returns_header_only(client):
+    """CSV-export med okänt organization_id returnerar enbart header-rad."""
+    fake_org = "00000000-0000-0000-0000-000000000000"
+    resp = await client.get("/api/v1/export/systems.csv",
+                             params={"organization_id": fake_org})
+    assert resp.status_code == 200
+
+    reader = csv.DictReader(io.StringIO(resp.text))
+    rows = list(reader)
+    assert rows == [], "Okänt org_id i CSV-filter borde ge inga rader"
+
+
+@pytest.mark.asyncio
+async def test_export_json_large_dataset(client):
+    """JSON-export hanterar dataset med 50 system."""
+    org = await create_org(client, name="LargeExportOrg", org_number="LRG-001")
+    for i in range(50):
+        await create_system(client, org["id"], f"LargeExportSys {i:03d}")
+
+    resp = await client.get("/api/v1/export/systems.json",
+                             params={"organization_id": org["id"]})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 50, f"Förväntade 50 system, fick {len(data)}"
+
+
+@pytest.mark.asyncio
+async def test_export_csv_large_dataset(client):
+    """CSV-export hanterar dataset med 50 system."""
+    org = await create_org(client, name="LargeCSVOrg", org_number="LCV-002")
+    for i in range(50):
+        await create_system(client, org["id"], f"LargeCSVSys {i:03d}")
+
+    resp = await client.get("/api/v1/export/systems.csv",
+                             params={"organization_id": org["id"]})
+    assert resp.status_code == 200
+
+    reader = csv.DictReader(io.StringIO(resp.text))
+    rows = list(reader)
+    assert len(rows) == 50, f"Förväntade 50 rader i CSV, fick {len(rows)}"
+
+
+@pytest.mark.asyncio
+async def test_export_json_system_with_all_flags(client):
+    """JSON-export av system med alla flaggor satta exporterar korrekt."""
+    org = await create_org(client, name="FlagExportOrg", org_number="FLAG-001")
+    await create_system(client, org["id"], "FlagExportSys",
+                        criticality="kritisk",
+                        lifecycle_status="i_drift",
+                        nis2_applicable=True,
+                        nis2_classification="väsentlig",
+                        treats_personal_data=True,
+                        treats_sensitive_data=True,
+                        third_country_transfer=True,
+                        has_elevated_protection=True)
+
+    resp = await client.get("/api/v1/export/systems.json",
+                             params={"organization_id": org["id"]})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+
+    sys = data[0]
+    assert sys["criticality"] == "kritisk"
+    assert sys["nis2_applicable"] is True
+    assert sys["treats_personal_data"] is True
+
+
+@pytest.mark.asyncio
+async def test_export_content_type_json(client):
+    """JSON-export har korrekt Content-Type."""
+    resp = await client.get("/api/v1/export/systems.json")
+    assert resp.status_code == 200
+    content_type = resp.headers.get("content-type", "")
+    assert "json" in content_type, f"Förväntade JSON content-type, fick: {content_type}"
+
+
+@pytest.mark.asyncio
+async def test_export_xlsx_content_type(client):
+    """XLSX-export har korrekt Content-Type."""
+    resp = await client.get("/api/v1/export/systems.xlsx")
+    assert resp.status_code == 200
+    content_type = resp.headers.get("content-type", "")
+    assert "spreadsheetml" in content_type or "openxmlformats" in content_type, (
+        f"Förväntade XLSX content-type, fick: {content_type}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_export_csv_unicode_in_names(client):
+    """CSV-export hanterar svenska tecken och specialtecken korrekt."""
+    org = await create_org(client, name="ÅÄÖ Org", org_number="AAO-001")
+    await create_system(client, org["id"], "Åäö System med specialtecken éàü",
+                        description="Beskrivning med specialtecken")
+
+    resp = await client.get("/api/v1/export/systems.csv",
+                             params={"organization_id": org["id"]})
+    assert resp.status_code == 200
+
+    reader = csv.DictReader(io.StringIO(resp.text))
+    rows = list(reader)
+    assert len(rows) == 1
+    assert "Åäö" in rows[0]["name"]
+
+
+@pytest.mark.asyncio
+async def test_export_json_multi_org_no_filter_returns_all(client):
+    """JSON-export utan org-filter returnerar system från alla orgs."""
+    org_a = await create_org(client, name="MultiExportA", org_number="MEA-001")
+    org_b = await create_org(client, name="MultiExportB", org_number="MEB-002")
+
+    sys_a = await create_system(client, org_a["id"], "MultiExportSysA")
+    sys_b = await create_system(client, org_b["id"], "MultiExportSysB")
+
+    resp = await client.get("/api/v1/export/systems.json")
+    assert resp.status_code == 200
+    ids = [s["id"] for s in resp.json()]
+    assert sys_a["id"] in ids
+    assert sys_b["id"] in ids

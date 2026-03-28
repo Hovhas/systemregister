@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator, field_validator
 
 from app.models.enums import (
     OrganizationType, SystemCategory, LifecycleStatus, Criticality,
@@ -9,10 +9,21 @@ from app.models.enums import (
 )
 
 
+class SafeStringMixin(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def reject_null_bytes_all_fields(cls, data):
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, str) and "\x00" in value:
+                    raise ValueError(f"Null-tecken (\\x00) är inte tillåtna i fältet '{key}'")
+        return data
+
+
 # --- Organization ---
 
-class OrganizationCreate(BaseModel):
-    name: str = Field(max_length=255)
+class OrganizationCreate(SafeStringMixin):
+    name: str = Field(min_length=1, max_length=255)
     org_number: str | None = Field(None, max_length=20)
     org_type: OrganizationType
     parent_org_id: UUID | None = None
@@ -42,9 +53,9 @@ class OrganizationResponse(BaseModel):
 
 # --- System ---
 
-class SystemCreate(BaseModel):
+class SystemCreate(SafeStringMixin):
     organization_id: UUID
-    name: str = Field(max_length=255)
+    name: str = Field(min_length=1, max_length=255)
     aliases: str | None = None
     description: str
     system_category: SystemCategory
@@ -120,7 +131,7 @@ class ClassificationCreate(BaseModel):
     integrity: int = Field(ge=0, le=4)
     availability: int = Field(ge=0, le=4)
     traceability: int | None = Field(None, ge=0, le=4)
-    classified_by: str = Field(max_length=255)
+    classified_by: str = Field(min_length=1, max_length=255)
     valid_until: date | None = None
     notes: str | None = None
 
@@ -140,13 +151,20 @@ class ClassificationResponse(BaseModel):
     notes: str | None
 
 
-class OwnerCreate(BaseModel):
+class OwnerCreate(SafeStringMixin):
     system_id: UUID
     organization_id: UUID
     role: OwnerRole
-    name: str = Field(max_length=255)
+    name: str = Field(min_length=1, max_length=255)
     email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=50)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def validate_email_length(cls, v):
+        if v is not None and len(v) > 255:
+            raise ValueError("Email får inte överstiga 255 tecken")
+        return v
 
 
 class OwnerUpdate(BaseModel):
@@ -337,8 +355,8 @@ class GDPRTreatmentResponse(BaseModel):
 
 # --- Contract ---
 
-class ContractCreate(BaseModel):
-    supplier_name: str = Field(max_length=255)
+class ContractCreate(SafeStringMixin):
+    supplier_name: str = Field(min_length=1, max_length=255)
     supplier_org_number: str | None = Field(None, max_length=20)
     contract_id_external: str | None = Field(None, max_length=100)
     contract_start: date | None = None

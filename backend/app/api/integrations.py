@@ -5,6 +5,7 @@ from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rls import get_rls_db
 from app.models import System, SystemIntegration
 from app.models.enums import IntegrationType
 from app.schemas import IntegrationCreate, IntegrationUpdate, IntegrationResponse
@@ -32,6 +33,12 @@ async def create_integration(
     await _get_system_or_404(data.source_system_id, db)
     await _get_system_or_404(data.target_system_id, db)
 
+    if data.source_system_id == data.target_system_id:
+        raise HTTPException(
+            status_code=422,
+            detail="source_system_id och target_system_id kan inte vara samma system"
+        )
+
     integration = SystemIntegration(**data.model_dump())
     db.add(integration)
     await db.flush()
@@ -43,7 +50,7 @@ async def create_integration(
 async def list_integrations(
     system_id: UUID | None = Query(None, description="Filter by source or target system"),
     integration_type: IntegrationType | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """List all integrations, optionally filtered by system or type."""
     stmt = select(SystemIntegration)
@@ -66,7 +73,7 @@ async def list_integrations(
 @router.get("/{integration_id}", response_model=IntegrationResponse)
 async def get_integration(
     integration_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """Get a single integration by ID."""
     integration = await db.get(SystemIntegration, integration_id)
@@ -113,7 +120,7 @@ async def delete_integration(
 )
 async def list_system_integrations(
     system_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """List all integrations for a system (both inbound and outbound)."""
     await _get_system_or_404(system_id, db)

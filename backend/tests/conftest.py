@@ -21,12 +21,19 @@ import os
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
+from fastapi import Header
 from app.core.database import Base, get_db
+from app.core.rls import get_rls_db
+from app.core.audit import register_audit_listeners
 from app.main import app as fastapi_app
 # Import all models so Base.metadata is populated
 import app.models.models  # noqa: F401
+
+# Register audit listeners (lifespan may not run in test mode)
+register_audit_listeners()
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -41,6 +48,132 @@ async def test_engine():
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Skapa icke-superuser roll + ge grants (krävs för att RLS ska enforças)
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'systemregister_app') THEN
+                    CREATE ROLE systemregister_app WITH LOGIN PASSWORD 'devpassword'
+                        NOBYPASSRLS NOSUPERUSER;
+                END IF;
+            END
+            $$;
+        """))
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO systemregister_app"))
+        await conn.execute(text("GRANT ALL ON ALL TABLES IN SCHEMA public TO systemregister_app"))
+        await conn.execute(text("GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO systemregister_app"))
+        await conn.execute(text("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO systemregister_app"))
+
+    # RLS-funktioner och policies (från alembic/versions/0001_enable_rls_multi_org.py)
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+            CREATE OR REPLACE FUNCTION set_org_context(p_org_id UUID)
+            RETURNS void
+            LANGUAGE plpgsql
+            SECURITY DEFINER
+            AS $$
+            BEGIN
+                PERFORM set_config('app.current_org_id', p_org_id::text, true);
+            END;
+            $$;
+        """))
+
+        await conn.execute(text("""
+            CREATE OR REPLACE FUNCTION current_org_id()
+            RETURNS UUID
+            LANGUAGE plpgsql
+            STABLE
+            AS $$
+            DECLARE
+                v_setting text;
+            BEGIN
+                v_setting := current_setting('app.current_org_id', true);
+                IF v_setting IS NULL OR v_setting = '' THEN
+                    RETURN NULL;
+                END IF;
+                RETURN v_setting::UUID;
+            EXCEPTION WHEN others THEN
+                RETURN NULL;
+            END;
+            $$;
+        """))
+
+        for table in [
+            "systems",
+            "system_owners",
+            "system_classifications",
+            "system_integrations",
+            "gdpr_treatments",
+            "contracts",
+        ]:
+            await conn.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;"))
+            await conn.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;"))
+
+        # Policies med NULL-bypass: utan org-context ser man allt (bypass-mode)
+        await conn.execute(text("""
+            CREATE POLICY org_isolation ON systems
+            AS PERMISSIVE FOR ALL TO PUBLIC
+            USING (current_org_id() IS NULL OR organization_id = current_org_id());
+        """))
+
+        await conn.execute(text("""
+            CREATE POLICY org_isolation ON system_owners
+            AS PERMISSIVE FOR ALL TO PUBLIC
+            USING (current_org_id() IS NULL OR organization_id = current_org_id());
+        """))
+
+        await conn.execute(text("""
+            CREATE POLICY org_isolation ON system_classifications
+            AS PERMISSIVE FOR ALL TO PUBLIC
+            USING (
+                current_org_id() IS NULL OR EXISTS (
+                    SELECT 1 FROM systems s
+                    WHERE s.id = system_classifications.system_id
+                      AND s.organization_id = current_org_id()
+                )
+            );
+        """))
+
+        await conn.execute(text("""
+            CREATE POLICY org_isolation ON system_integrations
+            AS PERMISSIVE FOR ALL TO PUBLIC
+            USING (
+                current_org_id() IS NULL OR EXISTS (
+                    SELECT 1 FROM systems s
+                    WHERE s.organization_id = current_org_id()
+                      AND (
+                          s.id = system_integrations.source_system_id
+                       OR s.id = system_integrations.target_system_id
+                      )
+                )
+            );
+        """))
+
+        await conn.execute(text("""
+            CREATE POLICY org_isolation ON gdpr_treatments
+            AS PERMISSIVE FOR ALL TO PUBLIC
+            USING (
+                current_org_id() IS NULL OR EXISTS (
+                    SELECT 1 FROM systems s
+                    WHERE s.id = gdpr_treatments.system_id
+                      AND s.organization_id = current_org_id()
+                )
+            );
+        """))
+
+        await conn.execute(text("""
+            CREATE POLICY org_isolation ON contracts
+            AS PERMISSIVE FOR ALL TO PUBLIC
+            USING (
+                current_org_id() IS NULL OR EXISTS (
+                    SELECT 1 FROM systems s
+                    WHERE s.id = contracts.system_id
+                      AND s.organization_id = current_org_id()
+                )
+            );
+        """))
 
     yield engine
 
@@ -84,12 +217,45 @@ async def client(db_session: AsyncSession):
     async def override_get_db():
         try:
             yield db_session
-            await db_session.flush()
+            await db_session.flush()      # Primär data + triggar audit
+            await db_session.flush()      # Sparar audit-entries
         except Exception:
             await db_session.rollback()
             raise
 
+    async def override_get_rls_db(
+        x_organization_id: str | None = Header(default=None),
+    ):
+        # Byt till icke-superuser så RLS policies enforças
+        if x_organization_id:
+            try:
+                import uuid as _uuid
+                _uuid.UUID(x_organization_id)  # Validera UUID-format
+            except ValueError:
+                from fastapi import HTTPException
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Ogiltigt UUID i X-Organization-Id: {x_organization_id!r}",
+                )
+            await db_session.execute(text("SET LOCAL ROLE systemregister_app"))
+            await db_session.execute(
+                text("SELECT set_org_context(CAST(:org_id AS uuid))"),
+                {"org_id": x_organization_id},
+            )
+        try:
+            yield db_session
+            await db_session.flush()      # Primär data + triggar audit
+            await db_session.flush()      # Sparar audit-entries
+        except Exception:
+            await db_session.rollback()
+            raise
+        finally:
+            # Återställ till superuser
+            if x_organization_id:
+                await db_session.execute(text("RESET ROLE"))
+
     fastapi_app.dependency_overrides[get_db] = override_get_db
+    fastapi_app.dependency_overrides[get_rls_db] = override_get_rls_db
 
     async with AsyncClient(
         transport=ASGITransport(app=fastapi_app),

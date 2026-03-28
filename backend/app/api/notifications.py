@@ -1,17 +1,22 @@
 from datetime import date, datetime, timedelta, timezone
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.rls import get_rls_db
 from app.models.models import System, SystemClassification, SystemOwner, Contract
 
 router = APIRouter(prefix="/notifications", tags=["Notifieringar"])
 
 
 @router.get("/")
-async def get_notifications(db: AsyncSession = Depends(get_db)):
+async def get_notifications(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_rls_db),
+):
     """Returnerar aktiva varningar/notifieringar."""
     notifications = []
     today = date.today()
@@ -110,7 +115,9 @@ async def get_notifications(db: AsyncSession = Depends(get_db)):
         by_severity[n["severity"]] = by_severity.get(n["severity"], 0) + 1
 
     return {
+        "items": notifications[offset:offset + limit],
         "total": len(notifications),
+        "limit": limit,
+        "offset": offset,
         "by_severity": by_severity,
-        "notifications": notifications,
     }

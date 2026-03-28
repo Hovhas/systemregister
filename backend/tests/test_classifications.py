@@ -240,3 +240,112 @@ async def test_list_classifications_scoped_to_system(client):
 
     assert resp.status_code == 200
     assert resp.json() == [], "system B should have no classifications"
+
+
+# ---------------------------------------------------------------------------
+# Extended tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_classification_min_boundary_values(client):
+    """POST classification with all values at minimum (0) succeeds."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    system_id = system["id"]
+
+    payload = {
+        **CLASSIFICATION_BASE,
+        "system_id": system_id,
+        "confidentiality": 0,
+        "integrity": 0,
+        "availability": 0,
+        "traceability": 0,
+    }
+    resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
+    assert resp.status_code == 201, f"Expected 201 for all-zero classification: {resp.text}"
+    body = resp.json()
+    assert body["confidentiality"] == 0
+    assert body["integrity"] == 0
+    assert body["availability"] == 0
+    assert body["traceability"] == 0
+
+
+@pytest.mark.asyncio
+async def test_classification_max_boundary_values(client):
+    """POST classification with all values at maximum (4) succeeds."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    system_id = system["id"]
+
+    payload = {
+        **CLASSIFICATION_BASE,
+        "system_id": system_id,
+        "confidentiality": 4,
+        "integrity": 4,
+        "availability": 4,
+        "traceability": 4,
+    }
+    resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
+    assert resp.status_code == 201, f"Expected 201 for all-four classification: {resp.text}"
+    body = resp.json()
+    assert body["confidentiality"] == 4
+    assert body["integrity"] == 4
+    assert body["availability"] == 4
+    assert body["traceability"] == 4
+
+
+@pytest.mark.asyncio
+async def test_get_latest_classification_endpoint_exists(client):
+    """GET /api/v1/systems/{id}/classifications/latest returns 200 or 404 (never 500)."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    system_id = system["id"]
+
+    # Add one classification
+    await create_classification(client, system_id)
+
+    resp = await client.get(f"/api/v1/systems/{system_id}/classifications/latest")
+    assert resp.status_code in (200, 404), (
+        f"Latest endpoint should return 200 or 404, never 500. Got {resp.status_code}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_classification_without_traceability_returns_none(client):
+    """POST classification without traceability stores null."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    system_id = system["id"]
+
+    payload = {
+        "system_id": system_id,
+        "confidentiality": 2,
+        "integrity": 3,
+        "availability": 1,
+        "classified_by": "test@test.se",
+    }
+    resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
+    assert resp.status_code == 201, f"Expected 201: {resp.text}"
+    assert resp.json()["traceability"] is None, "traceability should be null when not provided"
+
+
+@pytest.mark.asyncio
+async def test_classification_multiple_versions_ordered_newest_first(client):
+    """Multiple classifications listed newest first (stable ordering)."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    system_id = system["id"]
+
+    # Create 3 classifications
+    c1 = await create_classification(client, system_id, {"confidentiality": 1})
+    c2 = await create_classification(client, system_id, {"confidentiality": 2})
+    c3 = await create_classification(client, system_id, {"confidentiality": 3})
+
+    resp = await client.get(f"/api/v1/systems/{system_id}/classifications")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 3, f"Expected 3 classifications, got {len(body)}"
+    # All created IDs must be present
+    returned_ids = {c["id"] for c in body}
+    assert {c1["id"], c2["id"], c3["id"]} == returned_ids

@@ -36,7 +36,14 @@ async def create_owner(
 
     owner = SystemOwner(**payload)
     db.add(owner)
-    await db.flush()
+    try:
+        await db.flush()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Ägare med samma roll och namn finns redan för detta system",
+        )
     await db.refresh(owner)
     return owner
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeftIcon, PencilIcon, TrashIcon } from "lucide-react"
 
-import { getSystem, deleteSystem } from "@/lib/api"
+import { getSystem, deleteSystem, getOrganizations } from "@/lib/api"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { Criticality, LifecycleStatus, SystemCategory } from "@/types"
 import type { Classification, Owner, Integration } from "@/types"
@@ -265,7 +265,7 @@ function KlassningTab({ classifications }: { classifications: Classification[] }
   )
 }
 
-function AgareTab({ owners }: { owners: Owner[] }) {
+function AgareTab({ owners, orgNameMap }: { owners: Owner[]; orgNameMap: Record<string, string> }) {
   if (owners.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-4">
@@ -298,7 +298,7 @@ function AgareTab({ owners }: { owners: Owner[] }) {
                 {owner.email ?? "—"}
               </TableCell>
               <TableCell className="text-muted-foreground text-xs">
-                {owner.organization_id}
+                {orgNameMap[owner.organization_id] ?? owner.organization_id}
               </TableCell>
             </TableRow>
           ))}
@@ -470,6 +470,14 @@ export default function SystemDetailPage() {
 
   const { data: system, isLoading, isError } = useSystemDetail(id ?? "")
 
+  const { data: orgs } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: getOrganizations,
+  })
+  const orgNameMap = Object.fromEntries(
+    (orgs ?? []).map((o) => [o.id, o.name])
+  )
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteSystem(system!.id),
     onSuccess: () => {
@@ -589,7 +597,7 @@ export default function SystemDetailPage() {
         </TabsContent>
 
         <TabsContent value="agare" className="mt-4">
-          <AgareTab owners={system.owners} />
+          <AgareTab owners={system.owners} orgNameMap={orgNameMap} />
         </TabsContent>
 
         <TabsContent value="integrationer" className="mt-4">

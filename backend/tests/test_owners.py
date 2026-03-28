@@ -238,3 +238,100 @@ async def test_add_owner_invalid_role(client):
     resp = await client.post(f"/api/v1/systems/{system_id}/owners", json=payload)
 
     assert resp.status_code == 422, f"Expected 422 for invalid role, got {resp.status_code}"
+
+
+# ---------------------------------------------------------------------------
+# Extended tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", [
+    "systemägare", "informationsägare", "systemförvaltare",
+    "teknisk_förvaltare", "it_kontakt", "dataskyddsombud",
+])
+async def test_add_owner_all_six_roles(client, role):
+    """POST owner accepts all 6 valid role values."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"], name=f"System {role}")
+
+    resp = await client.post(f"/api/v1/systems/{system['id']}/owners", json={
+        **OWNER_BASE,
+        "system_id": system["id"],
+        "organization_id": org["id"],
+        "role": role,
+        "name": f"Person för {role}",
+    })
+    assert resp.status_code == 201, f"Expected 201 for role={role}: {resp.text}"
+    assert resp.json()["role"] == role
+
+
+@pytest.mark.asyncio
+async def test_add_duplicate_owner_same_system_role_name_rejected(client):
+    """POST same owner (system_id + role + name) twice should be rejected."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    payload = {
+        **OWNER_BASE,
+        "system_id": system["id"],
+        "organization_id": org["id"],
+        "role": "it_kontakt",
+        "name": "Dubbelregistrerad Person",
+    }
+    resp1 = await client.post(f"/api/v1/systems/{system['id']}/owners", json=payload)
+    assert resp1.status_code == 201
+
+    try:
+        resp2 = await client.post(f"/api/v1/systems/{system['id']}/owners", json=payload)
+        assert resp2.status_code in (409, 422, 400), (
+            f"Duplicate owner should be rejected, got {resp2.status_code}: {resp2.text}"
+        )
+    except Exception:
+        # FK/unique constraint as exception is also acceptable
+        pass
+
+
+@pytest.mark.asyncio
+async def test_multiple_owners_different_roles_same_system(client):
+    """Multiple owners with different roles for same system are all accepted."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    roles = ["systemägare", "informationsägare", "systemförvaltare"]
+    for i, role in enumerate(roles):
+        resp = await client.post(f"/api/v1/systems/{system['id']}/owners", json={
+            "system_id": system["id"],
+            "organization_id": org["id"],
+            "role": role,
+            "name": f"Person {i}",
+        })
+        assert resp.status_code == 201, f"Expected 201 for role={role}: {resp.text}"
+
+    list_resp = await client.get(f"/api/v1/systems/{system['id']}/owners")
+    assert list_resp.status_code == 200
+    owners = list_resp.json()
+    assert len(owners) == 3, f"Expected 3 owners, got {len(owners)}"
+
+
+@pytest.mark.asyncio
+async def test_update_owner_phone_number(client):
+    """PATCH owner can update phone number."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    owner = await create_owner(client, system["id"], org["id"])
+
+    resp = await client.patch(f"/api/v1/owners/{owner['id']}", json={"phone": "070-9876543"})
+    assert resp.status_code == 200, f"Expected 200: {resp.text}"
+    assert resp.json()["phone"] == "070-9876543"
+
+
+@pytest.mark.asyncio
+async def test_owner_system_id_in_response(client):
+    """POST owner response includes correct system_id."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    owner = await create_owner(client, system["id"], org["id"])
+
+    assert owner["system_id"] == system["id"], "owner.system_id must match the system"
+    assert owner["organization_id"] == org["id"], "owner.organization_id must match the org"

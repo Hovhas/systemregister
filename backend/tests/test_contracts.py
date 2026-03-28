@@ -319,3 +319,118 @@ async def test_contracts_scoped_to_system(client):
     resp = await client.get(f"/api/v1/systems/{system_b['id']}/contracts")
     assert resp.status_code == 200
     assert resp.json() == [], "System B should have no contracts"
+
+
+# ---------------------------------------------------------------------------
+# Extended tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_expiring_contracts_today_boundary(client):
+    """GET /api/v1/contracts/expiring?days=1 includes contracts expiring today."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    today = date.today()
+    contract = await create_contract(
+        client, system["id"],
+        {"supplier_name": "Today Expiry AB", "contract_end": today.isoformat()}
+    )
+
+    resp = await client.get("/api/v1/contracts/expiring?days=1")
+    assert resp.status_code == 200
+    ids = [c["id"] for c in resp.json()]
+    # Contract ending today should be included in 1-day window
+    assert contract["id"] in ids, "Contract expiring today should appear in 1-day window"
+
+
+@pytest.mark.asyncio
+async def test_expiring_contracts_no_end_date_excluded(client):
+    """Contracts without contract_end date should not appear in expiring list."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    contract_no_end = await create_contract(
+        client, system["id"],
+        {"supplier_name": "No End Date AB"}
+    )
+    assert contract_no_end["contract_end"] is None
+
+    resp = await client.get("/api/v1/contracts/expiring?days=365")
+    assert resp.status_code == 200
+    ids = [c["id"] for c in resp.json()]
+    assert contract_no_end["id"] not in ids, (
+        "Contract with no end date should not appear in expiring list"
+    )
+
+
+@pytest.mark.asyncio
+async def test_expiring_contracts_large_days_window(client):
+    """GET /api/v1/contracts/expiring?days=3650 returns contracts in 10-year window."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    far_future = (date.today() + timedelta(days=3000)).isoformat()
+    contract = await create_contract(
+        client, system["id"],
+        {"supplier_name": "Far Future AB", "contract_end": far_future}
+    )
+
+    resp = await client.get("/api/v1/contracts/expiring?days=3650")
+    assert resp.status_code == 200
+    ids = [c["id"] for c in resp.json()]
+    assert contract["id"] in ids, "Contract within 10-year window should be included"
+
+
+@pytest.mark.asyncio
+async def test_contract_auto_renewal_true(client):
+    """POST contract with auto_renewal=True stores and retrieves correctly."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    resp = await client.post(f"/api/v1/systems/{system['id']}/contracts", json={
+        "supplier_name": "Auto Renewal AB",
+        "auto_renewal": True,
+        "notice_period_months": 12,
+    })
+    assert resp.status_code == 201, f"Expected 201: {resp.text}"
+    body = resp.json()
+    assert body["auto_renewal"] is True
+    assert body["notice_period_months"] == 12
+
+
+@pytest.mark.asyncio
+async def test_contract_notice_period_zero_boundary(client):
+    """POST contract with notice_period_months=0 — check if accepted or rejected."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    resp = await client.post(f"/api/v1/systems/{system['id']}/contracts", json={
+        "supplier_name": "Zero Notice AB",
+        "notice_period_months": 0,
+    })
+    # 0 may be valid or invalid — just not 500
+    assert resp.status_code in (201, 422), (
+        f"notice_period_months=0 should return 201 or 422, got {resp.status_code}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_expiring_contracts_response_includes_system_id(client):
+    """Contracts in expiring list include system_id for context."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    expiring = (date.today() + timedelta(days=15)).isoformat()
+    contract = await create_contract(
+        client, system["id"],
+        {"supplier_name": "Response Fields AB", "contract_end": expiring}
+    )
+
+    resp = await client.get("/api/v1/contracts/expiring?days=30")
+    assert resp.status_code == 200
+    matching = [c for c in resp.json() if c["id"] == contract["id"]]
+    assert len(matching) == 1
+    assert "system_id" in matching[0], "Expiring contract response must include system_id"
+    assert matching[0]["system_id"] == system["id"]

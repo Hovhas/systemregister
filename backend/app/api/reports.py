@@ -5,7 +5,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import HTMLResponse, StreamingResponse
 from openpyxl import Workbook
-from weasyprint import HTML as WeasyHTML
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -278,6 +277,7 @@ async def nis2_report_html(db: AsyncSession = Depends(get_db)):
 @router.get("/nis2.pdf")
 async def nis2_report_pdf(db: AsyncSession = Depends(get_db)):
     """NIS2-compliance-rapport som PDF."""
+    from weasyprint import HTML as WeasyHTML
     systems = await _get_nis2_systems(db)
     html = _render_nis2_html(systems)
     pdf_bytes = WeasyHTML(string=html).write_pdf()
@@ -377,6 +377,7 @@ async def compliance_gap(db: AsyncSession = Depends(get_db)):
 @router.get("/compliance-gap.pdf")
 async def compliance_gap_pdf(db: AsyncSession = Depends(get_db)):
     """Compliance-gap-rapport som PDF."""
+    from weasyprint import HTML as WeasyHTML
     gap_data = await _get_compliance_gap_data(db)
     html = _render_compliance_gap_html(gap_data)
     pdf_bytes = WeasyHTML(string=html).write_pdf()

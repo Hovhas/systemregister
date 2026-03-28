@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.rls import get_rls_db
 from app.models import System, SystemClassification, SystemOwner
 from app.models.enums import SystemCategory, LifecycleStatus, Criticality
 from app.schemas import (
@@ -28,7 +29,7 @@ async def list_systems(
     extended_search: str | None = Query(None, description="Sök i extended_attributes (JSONB)"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     stmt = select(System)
 
@@ -79,7 +80,7 @@ async def list_systems(
 
 
 @router.get("/{system_id}", response_model=SystemDetailResponse)
-async def get_system(system_id: UUID, db: AsyncSession = Depends(get_db)):
+async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
     stmt = (
         select(System)
         .options(
@@ -121,7 +122,10 @@ async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_db)):
     system = await db.get(System, system_id)
     if not system:
         raise HTTPException(status_code=404, detail="System hittades inte")
-    await db.delete(system)
+    # Kör DELETE via SQL istället för session.delete() så att
+    # ON DELETE CASCADE i DB triggas korrekt
+    from sqlalchemy import delete as sa_delete
+    await db.execute(sa_delete(System).where(System.id == system_id))
     await db.flush()
 
 
@@ -130,7 +134,7 @@ async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_db)):
 @router.get("/stats/overview")
 async def system_stats(
     organization_id: UUID | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """KPI:er för dashboard."""
     base = select(System)

@@ -9,24 +9,44 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rls import get_rls_db
 from app.models import System
 
 router = APIRouter(prefix="/export", tags=["Export"])
 
 EXPORT_COLUMNS = [
+    "id",
+    "organization_id",
     "name",
+    "aliases",
     "description",
     "system_category",
-    "criticality",
-    "lifecycle_status",
     "business_area",
+    "criticality",
+    "has_elevated_protection",
+    "security_protection",
+    "nis2_applicable",
+    "nis2_classification",
+    "treats_personal_data",
+    "treats_sensitive_data",
+    "third_country_transfer",
     "hosting_model",
     "cloud_provider",
-    "nis2_applicable",
-    "treats_personal_data",
+    "data_location_country",
     "product_name",
     "product_version",
+    "lifecycle_status",
     "deployment_date",
+    "planned_decommission_date",
+    "end_of_support_date",
+    "backup_frequency",
+    "rpo",
+    "rto",
+    "dr_plan_exists",
+    "last_risk_assessment_date",
+    "klassa_reference_id",
+    "created_at",
+    "updated_at",
 ]
 
 
@@ -47,6 +67,8 @@ def _row_values(system: System) -> list:
         # Enum → value-sträng
         if hasattr(val, "value"):
             val = val.value
+        elif isinstance(val, UUID):
+            val = str(val)
         values.append(val)
     return values
 
@@ -54,7 +76,7 @@ def _row_values(system: System) -> list:
 @router.get("/systems.xlsx")
 async def export_systems_xlsx(
     organization_id: UUID | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """Exportera system som Excel-fil (.xlsx)."""
     from openpyxl import Workbook
@@ -90,7 +112,7 @@ async def export_systems_xlsx(
 @router.get("/systems.csv")
 async def export_systems_csv(
     organization_id: UUID | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """Exportera system som CSV-fil."""
     systems = await _fetch_systems(db, organization_id)
@@ -119,7 +141,7 @@ async def export_systems_csv(
 @router.get("/systems.json")
 async def export_systems_json(
     organization_id: UUID | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """Exportera system som JSON-array."""
     systems = await _fetch_systems(db, organization_id)
@@ -131,6 +153,8 @@ async def export_systems_json(
             val = getattr(system, col)
             if hasattr(val, "value"):
                 val = val.value
+            elif isinstance(val, UUID):
+                val = str(val)
             elif hasattr(val, "isoformat"):
                 val = val.isoformat()
             row[col] = val

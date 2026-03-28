@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models import System
 from app.models.enums import OwnerRole
-from app.models.models import SystemClassification, SystemOwner
+from app.models.models import Organization, SystemClassification, SystemOwner
 from app.schemas import SystemCreate
 
 router = APIRouter(prefix="/import", tags=["Import"])
@@ -145,6 +145,10 @@ async def import_systems(
     - Skippar rader där name+organization_id redan finns (ingen upsert).
     - Returnerar antal importerade + lista med valideringsfel per rad.
     """
+    org = await db.get(Organization, organization_id)
+    if not org:
+        raise HTTPException(status_code=404, detail=f"Organisation {organization_id} finns inte")
+
     fmt = _detect_format(file.filename or "", file.content_type)
     content = await file.read()
 

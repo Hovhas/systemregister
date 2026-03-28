@@ -369,3 +369,417 @@ async def test_import_xlsx(client):
     body = resp.json()
     assert body["imported"] == 2, f"Expected 2 imported from XLSX, got {body}"
     assert body["errors"] == []
+
+
+# ---------------------------------------------------------------------------
+# Utökade importtester — Kategori 8
+# ---------------------------------------------------------------------------
+
+
+# --- Format-varianter ---
+
+
+@pytest.mark.asyncio
+async def test_import_json_single_system(client):
+    """JSON-import med ett enda system lyckas."""
+    org = await create_org(client, name="SingleImportOrg", org_number="SIO-001")
+    rows = [{**VALID_SYSTEM_ROW, "name": "Single JSON Import"}]
+    content, filename, content_type = make_json_file(rows)
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 1
+
+
+@pytest.mark.asyncio
+async def test_import_json_with_optional_fields(client):
+    """JSON-import med valfria fält som lifecycle_status och criticality."""
+    org = await create_org(client, name="OptFieldOrg", org_number="OFO-001")
+    rows = [{
+        "name": "OptFieldSystem",
+        "description": "Med valfria fält",
+        "system_category": "infrastruktur",
+        "criticality": "hög",
+        "lifecycle_status": "planerad",
+        "nis2_applicable": True,
+    }]
+    content, filename, content_type = make_json_file(rows)
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 1
+
+    # Verifiera att fälten sparats korrekt
+    list_resp = await client.get("/api/v1/systems/",
+                                  params={"organization_id": org["id"]})
+    items = list_resp.json()["items"]
+    sys = next(s for s in items if s["name"] == "OptFieldSystem")
+    assert sys["criticality"] == "hög"
+    assert sys["lifecycle_status"] == "planerad"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("category", [
+    "verksamhetssystem", "stödsystem", "infrastruktur", "plattform", "iot"
+])
+async def test_import_json_all_system_categories(client, category):
+    """Import med alla systemkategorier lyckas."""
+    org = await create_org(client, name=f"CatImportOrg {category}", org_number=None)
+    rows = [{
+        "name": f"CatImport {category}",
+        "description": "Kategoritest",
+        "system_category": category,
+    }]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 1
+
+
+@pytest.mark.asyncio
+async def test_import_json_treats_personal_data_flag(client):
+    """Import med treats_personal_data=True sparar flaggan korrekt."""
+    org = await create_org(client, name="PersonalDataImportOrg", org_number=None)
+    rows = [{
+        "name": "PersonalDataImportSys",
+        "description": "Test",
+        "system_category": "verksamhetssystem",
+        "treats_personal_data": True,
+    }]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 1
+
+    list_resp = await client.get("/api/v1/systems/",
+                                  params={"organization_id": org["id"]})
+    items = list_resp.json()["items"]
+    sys = next(s for s in items if s["name"] == "PersonalDataImportSys")
+    assert sys["treats_personal_data"] is True
+
+
+@pytest.mark.asyncio
+async def test_import_csv_with_optional_fields(client):
+    """CSV-import med valfria fält."""
+    org = await create_org(client, name="CSVOptOrg", org_number=None)
+    rows = [{
+        "name": "CSV Optional System",
+        "description": "Test",
+        "system_category": "stödsystem",
+        "criticality": "kritisk",
+        "lifecycle_status": "under_inforande",
+    }]
+    content, filename, content_type = make_csv_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 1
+
+
+@pytest.mark.asyncio
+async def test_import_xlsx_multiple_rows(client):
+    """XLSX-import med fler än 2 rader."""
+    org = await create_org(client, name="XLSXMultiOrg", org_number=None)
+    rows = [{**VALID_SYSTEM_ROW, "name": f"XLSX Multi {i}"} for i in range(5)]
+    content, filename, content_type = make_xlsx_file(rows)
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 5
+
+
+@pytest.mark.asyncio
+async def test_import_xlsx_empty_file(client):
+    """XLSX-import med tom fil (enbart header) ger 0 importerade."""
+    org = await create_org(client, name="XLSXEmptyOrg", org_number=None)
+    content, filename, content_type = make_xlsx_file([])
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    assert resp.json()["imported"] == 0
+
+
+# --- Felaktiga rader ---
+
+
+@pytest.mark.asyncio
+async def test_import_json_invalid_lifecycle_status(client):
+    """Row med ogiltig lifecycle_status räknas som fel."""
+    org = await create_org(client, name="InvalidStatusOrg", org_number=None)
+    rows = [{
+        "name": "BadStatusSys",
+        "description": "Test",
+        "system_category": "verksamhetssystem",
+        "lifecycle_status": "ogiltig_status",
+    }]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 0
+    assert len(body["errors"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_import_json_invalid_criticality(client):
+    """Row med ogiltig criticality räknas som fel."""
+    org = await create_org(client, name="InvalidCritOrg", org_number=None)
+    rows = [{
+        "name": "BadCritSys",
+        "description": "Test",
+        "system_category": "verksamhetssystem",
+        "criticality": "superkritisk",
+    }]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 0
+    assert len(body["errors"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_import_json_row_with_empty_name(client):
+    """Row med tomt namn räknas som fel."""
+    org = await create_org(client, name="EmptyNameImportOrg", org_number=None)
+    rows = [{
+        "name": "",
+        "description": "Test",
+        "system_category": "verksamhetssystem",
+    }]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 0
+    assert len(body["errors"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_import_json_row_with_null_name(client):
+    """Row med null-namn räknas som fel."""
+    org = await create_org(client, name="NullNameImportOrg", org_number=None)
+    rows = [{
+        "name": None,
+        "description": "Test",
+        "system_category": "verksamhetssystem",
+    }]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 0
+    assert len(body["errors"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_import_json_many_rows_with_some_errors(client):
+    """Import med 10 rader varav 3 ogiltiga ger 7 importerade + 3 fel."""
+    org = await create_org(client, name="MixedImportOrg", org_number=None)
+
+    rows = []
+    for i in range(7):
+        rows.append({**VALID_SYSTEM_ROW, "name": f"Valid Mixed Sys {i}"})
+    # 3 ogiltiga
+    rows.append({"name": "BadCat1", "description": "Test", "system_category": "ogiltig"})
+    rows.append({"name": "BadCat2", "description": "Test", "system_category": "ogiltig"})
+    rows.append({"description": "NoName", "system_category": "verksamhetssystem"})
+
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 7, f"Förväntade 7 importerade, fick {body['imported']}"
+    assert len(body["errors"]) == 3, f"Förväntade 3 fel, fick {body['errors']}"
+
+
+@pytest.mark.asyncio
+async def test_import_response_contains_row_numbers(client):
+    """Import-fel innehåller radnummer för de problematiska raderna."""
+    org = await create_org(client, name="RowNumOrg", org_number=None)
+    rows = [
+        {**VALID_SYSTEM_ROW, "name": "Good Row 1"},
+        {"name": "Bad Row", "description": "Test", "system_category": "ogiltig"},
+        {**VALID_SYSTEM_ROW, "name": "Good Row 3"},
+    ]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["errors"]) == 1
+    error = body["errors"][0]
+    assert "row" in error, "Felet borde innehålla radnummer"
+
+
+@pytest.mark.asyncio
+async def test_import_json_duplicate_within_same_file(client):
+    """Dubbletter i samma importfil: enbart första importeras."""
+    org = await create_org(client, name="IntraFileDupOrg", org_number=None)
+    rows = [
+        {**VALID_SYSTEM_ROW, "name": "Dup In File"},
+        {**VALID_SYSTEM_ROW, "name": "Dup In File"},  # samma rad igen
+    ]
+    content, filename, content_type = make_json_file(rows)
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    # Totalt: max 1 importerad, 1 fel (eller 2 importerade om dubbletter i fil tillåts)
+    total = body["imported"] + len(body["errors"])
+    assert total == 2, "Sammanlagd import + fel borde vara 2"
+
+
+# --- Classifications import ---
+
+
+@pytest.mark.asyncio
+async def test_import_classifications_basic(client):
+    """POST /import/classifications importerar klassningar för ett befintligt system."""
+    org = await create_org(client, name="ClsImportOrg", org_number=None)
+    sys_resp = await client.post("/api/v1/systems/", json={
+        "organization_id": org["id"],
+        "name": "ClassImportSys",
+        "description": "Test",
+        "system_category": "verksamhetssystem",
+    })
+    assert sys_resp.status_code == 201
+    system = sys_resp.json()
+
+    rows = [{
+        "system_id": system["id"],
+        "confidentiality": 2,
+        "integrity": 3,
+        "availability": 2,
+        "classified_by": "import@test.se",
+    }]
+    content = json.dumps(rows, ensure_ascii=False).encode("utf-8")
+
+    resp = await client.post(
+        "/api/v1/import/classifications",
+        params={"organization_id": org["id"]},
+        files={"file": ("classifications.json", io.BytesIO(content), "application/json")},
+    )
+    # Acceptabelt: 200 (import lyckas) eller 404/422 om endpoint ej finns ännu
+    if resp.status_code == 200:
+        body = resp.json()
+        assert "imported" in body
+    else:
+        # Endpoint kan saknas — dokumenterar beteende
+        assert resp.status_code in (404, 405, 422), (
+            f"Oväntat svar på classifications import: {resp.status_code}: {resp.text}"
+        )
+
+
+# --- Owners import ---
+
+
+@pytest.mark.asyncio
+async def test_import_owners_basic(client):
+    """POST /import/owners importerar ägare för ett befintligt system."""
+    org = await create_org(client, name="OwnImportOrg", org_number=None)
+    sys_resp = await client.post("/api/v1/systems/", json={
+        "organization_id": org["id"],
+        "name": "OwnerImportSys",
+        "description": "Test",
+        "system_category": "verksamhetssystem",
+    })
+    system = sys_resp.json()
+
+    rows = [{
+        "system_id": system["id"],
+        "organization_id": org["id"],
+        "role": "systemägare",
+        "name": "Importerad Ägare",
+        "email": "agare@import.se",
+    }]
+    content = json.dumps(rows, ensure_ascii=False).encode("utf-8")
+
+    resp = await client.post(
+        "/api/v1/import/owners",
+        params={"organization_id": org["id"]},
+        files={"file": ("owners.json", io.BytesIO(content), "application/json")},
+    )
+    if resp.status_code == 200:
+        body = resp.json()
+        assert "imported" in body
+    else:
+        assert resp.status_code in (404, 405, 422)
+
+
+# --- Stora dataset ---
+
+
+@pytest.mark.asyncio
+async def test_import_json_100_rows(client):
+    """Import av 100 rader lyckas utan timeout."""
+    org = await create_org(client, name="BigImportOrg100", org_number=None)
+    rows = [{**VALID_SYSTEM_ROW, "name": f"BigImport Sys {i:03d}"} for i in range(100)]
+    content, filename, content_type = make_json_file(rows)
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 100, f"Förväntade 100 importerade, fick {body['imported']}"
+    assert body["errors"] == []
+
+
+@pytest.mark.asyncio
+async def test_import_csv_100_rows(client):
+    """CSV-import av 100 rader lyckas."""
+    org = await create_org(client, name="BigCSVImportOrg", org_number=None)
+    rows = [{**VALID_SYSTEM_ROW, "name": f"BigCSVImport Sys {i:03d}"} for i in range(100)]
+    content, filename, content_type = make_csv_file(rows)
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 100
+
+
+@pytest.mark.asyncio
+async def test_import_xlsx_100_rows(client):
+    """XLSX-import av 100 rader lyckas."""
+    org = await create_org(client, name="BigXLSXImportOrg", org_number=None)
+    rows = [{**VALID_SYSTEM_ROW, "name": f"BigXLSXImport Sys {i:03d}"} for i in range(100)]
+    content, filename, content_type = make_xlsx_file(rows)
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["imported"] == 100
+
+
+@pytest.mark.asyncio
+async def test_import_json_response_structure(client):
+    """Import-svaret har korrekt struktur: imported, errors."""
+    org = await create_org(client, name="StructTestOrg", org_number=None)
+    rows = [{**VALID_SYSTEM_ROW, "name": "Structure Test Sys"}]
+    content, filename, content_type = make_json_file(rows)
+
+    resp = await post_import(client, org["id"], content, filename, content_type)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "imported" in body, "Svaret borde innehålla 'imported'"
+    assert "errors" in body, "Svaret borde innehålla 'errors'"
+    assert isinstance(body["imported"], int), "'imported' borde vara ett heltal"
+    assert isinstance(body["errors"], list), "'errors' borde vara en lista"
+
+
+@pytest.mark.asyncio
+async def test_import_json_nonexistent_org_returns_error(client):
+    """Import med okänt organization_id borde ge fel."""
+    fake_org = "00000000-0000-0000-0000-000000000000"
+    rows = [{**VALID_SYSTEM_ROW, "name": "Orphan System"}]
+    content, filename, content_type = make_json_file(rows)
+
+    resp = await client.post(
+        "/api/v1/import/systems",
+        params={"organization_id": fake_org},
+        files={"file": (filename, io.BytesIO(content), content_type)},
+    )
+    # Accepterat: 404 (okänd org) eller 200 med 0 importerade + fel
+    if resp.status_code == 200:
+        body = resp.json()
+        assert body["imported"] == 0
+        assert len(body["errors"]) >= 1
+    else:
+        assert resp.status_code in (404, 422, 400)

@@ -357,3 +357,199 @@ async def test_system_stats_filtered_by_org(client):
     assert body["total_systems"] == 1, (
         f"Stats should only include org1's systems, got total={body['total_systems']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Extended tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("category,criticality,lifecycle", [
+    ("verksamhetssystem", "kritisk", "i_drift"),
+    ("stödsystem", "medel", "under_avveckling"),
+    ("infrastruktur", "hög", "planerad"),
+    ("plattform", "låg", "avvecklad"),
+    ("iot", "kritisk", "under_inforande"),
+])
+async def test_create_system_enum_combinations(client, category, criticality, lifecycle):
+    """POST system accepts all valid enum combinations."""
+    org = await create_org(client)
+    payload = {
+        **SYSTEM_BASE,
+        "organization_id": org["id"],
+        "name": f"System {category} {criticality}",
+        "system_category": category,
+        "criticality": criticality,
+        "lifecycle_status": lifecycle,
+    }
+    resp = await client.post("/api/v1/systems/", json=payload)
+    assert resp.status_code == 201, f"Expected 201 for {category}/{criticality}/{lifecycle}: {resp.text}"
+    body = resp.json()
+    assert body["system_category"] == category
+    assert body["criticality"] == criticality
+    assert body["lifecycle_status"] == lifecycle
+
+
+@pytest.mark.asyncio
+async def test_system_extended_attributes_jsonb_persisted(client):
+    """POST system with extended_attributes stores and retrieves JSONB correctly."""
+    org = await create_org(client)
+    ext_attrs = {"leverantör": "CGI", "version": "21.3", "kunder": 500}
+    resp = await client.post("/api/v1/systems/", json={
+        **SYSTEM_BASE,
+        "organization_id": org["id"],
+        "name": "JSONB System",
+        "extended_attributes": ext_attrs,
+    })
+    assert resp.status_code == 201, f"Expected 201: {resp.text}"
+    system_id = resp.json()["id"]
+
+    # Fetch and verify
+    get_resp = await client.get(f"/api/v1/systems/{system_id}")
+    assert get_resp.status_code == 200
+    body = get_resp.json()
+    assert body["extended_attributes"]["leverantör"] == "CGI"
+    assert body["extended_attributes"]["kunder"] == 500
+
+
+@pytest.mark.asyncio
+async def test_system_extended_attributes_null_by_default(client):
+    """POST system without extended_attributes has null/empty extended_attributes."""
+    org = await create_org(client)
+    resp = await client.post("/api/v1/systems/", json={
+        **SYSTEM_BASE,
+        "organization_id": org["id"],
+        "name": "System utan ext attrs",
+    })
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body.get("extended_attributes") in (None, {})
+
+
+@pytest.mark.asyncio
+async def test_system_stats_empty_db_returns_zeros(client):
+    """GET /api/v1/systems/stats/overview on empty DB returns all zeros."""
+    resp = await client.get("/api/v1/systems/stats/overview")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_systems"] == 0
+    assert body["nis2_applicable_count"] == 0
+    assert body["treats_personal_data_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_system_stats_by_lifecycle_status_distribution(client):
+    """Stats by_lifecycle_status accurately reflects created systems per status."""
+    org = await create_org(client)
+    await create_system(client, org["id"], {"name": "Plan 1", "lifecycle_status": "planerad"})
+    await create_system(client, org["id"], {"name": "Plan 2", "lifecycle_status": "planerad"})
+    await create_system(client, org["id"], {"name": "Drift 1", "lifecycle_status": "i_drift"})
+
+    resp = await client.get(
+        "/api/v1/systems/stats/overview",
+        params={"organization_id": org["id"]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    lifecycle = body["by_lifecycle_status"]
+    assert lifecycle.get("planerad", 0) >= 2, (
+        f"Expected at least 2 planerad systems, got {lifecycle.get('planerad', 0)}"
+    )
+    assert lifecycle.get("i_drift", 0) >= 1
+
+
+@pytest.mark.asyncio
+async def test_system_stats_by_criticality_distribution(client):
+    """Stats by_criticality accurately reflects created systems per criticality."""
+    org = await create_org(client)
+    await create_system(client, org["id"], {"name": "Krit A", "criticality": "kritisk"})
+    await create_system(client, org["id"], {"name": "Krit B", "criticality": "kritisk"})
+    await create_system(client, org["id"], {"name": "Låg A", "criticality": "låg"})
+
+    resp = await client.get(
+        "/api/v1/systems/stats/overview",
+        params={"organization_id": org["id"]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    criticality = body["by_criticality"]
+    assert criticality.get("kritisk", 0) >= 2
+    assert criticality.get("låg", 0) >= 1
+
+
+@pytest.mark.asyncio
+async def test_update_system_nis2_fields(client):
+    """PATCH system can update nis2_applicable and nis2_classification."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+    system_id = system["id"]
+
+    resp = await client.patch(f"/api/v1/systems/{system_id}", json={
+        "nis2_applicable": True,
+        "nis2_classification": "väsentlig",
+    })
+    assert resp.status_code == 200, f"Expected 200: {resp.text}"
+    body = resp.json()
+    assert body["nis2_applicable"] is True
+    assert body["nis2_classification"] == "väsentlig"
+
+
+@pytest.mark.asyncio
+async def test_create_system_preserves_all_optional_fields(client):
+    """POST system with all optional fields preserves them correctly."""
+    org = await create_org(client)
+    resp = await client.post("/api/v1/systems/", json={
+        **SYSTEM_BASE,
+        "organization_id": org["id"],
+        "name": "Komplett System",
+        "lifecycle_status": "planerad",
+        "criticality": "hög",
+        "nis2_applicable": True,
+        "nis2_classification": "viktig",
+        "treats_personal_data": True,
+        "treats_sensitive_data": True,
+        "hosting_model": "on_premise",
+        "business_area": "socialtjänst",
+    })
+    assert resp.status_code == 201, f"Expected 201: {resp.text}"
+    body = resp.json()
+    assert body["lifecycle_status"] == "planerad"
+    assert body["criticality"] == "hög"
+    assert body["nis2_applicable"] is True
+    assert body["treats_personal_data"] is True
+    assert body["business_area"] == "socialtjänst"
+
+
+@pytest.mark.asyncio
+async def test_delete_system_removes_from_list(client):
+    """After DELETE, system no longer appears in GET /systems/ list."""
+    org = await create_org(client)
+    system = await create_system(client, org["id"], {"name": "Ska Tas Bort"})
+    system_id = system["id"]
+
+    await client.delete(f"/api/v1/systems/{system_id}")
+
+    resp = await client.get("/api/v1/systems/")
+    ids = [s["id"] for s in resp.json()["items"]]
+    assert system_id not in ids, "Deleted system should not appear in list"
+
+
+@pytest.mark.asyncio
+async def test_filter_systems_by_organization_returns_correct_count(client):
+    """Filter by organization_id returns exactly that org's systems."""
+    org_a = await create_org(client)
+    org_b_resp = await client.post("/api/v1/organizations/", json={"name": "Org B Filter", "org_type": "bolag"})
+    assert org_b_resp.status_code == 201
+    org_b = org_b_resp.json()
+
+    await create_system(client, org_a["id"], {"name": "A-system 1"})
+    await create_system(client, org_a["id"], {"name": "A-system 2"})
+    await create_system(client, org_b["id"], {"name": "B-system 1"})
+
+    resp = await client.get("/api/v1/systems/", params={"organization_id": org_a["id"]})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2, f"Expected 2 systems for org_a, got {body['total']}"
+    for item in body["items"]:
+        assert item["organization_id"] == org_a["id"]

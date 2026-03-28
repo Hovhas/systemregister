@@ -75,7 +75,7 @@ async def get_latest_classification(
     stmt = (
         select(SystemClassification)
         .where(SystemClassification.system_id == system_id)
-        .order_by(SystemClassification.classified_at.desc())
+        .order_by(SystemClassification.classified_at.desc(), SystemClassification.id.desc())
         .limit(1)
     )
     result = await db.execute(stmt)

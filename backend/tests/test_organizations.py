@@ -191,3 +191,107 @@ async def test_delete_organization_with_systems_fails(client):
         f"Expected 409 when deleting org with systems, got {delete_resp.status_code}: {delete_resp.text}"
     )
     assert "system" in delete_resp.json()["detail"].lower(), "Error detail should mention systems"
+
+
+# ---------------------------------------------------------------------------
+# Extended tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("org_type", ["kommun", "bolag", "samverkan", "digit"])
+async def test_create_organization_all_org_types(client, org_type):
+    """POST organization with each valid org_type variant succeeds."""
+    resp = await client.post("/api/v1/organizations/", json={
+        "name": f"Test {org_type}",
+        "org_type": org_type,
+    })
+    assert resp.status_code == 201, f"Expected 201 for org_type={org_type}: {resp.text}"
+    assert resp.json()["org_type"] == org_type
+
+
+@pytest.mark.asyncio
+async def test_update_organization_all_fields(client):
+    """PATCH organization can update name, org_number, org_type and description."""
+    created = await create_org(client)
+    org_id = created["id"]
+
+    patch_payload = {
+        "name": "Ny Namn AB",
+        "org_number": "556000-9999",
+        "org_type": "bolag",
+        "description": "Uppdaterad beskrivning",
+    }
+    resp = await client.patch(f"/api/v1/organizations/{org_id}", json=patch_payload)
+
+    assert resp.status_code == 200, f"Expected 200: {resp.text}"
+    body = resp.json()
+    assert body["name"] == "Ny Namn AB"
+    assert body["org_number"] == "556000-9999"
+    assert body["org_type"] == "bolag"
+    assert body["description"] == "Uppdaterad beskrivning"
+
+
+@pytest.mark.asyncio
+async def test_delete_organization_without_systems_succeeds(client):
+    """DELETE org without systems returns 204 and org is removed."""
+    org = await create_org(client, {"name": "Ensam Org", "org_type": "samverkan"})
+    org_id = org["id"]
+
+    delete_resp = await client.delete(f"/api/v1/organizations/{org_id}")
+    assert delete_resp.status_code == 204, f"Expected 204: {delete_resp.text}"
+
+    get_resp = await client.get(f"/api/v1/organizations/{org_id}")
+    assert get_resp.status_code == 404, "Org should be gone after delete"
+
+
+@pytest.mark.asyncio
+async def test_organization_parent_child_hierarchy(client):
+    """POST child organization with parent_org_id links correctly."""
+    parent = await create_org(client, {"name": "Moderorganisation", "org_type": "samverkan"})
+    child_resp = await client.post("/api/v1/organizations/", json={
+        "name": "Dotterbolag",
+        "org_type": "bolag",
+        "parent_org_id": parent["id"],
+    })
+    assert child_resp.status_code == 201, f"Expected 201: {child_resp.text}"
+    child = child_resp.json()
+    assert child["parent_org_id"] == parent["id"], "parent_org_id should be set"
+
+
+@pytest.mark.asyncio
+async def test_organization_get_after_create_matches(client):
+    """GET /organizations/{id} after create returns identical data."""
+    created = await create_org(client, {**ORG_BASE, "name": "Matchningstest Org"})
+    org_id = created["id"]
+
+    resp = await client.get(f"/api/v1/organizations/{org_id}")
+    assert resp.status_code == 200
+    got = resp.json()
+    for field in ["name", "org_number", "org_type", "description"]:
+        assert got[field] == created[field], f"Field {field} mismatch after GET"
+
+
+@pytest.mark.asyncio
+async def test_list_organizations_sorted_alphabetically(client):
+    """GET /organizations/ returns organizations sorted by name A-Z."""
+    await create_org(client, {"name": "Östra kommunen", "org_type": "kommun"})
+    await create_org(client, {"name": "Ångermanland AB", "org_type": "bolag"})
+    await create_org(client, {"name": "Alfa samverkan", "org_type": "samverkan"})
+
+    resp = await client.get("/api/v1/organizations/")
+    assert resp.status_code == 200
+    body = resp.json()
+    names = [o["name"] for o in body]
+    assert names == sorted(names), f"Organizations not sorted alphabetically: {names}"
+
+
+@pytest.mark.asyncio
+async def test_organization_update_preserves_created_at(client):
+    """PATCH organization should not change created_at timestamp."""
+    created = await create_org(client)
+    created_at = created["created_at"]
+
+    resp = await client.patch(f"/api/v1/organizations/{created['id']}", json={"name": "Uppdaterat"})
+    assert resp.status_code == 200
+    assert resp.json()["created_at"] == created_at, "created_at must not change on update"
