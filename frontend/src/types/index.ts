@@ -350,6 +350,41 @@ export interface IntegrationSearchParams {
   integration_type?: IntegrationType
 }
 
+// --- Notifikationer ---
+
+export interface Notification {
+  type: string
+  severity: "critical" | "warning" | "info"
+  title: string
+  description: string
+  system_id?: string
+  record_id?: string
+}
+
+export interface NotificationsResponse {
+  items: Notification[]
+  total: number
+  limit: number
+  offset: number
+  by_severity: { critical: number; warning: number; info: number }
+}
+
+// --- Organisation Create/Update ---
+
+export interface OrganizationCreate {
+  name: string
+  org_number?: string
+  org_type: OrganizationType
+  parent_org_id?: string
+}
+
+export interface OrganizationUpdate {
+  name?: string
+  org_number?: string
+  org_type?: OrganizationType
+  parent_org_id?: string | null
+}
+
 // --- Skapa-typer ---
 
 export interface ClassificationCreate {

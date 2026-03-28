@@ -1,6 +1,8 @@
 import axios from "axios"
 import type {
   Organization,
+  OrganizationCreate,
+  OrganizationUpdate,
   System,
   SystemCreate,
   SystemUpdate,
@@ -20,6 +22,7 @@ import type {
   PaginatedResponse,
   SystemSearchParams,
   IntegrationSearchParams,
+  NotificationsResponse,
 } from "@/types"
 
 const api = axios.create({
@@ -34,6 +37,20 @@ const api = axios.create({
 export async function getOrganizations(): Promise<Organization[]> {
   const res = await api.get<Organization[]>("/organizations/")
   return res.data
+}
+
+export async function createOrganization(data: OrganizationCreate): Promise<Organization> {
+  const res = await api.post<Organization>("/organizations/", data)
+  return res.data
+}
+
+export async function updateOrganization(id: string, data: OrganizationUpdate): Promise<Organization> {
+  const res = await api.patch<Organization>(`/organizations/${id}`, data)
+  return res.data
+}
+
+export async function deleteOrganization(id: string): Promise<void> {
+  await api.delete(`/organizations/${id}`)
 }
 
 // --- System ---
@@ -196,6 +213,16 @@ export async function importFile(
   const res = await api.post<ImportResult>(`/import/${type}${params}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   })
+  return res.data
+}
+
+// --- Notifikationer ---
+
+export async function getNotifications(params?: {
+  limit?: number
+  offset?: number
+}): Promise<NotificationsResponse> {
+  const res = await api.get<NotificationsResponse>("/notifications/", { params })
   return res.data
 }
 

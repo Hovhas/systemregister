@@ -1,12 +1,38 @@
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeftIcon, PencilIcon, TrashIcon } from "lucide-react"
+import { ArrowLeftIcon, PencilIcon, TrashIcon, PlusIcon } from "lucide-react"
 
-import { getSystem, deleteSystem, getOrganizations } from "@/lib/api"
+import {
+  getSystem,
+  deleteSystem,
+  getOrganizations,
+  getSystems,
+  createClassification,
+  createOwner,
+  deleteOwner,
+  deleteIntegration,
+  getGDPRTreatments,
+  createGDPRTreatment,
+  deleteGDPRTreatment,
+  getContracts,
+  createContract,
+  deleteContract,
+} from "@/lib/api"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
-import { Criticality, LifecycleStatus, SystemCategory } from "@/types"
-import type { Classification, Owner, Integration } from "@/types"
+import IntegrationDialog from "@/components/IntegrationDialog"
+import { Criticality, LifecycleStatus, SystemCategory, OwnerRole } from "@/types"
+import type {
+  Classification,
+  ClassificationCreate,
+  Owner,
+  OwnerCreate,
+  Integration,
+  GDPRTreatment,
+  GDPRTreatmentCreate,
+  Contract,
+  ContractCreate,
+} from "@/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -29,6 +55,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 
 // --- Etiketter ---
 
@@ -72,6 +113,15 @@ const integrationTypeLabels: Record<string, string> = {
   manuell: "Manuell",
 }
 
+const legalBasisLabels: Record<string, string> = {
+  samtycke: "Samtycke",
+  avtal: "Avtal",
+  rättslig_förpliktelse: "Rättslig förpliktelse",
+  grundläggande_intresse: "Grundläggande intresse",
+  allmänt_intresse: "Allmänt intresse",
+  berättigat_intresse: "Berättigat intresse",
+}
+
 // --- Hjälpkomponenter ---
 
 function InfoRow({
@@ -110,6 +160,17 @@ function CiaBar({ label, value }: { label: string; value: number }) {
         />
       </div>
       <span className="w-4 text-right text-xs tabular-nums">{value}</span>
+    </div>
+  )
+}
+
+function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-muted-foreground">
+        {label}{required && <span className="text-destructive ml-0.5">*</span>}
+      </label>
+      {children}
     </div>
   )
 }
@@ -213,23 +274,93 @@ function OversiktTab({ system }: { system: ReturnType<typeof useSystemDetail>["d
   )
 }
 
-function KlassningTab({ classifications }: { classifications: Classification[] }) {
-  if (classifications.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-4">
-        Inga klassningar registrerade
-      </p>
-    )
+// --- Klassning-tabb ---
+
+function KlassningTab({
+  classifications,
+  systemId,
+}: {
+  classifications: Classification[]
+  systemId: string
+}) {
+  const queryClient = useQueryClient()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [form, setForm] = useState<{
+    confidentiality: string
+    integrity: string
+    availability: string
+    traceability: string
+    classified_by: string
+    valid_until: string
+    notes: string
+  }>({
+    confidentiality: "2",
+    integrity: "2",
+    availability: "2",
+    traceability: "",
+    classified_by: "",
+    valid_until: "",
+    notes: "",
+  })
+  const [error, setError] = useState("")
+
+  const createMutation = useMutation({
+    mutationFn: (data: ClassificationCreate) =>
+      createClassification(systemId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDialogOpen(false)
+      setForm({
+        confidentiality: "2",
+        integrity: "2",
+        availability: "2",
+        traceability: "",
+        classified_by: "",
+        valid_until: "",
+        notes: "",
+      })
+      setError("")
+    },
+    onError: () => setError("Kunde inte spara klassning. Försök igen."),
+  })
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.classified_by.trim()) {
+      setError("Klassad av är obligatoriskt")
+      return
+    }
+    const payload: ClassificationCreate = {
+      system_id: systemId,
+      confidentiality: parseInt(form.confidentiality),
+      integrity: parseInt(form.integrity),
+      availability: parseInt(form.availability),
+      classified_by: form.classified_by.trim(),
+    }
+    if (form.traceability !== "") payload.traceability = parseInt(form.traceability)
+    if (form.valid_until) payload.valid_until = form.valid_until
+    if (form.notes.trim()) payload.notes = form.notes.trim()
+    createMutation.mutate(payload)
   }
 
-  // Senaste klassning baserat på classified_at
   const sorted = [...classifications].sort(
     (a, b) => new Date(b.classified_at).getTime() - new Date(a.classified_at).getTime()
   )
-  const latest = sorted[0]
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <PlusIcon className="mr-1 size-4" /> Ny klassning
+        </Button>
+      </div>
+
+      {sorted.length === 0 && (
+        <p className="text-sm text-muted-foreground py-4">
+          Inga klassningar registrerade
+        </p>
+      )}
+
       {sorted.map((cls, idx) => (
         <Card key={cls.id}>
           <CardHeader>
@@ -259,54 +390,300 @@ function KlassningTab({ classifications }: { classifications: Classification[] }
           </CardContent>
         </Card>
       ))}
-      {/* supress lint warning for latest */}
-      <span className="sr-only">{latest.id}</span>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ny klassning</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Konfidentialitet (K)" required>
+                <Input
+                  type="number"
+                  min={0}
+                  max={4}
+                  value={form.confidentiality}
+                  onChange={(e) => setForm((f) => ({ ...f, confidentiality: e.target.value }))}
+                />
+              </FormField>
+              <FormField label="Riktighet (R)" required>
+                <Input
+                  type="number"
+                  min={0}
+                  max={4}
+                  value={form.integrity}
+                  onChange={(e) => setForm((f) => ({ ...f, integrity: e.target.value }))}
+                />
+              </FormField>
+              <FormField label="Tillgänglighet (T)" required>
+                <Input
+                  type="number"
+                  min={0}
+                  max={4}
+                  value={form.availability}
+                  onChange={(e) => setForm((f) => ({ ...f, availability: e.target.value }))}
+                />
+              </FormField>
+              <FormField label="Spårbarhet (S)">
+                <Input
+                  type="number"
+                  min={0}
+                  max={4}
+                  placeholder="Valfritt"
+                  value={form.traceability}
+                  onChange={(e) => setForm((f) => ({ ...f, traceability: e.target.value }))}
+                />
+              </FormField>
+            </div>
+            <FormField label="Klassad av" required>
+              <Input
+                value={form.classified_by}
+                onChange={(e) => setForm((f) => ({ ...f, classified_by: e.target.value }))}
+                placeholder="Namn eller e-post"
+              />
+            </FormField>
+            <FormField label="Giltig till">
+              <Input
+                type="date"
+                value={form.valid_until}
+                onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
+              />
+            </FormField>
+            <FormField label="Anteckningar">
+              <textarea
+                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 placeholder:text-muted-foreground resize-none"
+                rows={3}
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Valfria anteckningar..."
+              />
+            </FormField>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Sparar..." : "Spara"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-function AgareTab({ owners, orgNameMap }: { owners: Owner[]; orgNameMap: Record<string, string> }) {
-  if (owners.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-4">
-        Inga ägare registrerade
-      </p>
-    )
+// --- Ägare-tabb ---
+
+function AgareTab({
+  owners,
+  orgNameMap,
+  systemId,
+}: {
+  owners: Owner[]
+  orgNameMap: Record<string, string>
+  systemId: string
+}) {
+  const queryClient = useQueryClient()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Owner | null>(null)
+  const [form, setForm] = useState<{
+    role: string
+    name: string
+    email: string
+    phone: string
+    organization_id: string
+  }>({
+    role: "",
+    name: "",
+    email: "",
+    phone: "",
+    organization_id: "",
+  })
+  const [error, setError] = useState("")
+
+  const { data: orgs } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: getOrganizations,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (data: OwnerCreate) => createOwner(systemId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDialogOpen(false)
+      setForm({ role: "", name: "", email: "", phone: "", organization_id: "" })
+      setError("")
+    },
+    onError: () => setError("Kunde inte spara ägare. Försök igen."),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteOwner(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDeleteTarget(null)
+    },
+  })
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.role) { setError("Roll är obligatoriskt"); return }
+    if (!form.name.trim()) { setError("Namn är obligatoriskt"); return }
+    if (!form.email.trim()) { setError("E-post är obligatoriskt"); return }
+    if (!form.organization_id) { setError("Organisation är obligatoriskt"); return }
+    createMutation.mutate({
+      system_id: systemId,
+      role: form.role as OwnerRole,
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim() || undefined,
+      organization_id: form.organization_id,
+    })
   }
 
   return (
-    <div className="rounded-xl ring-1 ring-foreground/10">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Roll</TableHead>
-            <TableHead>Namn</TableHead>
-            <TableHead>E-post</TableHead>
-            <TableHead>Organisation</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {owners.map((owner) => (
-            <TableRow key={owner.id}>
-              <TableCell>
-                <Badge variant="secondary">
-                  {ownerRoleLabels[owner.role] ?? owner.role}
-                </Badge>
-              </TableCell>
-              <TableCell className="font-medium">{owner.name}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {owner.email ?? "—"}
-              </TableCell>
-              <TableCell className="text-muted-foreground text-xs">
-                {orgNameMap[owner.organization_id] ?? owner.organization_id}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <PlusIcon className="mr-1 size-4" /> Lägg till ägare
+        </Button>
+      </div>
+
+      {owners.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">
+          Inga ägare registrerade
+        </p>
+      ) : (
+        <div className="rounded-xl ring-1 ring-foreground/10">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Roll</TableHead>
+                <TableHead>Namn</TableHead>
+                <TableHead>E-post</TableHead>
+                <TableHead>Organisation</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {owners.map((owner) => (
+                <TableRow key={owner.id}>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {ownerRoleLabels[owner.role] ?? owner.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{owner.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {owner.email ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {orgNameMap[owner.organization_id] ?? owner.organization_id}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteTarget(owner)}
+                    >
+                      <TrashIcon className="size-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Lägg till ägare</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <FormField label="Roll" required>
+              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v ?? "" }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {form.role ? ownerRoleLabels[form.role] ?? form.role : "Välj roll..."}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ownerRoleLabels).map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Namn" required>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Fullständigt namn"
+              />
+            </FormField>
+            <FormField label="E-post" required>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="namn@sundsvall.se"
+              />
+            </FormField>
+            <FormField label="Telefon">
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="Valfritt"
+              />
+            </FormField>
+            <FormField label="Organisation" required>
+              <Select value={form.organization_id} onValueChange={(v) => setForm((f) => ({ ...f, organization_id: v ?? "" }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {form.organization_id
+                      ? (orgs?.find((o) => o.id === form.organization_id)?.name ?? form.organization_id)
+                      : "Välj organisation..."}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {(orgs ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Sparar..." : "Spara"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Ta bort ägare"
+        description={`Är du säker på att du vill ta bort ${deleteTarget?.name ?? ""}?`}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        loading={deleteMutation.isPending}
+      />
     </div>
   )
 }
+
+// --- Integrationer-tabb ---
 
 function IntegrationerTab({
   integrations,
@@ -315,54 +692,587 @@ function IntegrationerTab({
   integrations: Integration[]
   systemId: string
 }) {
-  if (integrations.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground py-4">
-        Inga integrationer registrerade
-      </p>
-    )
-  }
+  const queryClient = useQueryClient()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Integration | null>(null)
+
+  const { data: allSystemsData } = useQuery({
+    queryKey: ["systems", { limit: 500 }],
+    queryFn: () => getSystems({ limit: 500 }),
+  })
+  const allSystems = allSystemsData?.items ?? []
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteIntegration(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDeleteTarget(null)
+    },
+  })
+
+  const systemNameMap = Object.fromEntries(allSystems.map((s) => [s.id, s.name]))
 
   return (
-    <div className="rounded-xl ring-1 ring-foreground/10">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Riktning</TableHead>
-            <TableHead>Typ</TableHead>
-            <TableHead>Motpart</TableHead>
-            <TableHead>Frekvens</TableHead>
-            <TableHead>Beskrivning</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {integrations.map((intg) => {
-            const isSource = intg.source_system_id === systemId
-            return (
-              <TableRow key={intg.id}>
-                <TableCell>
-                  <Badge variant={isSource ? "default" : "secondary"}>
-                    {isSource ? "Ut" : "In"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {integrationTypeLabels[intg.integration_type] ??
-                    intg.integration_type}
-                </TableCell>
-                <TableCell className="text-muted-foreground text-xs">
-                  {isSource ? intg.target_system_id : intg.source_system_id}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {intg.frequency ?? "—"}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {intg.description ?? "—"}
-                </TableCell>
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <PlusIcon className="mr-1 size-4" /> Ny integration
+        </Button>
+      </div>
+
+      {integrations.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">
+          Inga integrationer registrerade
+        </p>
+      ) : (
+        <div className="rounded-xl ring-1 ring-foreground/10">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Riktning</TableHead>
+                <TableHead>Typ</TableHead>
+                <TableHead>Motpart</TableHead>
+                <TableHead>Frekvens</TableHead>
+                <TableHead>Beskrivning</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {integrations.map((intg) => {
+                const isSource = intg.source_system_id === systemId
+                const counterpartId = isSource ? intg.target_system_id : intg.source_system_id
+                return (
+                  <TableRow key={intg.id}>
+                    <TableCell>
+                      <Badge variant={isSource ? "default" : "secondary"}>
+                        {isSource ? "Ut" : "In"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {integrationTypeLabels[intg.integration_type] ?? intg.integration_type}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {systemNameMap[counterpartId] ?? counterpartId}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {intg.frequency ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {intg.description ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleteTarget(intg)}
+                      >
+                        <TrashIcon className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <IntegrationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        systemId={systemId}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Ta bort integration"
+        description="Är du säker på att du vill ta bort denna integration?"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        loading={deleteMutation.isPending}
+      />
+    </div>
+  )
+}
+
+// --- GDPR-tabb ---
+
+function GdprTab({
+  systemId,
+}: {
+  systemId: string
+}) {
+  const queryClient = useQueryClient()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<GDPRTreatment | null>(null)
+  const [form, setForm] = useState<{
+    data_categories: string
+    categories_of_data_subjects: string
+    legal_basis: string
+    retention_policy: string
+    dpia_conducted: boolean
+    ropa_reference_id: string
+  }>({
+    data_categories: "",
+    categories_of_data_subjects: "",
+    legal_basis: "",
+    retention_policy: "",
+    dpia_conducted: false,
+    ropa_reference_id: "",
+  })
+  const [error, setError] = useState("")
+
+  const { data: treatments = [], isLoading } = useQuery({
+    queryKey: ["gdpr", systemId],
+    queryFn: () => getGDPRTreatments(systemId),
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (data: GDPRTreatmentCreate) => createGDPRTreatment(systemId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gdpr", systemId] })
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDialogOpen(false)
+      setForm({
+        data_categories: "",
+        categories_of_data_subjects: "",
+        legal_basis: "",
+        retention_policy: "",
+        dpia_conducted: false,
+        ropa_reference_id: "",
+      })
+      setError("")
+    },
+    onError: () => setError("Kunde inte spara GDPR-behandling. Försök igen."),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteGDPRTreatment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gdpr", systemId] })
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDeleteTarget(null)
+    },
+  })
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const payload: GDPRTreatmentCreate = {
+      dpia_conducted: form.dpia_conducted,
+    }
+    if (form.data_categories.trim()) {
+      payload.data_categories = form.data_categories.split(",").map((s) => s.trim()).filter(Boolean)
+    }
+    if (form.categories_of_data_subjects.trim()) payload.categories_of_data_subjects = form.categories_of_data_subjects.trim()
+    if (form.legal_basis) payload.legal_basis = form.legal_basis
+    if (form.retention_policy.trim()) payload.retention_policy = form.retention_policy.trim()
+    if (form.ropa_reference_id.trim()) payload.ropa_reference_id = form.ropa_reference_id.trim()
+    createMutation.mutate(payload)
+  }
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Laddar...</p>
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <PlusIcon className="mr-1 size-4" /> Ny behandling
+        </Button>
+      </div>
+
+      {treatments.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">
+          Inga GDPR-behandlingar registrerade
+        </p>
+      ) : (
+        <div className="rounded-xl ring-1 ring-foreground/10">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Datakategorier</TableHead>
+                <TableHead>Rättslig grund</TableHead>
+                <TableHead>DPIA</TableHead>
+                <TableHead>Gallringspolicy</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {treatments.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="text-sm">
+                    {t.data_categories?.join(", ") ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {t.legal_basis ? (legalBasisLabels[t.legal_basis] ?? t.legal_basis) : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={t.dpia_conducted ? "default" : "outline"}>
+                      {t.dpia_conducted ? "Genomförd" : "Ej genomförd"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {t.retention_policy ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteTarget(t)}
+                    >
+                      <TrashIcon className="size-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ny GDPR-behandling</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <FormField label="Kategorier av personuppgifter">
+              <Input
+                value={form.data_categories}
+                onChange={(e) => setForm((f) => ({ ...f, data_categories: e.target.value }))}
+                placeholder="Kommaseparerat, t.ex. namn, adress"
+              />
+            </FormField>
+            <FormField label="Kategorier av registrerade">
+              <Input
+                value={form.categories_of_data_subjects}
+                onChange={(e) => setForm((f) => ({ ...f, categories_of_data_subjects: e.target.value }))}
+                placeholder="t.ex. anställda, medborgare"
+              />
+            </FormField>
+            <FormField label="Rättslig grund">
+              <Select value={form.legal_basis} onValueChange={(v) => setForm((f) => ({ ...f, legal_basis: v ?? "" }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {form.legal_basis ? legalBasisLabels[form.legal_basis] ?? form.legal_basis : "Välj rättslig grund..."}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(legalBasisLabels).map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Gallringspolicy">
+              <Input
+                value={form.retention_policy}
+                onChange={(e) => setForm((f) => ({ ...f, retention_policy: e.target.value }))}
+                placeholder="t.ex. 7 år efter avslutad tjänst"
+              />
+            </FormField>
+            <FormField label="RoPA-referens">
+              <Input
+                value={form.ropa_reference_id}
+                onChange={(e) => setForm((f) => ({ ...f, ropa_reference_id: e.target.value }))}
+                placeholder="Valfritt referens-ID"
+              />
+            </FormField>
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.dpia_conducted}
+                onChange={(e) => setForm((f) => ({ ...f, dpia_conducted: e.target.checked }))}
+                className="rounded border-input"
+              />
+              DPIA genomförd
+            </label>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Sparar..." : "Spara"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Ta bort GDPR-behandling"
+        description="Är du säker på att du vill ta bort denna behandlingspost?"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        loading={deleteMutation.isPending}
+      />
+    </div>
+  )
+}
+
+// --- Avtal-tabb ---
+
+function AvtalTab({ systemId }: { systemId: string }) {
+  const queryClient = useQueryClient()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Contract | null>(null)
+  const [form, setForm] = useState<{
+    supplier_name: string
+    contract_start: string
+    contract_end: string
+    license_model: string
+    annual_license_cost: string
+    annual_operations_cost: string
+    notice_period_months: string
+    sla_description: string
+    auto_renewal: boolean
+  }>({
+    supplier_name: "",
+    contract_start: "",
+    contract_end: "",
+    license_model: "",
+    annual_license_cost: "",
+    annual_operations_cost: "",
+    notice_period_months: "",
+    sla_description: "",
+    auto_renewal: false,
+  })
+  const [error, setError] = useState("")
+
+  const { data: contracts = [], isLoading } = useQuery({
+    queryKey: ["contracts", systemId],
+    queryFn: () => getContracts(systemId),
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (data: ContractCreate) => createContract(systemId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contracts", systemId] })
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDialogOpen(false)
+      setForm({
+        supplier_name: "",
+        contract_start: "",
+        contract_end: "",
+        license_model: "",
+        annual_license_cost: "",
+        annual_operations_cost: "",
+        notice_period_months: "",
+        sla_description: "",
+        auto_renewal: false,
+      })
+      setError("")
+    },
+    onError: () => setError("Kunde inte spara avtal. Försök igen."),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteContract(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contracts", systemId] })
+      queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      setDeleteTarget(null)
+    },
+  })
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.supplier_name.trim()) { setError("Leverantör är obligatoriskt"); return }
+    const payload: ContractCreate = {
+      supplier_name: form.supplier_name.trim(),
+      auto_renewal: form.auto_renewal,
+    }
+    if (form.contract_start) payload.contract_start = form.contract_start
+    if (form.contract_end) payload.contract_end = form.contract_end
+    if (form.license_model.trim()) payload.license_model = form.license_model.trim()
+    if (form.annual_license_cost !== "") payload.annual_license_cost = parseFloat(form.annual_license_cost)
+    if (form.annual_operations_cost !== "") payload.annual_operations_cost = parseFloat(form.annual_operations_cost)
+    if (form.notice_period_months !== "") payload.notice_period_months = parseInt(form.notice_period_months)
+    if (form.sla_description.trim()) payload.sla_description = form.sla_description.trim()
+    createMutation.mutate(payload)
+  }
+
+  function contractRowClass(contract: Contract): string {
+    if (!contract.contract_end) return ""
+    const daysLeft = Math.ceil(
+      (new Date(contract.contract_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysLeft < 0) return "bg-red-50 dark:bg-red-950/20"
+    if (daysLeft <= 90) return "bg-orange-50 dark:bg-orange-950/20"
+    return ""
+  }
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Laddar...</p>
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <PlusIcon className="mr-1 size-4" /> Nytt avtal
+        </Button>
+      </div>
+
+      {contracts.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">
+          Inga avtal registrerade
+        </p>
+      ) : (
+        <div className="rounded-xl ring-1 ring-foreground/10 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Leverantör</TableHead>
+                <TableHead>Start</TableHead>
+                <TableHead>Slut</TableHead>
+                <TableHead>Licenskostnad/år</TableHead>
+                <TableHead>Driftskostnad/år</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {contracts.map((c) => (
+                <TableRow key={c.id} className={contractRowClass(c)}>
+                  <TableCell className="font-medium">{c.supplier_name}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {c.contract_start ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {c.contract_end ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {c.annual_license_cost != null
+                      ? `${c.annual_license_cost.toLocaleString("sv-SE")} kr`
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {c.annual_operations_cost != null
+                      ? `${c.annual_operations_cost.toLocaleString("sv-SE")} kr`
+                      : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteTarget(c)}
+                    >
+                      <TrashIcon className="size-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nytt avtal</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <FormField label="Leverantör" required>
+              <Input
+                value={form.supplier_name}
+                onChange={(e) => setForm((f) => ({ ...f, supplier_name: e.target.value }))}
+                placeholder="Leverantörens namn"
+              />
+            </FormField>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Startdatum">
+                <Input
+                  type="date"
+                  value={form.contract_start}
+                  onChange={(e) => setForm((f) => ({ ...f, contract_start: e.target.value }))}
+                />
+              </FormField>
+              <FormField label="Slutdatum">
+                <Input
+                  type="date"
+                  value={form.contract_end}
+                  onChange={(e) => setForm((f) => ({ ...f, contract_end: e.target.value }))}
+                />
+              </FormField>
+            </div>
+            <FormField label="Licensmodell">
+              <Input
+                value={form.license_model}
+                onChange={(e) => setForm((f) => ({ ...f, license_model: e.target.value }))}
+                placeholder="t.ex. Per användare, Namngivna licenser"
+              />
+            </FormField>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Årlig licenskostnad (kr)">
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.annual_license_cost}
+                  onChange={(e) => setForm((f) => ({ ...f, annual_license_cost: e.target.value }))}
+                  placeholder="0"
+                />
+              </FormField>
+              <FormField label="Årlig driftskostnad (kr)">
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.annual_operations_cost}
+                  onChange={(e) => setForm((f) => ({ ...f, annual_operations_cost: e.target.value }))}
+                  placeholder="0"
+                />
+              </FormField>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Uppsägningstid (månader)">
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.notice_period_months}
+                  onChange={(e) => setForm((f) => ({ ...f, notice_period_months: e.target.value }))}
+                  placeholder="0"
+                />
+              </FormField>
+              <FormField label="SLA-nivå">
+                <Input
+                  value={form.sla_description}
+                  onChange={(e) => setForm((f) => ({ ...f, sla_description: e.target.value }))}
+                  placeholder="t.ex. 99.9%"
+                />
+              </FormField>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.auto_renewal}
+                onChange={(e) => setForm((f) => ({ ...f, auto_renewal: e.target.checked }))}
+                className="rounded border-input"
+              />
+              Automatisk förlängning
+            </label>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Sparar..." : "Spara"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Ta bort avtal"
+        description={`Är du säker på att du vill ta bort avtalet med ${deleteTarget?.supplier_name ?? ""}?`}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        loading={deleteMutation.isPending}
+      />
     </div>
   )
 }
@@ -437,7 +1347,7 @@ function AuditTimeline({ systemId }: { systemId: string }) {
                   <div key={key} className="flex gap-2">
                     <span className="font-medium min-w-24">{key}:</span>
                     <span className="text-red-600 line-through">{String(entry.old_values[key] ?? "—")}</span>
-                    <span>→</span>
+                    <span>-&gt;</span>
                     <span className="text-green-600">{String(entry.new_values[key] ?? "—")}</span>
                   </div>
                 ))}
@@ -584,6 +1494,8 @@ export default function SystemDetailPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="integrationer">Integrationer</TabsTrigger>
+          <TabsTrigger value="gdpr">GDPR</TabsTrigger>
+          <TabsTrigger value="avtal">Avtal</TabsTrigger>
           <TabsTrigger value="ovrigt">Övrig data</TabsTrigger>
           <TabsTrigger value="andringslogg">Ändringslogg</TabsTrigger>
         </TabsList>
@@ -593,15 +1505,23 @@ export default function SystemDetailPage() {
         </TabsContent>
 
         <TabsContent value="klassning" className="mt-4">
-          <KlassningTab classifications={system.classifications} />
+          <KlassningTab classifications={system.classifications} systemId={system.id} />
         </TabsContent>
 
         <TabsContent value="agare" className="mt-4">
-          <AgareTab owners={system.owners} orgNameMap={orgNameMap} />
+          <AgareTab owners={system.owners} orgNameMap={orgNameMap} systemId={system.id} />
         </TabsContent>
 
         <TabsContent value="integrationer" className="mt-4">
           <IntegrationerTab integrations={system.integrations ?? []} systemId={system.id} />
+        </TabsContent>
+
+        <TabsContent value="gdpr" className="mt-4">
+          <GdprTab systemId={system.id} />
+        </TabsContent>
+
+        <TabsContent value="avtal" className="mt-4">
+          <AvtalTab systemId={system.id} />
         </TabsContent>
 
         <TabsContent value="ovrigt" className="mt-4">

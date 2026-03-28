@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react"
-import axios from "axios"
+import { useRef, useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { PlusIcon, TrashIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -12,32 +14,20 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { getIntegrations, getSystems, deleteIntegration } from "@/lib/api"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
+import IntegrationDialog from "@/components/IntegrationDialog"
+import type { Integration } from "@/types"
 
 // ---------- Typer ----------
 
-type Criticality = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+type Criticality = "låg" | "medel" | "hög" | "kritisk"
 type IntegrationType =
-  | "REST_API"
-  | "SOAP"
-  | "DATABASE"
-  | "FILE_TRANSFER"
-  | "MESSAGE_QUEUE"
-  | "EVENT_STREAM"
-  | "OTHER"
-
-interface Integration {
-  id: string
-  source_system_id: string
-  target_system_id: string
-  integration_type: IntegrationType
-  data_types: string | null
-  frequency: string | null
-  description: string | null
-  criticality: Criticality | null
-  is_external: boolean
-  external_party: string | null
-  created_at: string
-}
+  | "api"
+  | "filöverföring"
+  | "databasreplikering"
+  | "event"
+  | "manuell"
 
 interface SystemItem {
   id: string
@@ -45,55 +35,39 @@ interface SystemItem {
   criticality: Criticality
 }
 
-// ---------- API ----------
-
-const API_BASE = "/api/v1"
-
-async function fetchIntegrations(): Promise<Integration[]> {
-  const { data } = await axios.get<Integration[]>(`${API_BASE}/integrations`)
-  return data
-}
-
-async function fetchSystems(): Promise<SystemItem[]> {
-  const { data } = await axios.get<SystemItem[]>(`${API_BASE}/systems`)
-  return data
-}
-
 // ---------- Hjälpfunktioner ----------
 
 const criticalityLabel: Record<Criticality, string> = {
-  LOW: "Låg",
-  MEDIUM: "Medium",
-  HIGH: "Hög",
-  CRITICAL: "Kritisk",
+  låg: "Låg",
+  medel: "Medium",
+  hög: "Hög",
+  kritisk: "Kritisk",
 }
 
 const criticalityVariant: Record<
   Criticality,
   "default" | "secondary" | "destructive" | "outline"
 > = {
-  LOW: "secondary",
-  MEDIUM: "outline",
-  HIGH: "default",
-  CRITICAL: "destructive",
+  låg: "secondary",
+  medel: "outline",
+  hög: "default",
+  kritisk: "destructive",
 }
 
-const integrationTypeLabel: Record<IntegrationType, string> = {
-  REST_API: "REST API",
-  SOAP: "SOAP",
-  DATABASE: "Databas",
-  FILE_TRANSFER: "Filöverföring",
-  MESSAGE_QUEUE: "Meddelandekö",
-  EVENT_STREAM: "Händelseström",
-  OTHER: "Övrigt",
+const integrationTypeLabel: Record<string, string> = {
+  api: "API",
+  filöverföring: "Filöverföring",
+  databasreplikering: "Databasreplikering",
+  event: "Event",
+  manuell: "Manuell",
 }
 
 // Färg per kritikalitet — för SVG-noder
 const criticalityColor: Record<Criticality, string> = {
-  LOW: "#86efac",       // grön
-  MEDIUM: "#fcd34d",    // gul
-  HIGH: "#fb923c",      // orange
-  CRITICAL: "#f87171",  // röd
+  låg: "#86efac",
+  medel: "#fcd34d",
+  hög: "#fb923c",
+  kritisk: "#f87171",
 }
 
 const DEFAULT_NODE_COLOR = "#94a3b8"
@@ -150,7 +124,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
     return {
       id,
       label: sys?.name ?? id.slice(0, 8),
-      criticality: sys?.criticality ?? null,
+      criticality: (sys?.criticality as Criticality) ?? null,
       x: CX + RADIUS * Math.cos(angle),
       y: CY + RADIUS * Math.sin(angle),
     }
@@ -161,8 +135,8 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
   const edges: GraphEdge[] = integrations.map((i) => ({
     source: i.source_system_id,
     target: i.target_system_id,
-    type: i.integration_type,
-    criticality: i.criticality,
+    type: i.integration_type as IntegrationType,
+    criticality: i.criticality as Criticality | null,
   }))
 
   // Beräkna offset-vektor för pil (undvik överlapp med nod-cirkeln)
@@ -207,7 +181,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
       >
         {/* Pil-markör per kritikalitet */}
         <defs>
-          {(["LOW", "MEDIUM", "HIGH", "CRITICAL", "DEFAULT"] as const).map(
+          {(["låg", "medel", "hög", "kritisk", "DEFAULT"] as const).map(
             (k) => {
               const color =
                 k === "DEFAULT"
@@ -264,7 +238,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
                     setTooltip({
                       x: e.clientX - rect.left,
                       y: e.clientY - rect.top - 36,
-                      text: integrationTypeLabel[edge.type],
+                      text: integrationTypeLabel[edge.type] ?? edge.type,
                     })
                   }
                 }}
@@ -296,7 +270,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
                   className="font-medium select-none"
                   style={{ pointerEvents: "none" }}
                 >
-                  {integrationTypeLabel[edge.type]}
+                  {integrationTypeLabel[edge.type] ?? edge.type}
                 </text>
               )}
             </g>
@@ -318,7 +292,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
                 if (rect) {
                   const sys = systems.get(node.id)
                   const crit = sys
-                    ? criticalityLabel[sys.criticality]
+                    ? criticalityLabel[sys.criticality as Criticality]
                     : "Okänd"
                   setTooltip({
                     x: e.clientX - rect.left,
@@ -370,7 +344,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
 
       {/* Förklaring */}
       <div className="mt-4 flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
-        {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as Criticality[]).map((c) => (
+        {(["låg", "medel", "hög", "kritisk"] as Criticality[]).map((c) => (
           <span key={c} className="flex items-center gap-1.5">
             <span
               className="inline-block h-3 w-3 rounded-full border"
@@ -389,9 +363,10 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
 interface DependencyTableProps {
   integrations: Integration[]
   systems: Map<string, SystemItem>
+  onDelete: (integration: Integration) => void
 }
 
-function DependencyTable({ integrations, systems }: DependencyTableProps) {
+function DependencyTable({ integrations, systems, onDelete }: DependencyTableProps) {
   if (integrations.length === 0) {
     return (
       <p className="py-12 text-center text-muted-foreground">
@@ -411,25 +386,27 @@ function DependencyTable({ integrations, systems }: DependencyTableProps) {
           <TableHead>Frekvens</TableHead>
           <TableHead>Extern part</TableHead>
           <TableHead>Beskrivning</TableHead>
+          <TableHead className="w-12"></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {integrations.map((i) => {
           const srcName = systems.get(i.source_system_id)?.name ?? i.source_system_id.slice(0, 8)
           const tgtName = systems.get(i.target_system_id)?.name ?? i.target_system_id.slice(0, 8)
+          const crit = i.criticality as Criticality | null
           return (
             <TableRow key={i.id}>
               <TableCell className="font-medium">{srcName}</TableCell>
               <TableCell>{tgtName}</TableCell>
               <TableCell>
                 <Badge variant="outline">
-                  {integrationTypeLabel[i.integration_type]}
+                  {integrationTypeLabel[i.integration_type] ?? i.integration_type}
                 </Badge>
               </TableCell>
               <TableCell>
-                {i.criticality ? (
-                  <Badge variant={criticalityVariant[i.criticality]}>
-                    {criticalityLabel[i.criticality]}
+                {crit ? (
+                  <Badge variant={criticalityVariant[crit]}>
+                    {criticalityLabel[crit]}
                   </Badge>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -453,6 +430,16 @@ function DependencyTable({ integrations, systems }: DependencyTableProps) {
               >
                 {i.description ?? "—"}
               </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => onDelete(i)}
+                >
+                  <TrashIcon className="size-4" />
+                </Button>
+              </TableCell>
             </TableRow>
           )
         })}
@@ -464,52 +451,56 @@ function DependencyTable({ integrations, systems }: DependencyTableProps) {
 // ---------- Sida ----------
 
 export default function DependenciesPage() {
-  const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [systems, setSystems] = useState<Map<string, SystemItem>>(new Map())
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const [newDialogOpen, setNewDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Integration | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const [ints, sysList] = await Promise.all([
-          fetchIntegrations(),
-          fetchSystems(),
-        ])
-        if (cancelled) return
-        setIntegrations(ints)
-        setSystems(new Map(sysList.map((s) => [s.id, s])))
-      } catch (err) {
-        if (cancelled) return
-        setError("Kunde inte hämta data. Kontrollera att API:et är tillgängligt.")
-        console.error(err)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { data: integrationsData = [], isLoading: isLoadingIntegrations, error: integrationsError } = useQuery({
+    queryKey: ["integrations"],
+    queryFn: () => getIntegrations(),
+  })
+
+  const { data: systemsData, isLoading: isLoadingSystems } = useQuery({
+    queryKey: ["systems", { limit: 500 }],
+    queryFn: () => getSystems({ limit: 500 }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteIntegration(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["integrations"] })
+      setDeleteTarget(null)
+    },
+  })
+
+  const loading = isLoadingIntegrations || isLoadingSystems
+  const error = integrationsError ? "Kunde inte hämta data. Kontrollera att API:et är tillgängligt." : null
+
+  const systemsList = systemsData?.items ?? []
+  const systems = new Map(systemsList.map((s) => [s.id, s as unknown as SystemItem]))
 
   // Statistik
   const totalSystems = new Set(
-    integrations.flatMap((i) => [i.source_system_id, i.target_system_id])
+    integrationsData.flatMap((i) => [i.source_system_id, i.target_system_id])
   ).size
-  const criticalCount = integrations.filter(
-    (i) => i.criticality === "CRITICAL"
+  const criticalCount = integrationsData.filter(
+    (i) => i.criticality === "kritisk"
   ).length
-  const externalCount = integrations.filter((i) => i.is_external).length
+  const externalCount = integrationsData.filter((i) => i.is_external).length
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Beroendekarta</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Visualisering av systemintegrationer och beroenden
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Beroendekarta</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Visualisering av systemintegrationer och beroenden
+          </p>
+        </div>
+        <Button onClick={() => setNewDialogOpen(true)}>
+          <PlusIcon className="mr-2 size-4" />
+          Ny integration
+        </Button>
       </div>
 
       {/* KPI-kort */}
@@ -522,7 +513,7 @@ export default function DependenciesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">
-              {loading ? "—" : integrations.length}
+              {loading ? "—" : integrationsData.length}
             </p>
           </CardContent>
         </Card>
@@ -578,16 +569,36 @@ export default function DependenciesPage() {
               </TabsList>
 
               <TabsContent value="graf" className="mt-4">
-                <DependencyGraph integrations={integrations} systems={systems} />
+                <DependencyGraph integrations={integrationsData} systems={systems} />
               </TabsContent>
 
               <TabsContent value="tabell" className="mt-4">
-                <DependencyTable integrations={integrations} systems={systems} />
+                <DependencyTable
+                  integrations={integrationsData}
+                  systems={systems}
+                  onDelete={setDeleteTarget}
+                />
               </TabsContent>
             </Tabs>
           )}
         </CardContent>
       </Card>
+
+      {/* Ny integration-dialog */}
+      <IntegrationDialog
+        open={newDialogOpen}
+        onOpenChange={setNewDialogOpen}
+      />
+
+      {/* Bekräftelsedialog för borttagning */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Ta bort integration"
+        description="Är du säker på att du vill ta bort denna integration? Åtgärden kan inte ångras."
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        loading={deleteMutation.isPending}
+      />
     </div>
   )
 }

@@ -14,6 +14,7 @@ import {
   UploadIcon,
   FileTextIcon,
   BellIcon,
+  BuildingIcon,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
@@ -24,6 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Link } from "react-router-dom"
 
 import DashboardPage from "@/pages/DashboardPage"
 import SystemsPage from "@/pages/SystemsPage"
@@ -32,6 +34,8 @@ import SystemFormPage from "@/pages/SystemFormPage"
 import DependenciesPage from "@/pages/DependenciesPage"
 import ImportPage from "@/pages/ImportPage"
 import ReportsPage from "@/pages/ReportsPage"
+import NotificationsPage from "@/pages/NotificationsPage"
+import OrganizationsPage from "@/pages/OrganizationsPage"
 
 // --- Notifikationsklockla ---
 
@@ -49,14 +53,14 @@ function NotificationBell() {
   const count = data?.total ?? 0
 
   return (
-    <div className="relative">
-      <BellIcon className="size-5 text-muted-foreground" />
+    <Link to="/notifications" className="relative" aria-label="Visa notifikationer">
+      <BellIcon className="size-5 text-muted-foreground hover:text-foreground transition-colors" />
       {count > 0 && (
         <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
           {count > 99 ? "99+" : count}
         </span>
       )}
-    </div>
+    </Link>
   )
 }
 
@@ -65,7 +69,9 @@ function NotificationBell() {
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
   { to: "/systems", label: "System", icon: ServerIcon },
-  { to: "/dependencies", label: "Beroenden", icon: GitForkIcon },
+  { to: "/organizations", label: "Organisationer", icon: BuildingIcon },
+  { to: "/dependencies", label: "Beroendekarta", icon: GitForkIcon },
+  { to: "/notifications", label: "Notifikationer", icon: BellIcon },
   { to: "/import", label: "Import", icon: UploadIcon },
   { to: "/reports", label: "Rapporter", icon: FileTextIcon },
 ]
@@ -182,7 +188,9 @@ export default function App() {
           <Route path="/systems/new" element={<SystemFormPage />} />
           <Route path="/systems/:id" element={<SystemDetailPage />} />
           <Route path="/systems/:id/edit" element={<SystemFormPage />} />
+          <Route path="/organizations" element={<OrganizationsPage />} />
           <Route path="/dependencies" element={<DependenciesPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/reports" element={<ReportsPage />} />
         </Routes>
