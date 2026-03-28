@@ -75,11 +75,9 @@ async def get_rls_db(
     TODO: Byt till JWT-claims när auth är implementerat.
           Se issue #XX — auth-modul.
     """
-    if settings.environment != "development" and x_organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="X-Organization-Id-header krävs",
-        )
+    # Utan header = bypass-mode (superadmin-vy, ser allt)
+    # Med header = filtrerat per organisation via RLS
+    # TODO: Kräv header när JWT-auth är implementerat
 
     if x_organization_id is not None:
         try:
