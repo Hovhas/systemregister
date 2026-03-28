@@ -22,7 +22,6 @@ SYSTEM_BASE = {
 }
 
 OWNER_BASE = {
-    "system_id": "00000000-0000-0000-0000-000000000000",  # overridden per test
     "organization_id": "00000000-0000-0000-0000-000000000000",  # overridden per test
     "role": "systemägare",
     "name": "Anna Svensson",
@@ -45,7 +44,7 @@ async def create_system(client, org_id: str, name: str = "Procapita") -> dict:
 
 
 async def create_owner(client, system_id: str, org_id: str, overrides: dict | None = None) -> dict:
-    payload = {**OWNER_BASE, "system_id": system_id, "organization_id": org_id}
+    payload = {**OWNER_BASE, "organization_id": org_id}
     if overrides:
         payload.update(overrides)
     resp = await client.post(f"/api/v1/systems/{system_id}/owners", json=payload)
@@ -65,7 +64,7 @@ async def test_add_owner(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    payload = {**OWNER_BASE, "system_id": system_id, "organization_id": org["id"]}
+    payload = {**OWNER_BASE, "organization_id": org["id"]}
     resp = await client.post(f"/api/v1/systems/{system_id}/owners", json=payload)
 
     assert resp.status_code == 201, f"Expected 201: {resp.text}"
@@ -89,7 +88,6 @@ async def test_add_owner_minimal_fields(client):
     system_id = system["id"]
 
     payload = {
-        "system_id": system_id,
         "organization_id": org["id"],
         "role": "it_kontakt",
         "name": "IT-kontakt Person",
@@ -207,7 +205,7 @@ async def test_add_owner_invalid_system(client):
     org = await create_org(client)
     fake_system_id = "00000000-0000-0000-0000-000000000000"
 
-    payload = {**OWNER_BASE, "system_id": fake_system_id, "organization_id": org["id"]}
+    payload = {**OWNER_BASE, "organization_id": org["id"]}
     resp = await client.post(f"/api/v1/systems/{fake_system_id}/owners", json=payload)
 
     assert resp.status_code == 404, f"Expected 404, got {resp.status_code}"
@@ -234,7 +232,7 @@ async def test_add_owner_invalid_role(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    payload = {**OWNER_BASE, "system_id": system_id, "organization_id": org["id"], "role": "okänd_roll"}
+    payload = {**OWNER_BASE, "organization_id": org["id"], "role": "okänd_roll"}
     resp = await client.post(f"/api/v1/systems/{system_id}/owners", json=payload)
 
     assert resp.status_code == 422, f"Expected 422 for invalid role, got {resp.status_code}"
@@ -257,7 +255,6 @@ async def test_add_owner_all_six_roles(client, role):
 
     resp = await client.post(f"/api/v1/systems/{system['id']}/owners", json={
         **OWNER_BASE,
-        "system_id": system["id"],
         "organization_id": org["id"],
         "role": role,
         "name": f"Person för {role}",
@@ -274,7 +271,6 @@ async def test_add_duplicate_owner_same_system_role_name_rejected(client):
 
     payload = {
         **OWNER_BASE,
-        "system_id": system["id"],
         "organization_id": org["id"],
         "role": "it_kontakt",
         "name": "Dubbelregistrerad Person",
@@ -301,7 +297,6 @@ async def test_multiple_owners_different_roles_same_system(client):
     roles = ["systemägare", "informationsägare", "systemförvaltare"]
     for i, role in enumerate(roles):
         resp = await client.post(f"/api/v1/systems/{system['id']}/owners", json={
-            "system_id": system["id"],
             "organization_id": org["id"],
             "role": role,
             "name": f"Person {i}",

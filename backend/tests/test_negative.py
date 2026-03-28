@@ -120,7 +120,6 @@ async def test_create_owner_for_nonexistent_system(client):
     org = await create_org(client)
     try:
         resp = await client.post(f"/api/v1/systems/{FAKE_UUID}/owners", json={
-            "system_id": FAKE_UUID,
             "organization_id": org["id"],
             "role": "systemägare",
             "name": "Test Person",
@@ -238,7 +237,7 @@ async def test_delete_contract_nonexistent(client):
 
 @pytest.mark.asyncio
 async def test_contract_end_before_start_rejected_or_accepted(client):
-    """Contract with end_date before start_date — document behavior."""
+    """Contract med end_date före start_date ska alltid rejectas med 422."""
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     resp = await client.post(f"/api/v1/systems/{sys['id']}/contracts", json={
@@ -246,10 +245,8 @@ async def test_contract_end_before_start_rejected_or_accepted(client):
         "contract_start": "2025-12-01",
         "contract_end": "2025-01-01",  # end before start
     })
-    # Either rejected (422) or accepted (API trusts caller)
-    # Document observed behavior:
-    assert resp.status_code in (201, 422), (
-        f"Unexpected status for reversed dates: {resp.status_code}"
+    assert resp.status_code == 422, (
+        f"Förväntade 422 för omvända datum, fick: {resp.status_code}"
     )
 
 
@@ -332,7 +329,6 @@ async def test_create_owner_empty_name(client):
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     resp = await client.post(f"/api/v1/systems/{sys['id']}/owners", json={
-        "system_id": sys["id"],
         "organization_id": org["id"],
         "role": "systemägare",
         "name": "",

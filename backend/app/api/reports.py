@@ -128,7 +128,7 @@ _REPORT_CSS = """
 
 
 def _render_nis2_html(systems: list[System]) -> str:
-    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     total = len(systems)
     without_classification = sum(1 for s in systems if s.nis2_classification is None)
     without_risk = sum(1 for s in systems if s.last_risk_assessment_date is None)
@@ -189,7 +189,7 @@ def _render_nis2_html(systems: list[System]) -> str:
 
 
 def _render_compliance_gap_html(gap_data: dict) -> str:
-    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     total_gaps = gap_data["summary"]["total_gaps"]
     gaps = gap_data["gaps"]
 

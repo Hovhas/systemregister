@@ -22,7 +22,6 @@ SYSTEM_BASE = {
 }
 
 CLASSIFICATION_BASE = {
-    "system_id": "00000000-0000-0000-0000-000000000000",  # overridden per test
     "confidentiality": 2,
     "integrity": 3,
     "availability": 1,
@@ -45,7 +44,7 @@ async def create_system(client, org_id: str, name: str = "Procapita") -> dict:
 
 
 async def create_classification(client, system_id: str, overrides: dict | None = None) -> dict:
-    payload = {**CLASSIFICATION_BASE, "system_id": system_id}
+    payload = {**CLASSIFICATION_BASE}
     if overrides:
         payload.update(overrides)
     resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
@@ -65,7 +64,7 @@ async def test_create_classification(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    payload = {**CLASSIFICATION_BASE, "system_id": system_id}
+    payload = {**CLASSIFICATION_BASE}
     resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
 
     assert resp.status_code == 201, f"Expected 201: {resp.text}"
@@ -168,7 +167,7 @@ async def test_get_latest_classification_no_classifications_returns_404(client):
 async def test_create_classification_invalid_system(client):
     """POST /api/v1/systems/{id}/classifications with non-existent system returns 404."""
     fake_id = "00000000-0000-0000-0000-000000000000"
-    payload = {**CLASSIFICATION_BASE, "system_id": fake_id}
+    payload = {**CLASSIFICATION_BASE}
 
     resp = await client.post(f"/api/v1/systems/{fake_id}/classifications", json=payload)
 
@@ -182,7 +181,7 @@ async def test_classification_values_validated_below_range(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    payload = {**CLASSIFICATION_BASE, "system_id": system_id, "confidentiality": -1}
+    payload = {**CLASSIFICATION_BASE, "confidentiality": -1}
     resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
 
     assert resp.status_code == 422, f"Expected 422 for value -1, got {resp.status_code}"
@@ -195,7 +194,7 @@ async def test_classification_values_validated_above_range(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    payload = {**CLASSIFICATION_BASE, "system_id": system_id, "integrity": 5}
+    payload = {**CLASSIFICATION_BASE, "integrity": 5}
     resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
 
     assert resp.status_code == 422, f"Expected 422 for value 5, got {resp.status_code}"
@@ -210,7 +209,6 @@ async def test_classification_boundary_values_valid(client):
 
     payload = {
         **CLASSIFICATION_BASE,
-        "system_id": system_id,
         "confidentiality": 0,
         "integrity": 4,
         "availability": 0,
@@ -256,7 +254,6 @@ async def test_classification_min_boundary_values(client):
 
     payload = {
         **CLASSIFICATION_BASE,
-        "system_id": system_id,
         "confidentiality": 0,
         "integrity": 0,
         "availability": 0,
@@ -280,7 +277,6 @@ async def test_classification_max_boundary_values(client):
 
     payload = {
         **CLASSIFICATION_BASE,
-        "system_id": system_id,
         "confidentiality": 4,
         "integrity": 4,
         "availability": 4,
@@ -319,7 +315,6 @@ async def test_classification_without_traceability_returns_none(client):
     system_id = system["id"]
 
     payload = {
-        "system_id": system_id,
         "confidentiality": 2,
         "integrity": 3,
         "availability": 1,

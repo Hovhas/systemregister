@@ -42,7 +42,7 @@ app = FastAPI(
 
 # Trusted proxy headers (Traefik sätter X-Forwarded-Proto)
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=settings.trusted_proxy_hosts)
 
 # CORS
 app.add_middleware(

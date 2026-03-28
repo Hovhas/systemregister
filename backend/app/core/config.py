@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # CORS
     allowed_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # Betrodda proxy-hostar som tillåts sätta X-Forwarded-For (Traefik, intern LB)
+    trusted_proxy_hosts: list[str] = ["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12"]
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

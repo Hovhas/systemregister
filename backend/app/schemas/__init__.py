@@ -30,7 +30,7 @@ class OrganizationCreate(SafeStringMixin):
     description: str | None = None
 
 
-class OrganizationUpdate(BaseModel):
+class OrganizationUpdate(SafeStringMixin):
     name: str | None = Field(None, max_length=255)
     org_number: str | None = Field(None, max_length=20)
     org_type: OrganizationType | None = None
@@ -126,7 +126,6 @@ class SystemUpdate(BaseModel):
 
 
 class ClassificationCreate(BaseModel):
-    system_id: UUID
     confidentiality: int = Field(ge=0, le=4)
     integrity: int = Field(ge=0, le=4)
     availability: int = Field(ge=0, le=4)
@@ -152,7 +151,6 @@ class ClassificationResponse(BaseModel):
 
 
 class OwnerCreate(SafeStringMixin):
-    system_id: UUID
     organization_id: UUID
     role: OwnerRole
     name: str = Field(min_length=1, max_length=255)
@@ -187,7 +185,7 @@ class OwnerResponse(BaseModel):
     created_at: datetime
 
 
-class IntegrationCreate(BaseModel):
+class IntegrationCreate(SafeStringMixin):
     source_system_id: UUID
     target_system_id: UUID
     integration_type: IntegrationType
@@ -302,7 +300,7 @@ class PaginatedResponse(BaseModel):
 
 # --- GDPRTreatment ---
 
-class GDPRTreatmentCreate(BaseModel):
+class GDPRTreatmentCreate(SafeStringMixin):
     ropa_reference_id: str | None = Field(None, max_length=100)
     data_categories: list[str] | None = None
     categories_of_data_subjects: str | None = None
@@ -370,6 +368,14 @@ class ContractCreate(SafeStringMixin):
     procurement_type: str | None = Field(None, max_length=100)
     support_level: str | None = Field(None, max_length=255)
 
+    @model_validator(mode="after")
+    def validate_contract_dates(self):
+        """Kontrollera att contract_end inte är före contract_start."""
+        if self.contract_start and self.contract_end:
+            if self.contract_end < self.contract_start:
+                raise ValueError("contract_end kan inte vara före contract_start")
+        return self
+
 
 class ContractUpdate(BaseModel):
     supplier_name: str | None = Field(None, max_length=255)
@@ -385,6 +391,14 @@ class ContractUpdate(BaseModel):
     annual_operations_cost: int | None = None
     procurement_type: str | None = Field(None, max_length=100)
     support_level: str | None = Field(None, max_length=255)
+
+    @model_validator(mode="after")
+    def validate_contract_dates(self):
+        """Kontrollera att contract_end inte är före contract_start (båda måste anges)."""
+        if self.contract_start and self.contract_end:
+            if self.contract_end < self.contract_start:
+                raise ValueError("contract_end kan inte vara före contract_start")
+        return self
 
 
 class ContractResponse(BaseModel):

@@ -331,7 +331,6 @@ async def test_invalid_owner_role_rejected(client):
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     resp = await client.post(f"/api/v1/systems/{sys['id']}/owners", json={
-        "system_id": sys["id"],
         "organization_id": org["id"],
         "role": "kung",
         "name": "Test Person",
@@ -496,7 +495,6 @@ async def test_classification_value_above_max_rejected(client):
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     resp = await client.post(f"/api/v1/systems/{sys['id']}/classifications", json={
-        "system_id": sys["id"],
         "confidentiality": 5,  # Max is 4
         "integrity": 2,
         "availability": 2,
@@ -513,7 +511,6 @@ async def test_classification_negative_value_rejected(client):
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     resp = await client.post(f"/api/v1/systems/{sys['id']}/classifications", json={
-        "system_id": sys["id"],
         "confidentiality": -1,
         "integrity": 2,
         "availability": 2,

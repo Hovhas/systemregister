@@ -54,7 +54,6 @@ async def create_system(client: AsyncClient, org_id: str, **overrides) -> dict:
 async def create_classification(client: AsyncClient, system_id: str, **overrides) -> dict:
     """Create a classification for a system."""
     data = {
-        "system_id": str(system_id),
         "confidentiality": overrides.pop("confidentiality", 2),
         "integrity": overrides.pop("integrity", 2),
         "availability": overrides.pop("availability", 2),
@@ -74,7 +73,6 @@ async def create_classification(client: AsyncClient, system_id: str, **overrides
 async def create_owner(client: AsyncClient, system_id: str, org_id: str, **overrides) -> dict:
     """Create an owner for a system."""
     data = {
-        "system_id": str(system_id),
         "organization_id": str(org_id),
         "role": overrides.pop("role", "systemägare"),
         "name": overrides.pop("name", "Test Testsson"),
