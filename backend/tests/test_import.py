@@ -11,24 +11,7 @@ import json
 
 import pytest
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-
-async def create_org(client, name: str = "Sundsvalls kommun", org_number: str = "212000-2723") -> dict:
-    resp = await client.post("/api/v1/organizations/", json={
-        **ORG_PAYLOAD, "name": name, "org_number": org_number,
-    })
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
+from tests.factories import create_org
 
 
 def make_json_file(rows: list[dict]) -> tuple[bytes, str, str]:

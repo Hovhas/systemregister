@@ -4,21 +4,12 @@ Tests for /api/v1/integrations and /api/v1/systems/{id}/integrations endpoints.
 
 import pytest
 
+from tests.factories import create_org, create_system, create_integration
+
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Constants used in direct POST calls within tests
 # ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-SYSTEM_BASE = {
-    "description": "Testbeskrivning",
-    "system_category": "verksamhetssystem",
-}
 
 INTEGRATION_BASE = {
     "integration_type": "api",
@@ -27,37 +18,6 @@ INTEGRATION_BASE = {
     "frequency": "realtid",
     "is_external": False,
 }
-
-
-async def create_org(client) -> dict:
-    resp = await client.post("/api/v1/organizations/", json=ORG_PAYLOAD)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, name: str) -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name}
-    resp = await client.post("/api/v1/systems/", json=payload)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_integration(
-    client,
-    source_id: str,
-    target_id: str,
-    overrides: dict | None = None,
-) -> dict:
-    payload = {
-        **INTEGRATION_BASE,
-        "source_system_id": source_id,
-        "target_system_id": target_id,
-    }
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post("/api/v1/integrations/", json=payload)
-    assert resp.status_code == 201, f"Integration creation failed: {resp.text}"
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -69,8 +29,8 @@ async def create_integration(
 async def test_create_integration(client):
     """POST /api/v1/integrations/ returns 201 with correct fields."""
     org = await create_org(client)
-    source = await create_system(client, org["id"], "Procapita")
-    target = await create_system(client, org["id"], "DataLager")
+    source = await create_system(client, org["id"], name="Procapita")
+    target = await create_system(client, org["id"], name="DataLager")
 
     payload = {
         **INTEGRATION_BASE,
@@ -95,9 +55,9 @@ async def test_create_integration(client):
 async def test_list_integrations(client):
     """GET /api/v1/integrations/ returns all integrations."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
-    sys_c = await create_system(client, org["id"], "System C")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
+    sys_c = await create_system(client, org["id"], name="System C")
 
     await create_integration(client, sys_a["id"], sys_b["id"])
     await create_integration(client, sys_b["id"], sys_c["id"])
@@ -123,9 +83,9 @@ async def test_list_integrations_empty(client):
 async def test_filter_integrations_by_system(client):
     """GET /api/v1/integrations/?system_id=... returns only integrations involving that system."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
-    sys_c = await create_system(client, org["id"], "System C")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
+    sys_c = await create_system(client, org["id"], name="System C")
 
     # A -> B (involves A)
     await create_integration(client, sys_a["id"], sys_b["id"])
@@ -150,8 +110,8 @@ async def test_filter_integrations_by_system(client):
 async def test_get_integration(client):
     """GET /api/v1/integrations/{id} returns the correct integration."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
     created = await create_integration(client, sys_a["id"], sys_b["id"])
 
     resp = await client.get(f"/api/v1/integrations/{created['id']}")
@@ -176,8 +136,8 @@ async def test_get_integration_not_found(client):
 async def test_update_integration(client):
     """PATCH /api/v1/integrations/{id} updates fields without touching others."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
     created = await create_integration(client, sys_a["id"], sys_b["id"])
 
     patch = {
@@ -210,8 +170,8 @@ async def test_update_integration_not_found(client):
 async def test_delete_integration(client):
     """DELETE /api/v1/integrations/{id} removes the integration and returns 204."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
     created = await create_integration(client, sys_a["id"], sys_b["id"])
     integration_id = created["id"]
 
@@ -235,9 +195,9 @@ async def test_delete_integration_not_found(client):
 async def test_list_system_integrations(client):
     """GET /api/v1/systems/{id}/integrations returns both inbound and outbound integrations."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
-    sys_c = await create_system(client, org["id"], "System C")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
+    sys_c = await create_system(client, org["id"], name="System C")
 
     # A -> B (outbound from A)
     await create_integration(client, sys_a["id"], sys_b["id"])
@@ -274,8 +234,8 @@ async def test_list_system_integrations_invalid_system(client):
 async def test_create_integration_invalid_type(client):
     """POST integration with unknown integration_type returns 422."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
 
     payload = {
         **INTEGRATION_BASE,
@@ -292,7 +252,7 @@ async def test_create_integration_invalid_type(client):
 async def test_create_integration_invalid_source_system(client):
     """POST integration with non-existent source_system_id returns 404."""
     org = await create_org(client)
-    sys_b = await create_system(client, org["id"], "System B")
+    sys_b = await create_system(client, org["id"], name="System B")
     fake_id = "00000000-0000-0000-0000-000000000000"
 
     payload = {
@@ -309,12 +269,12 @@ async def test_create_integration_invalid_source_system(client):
 async def test_filter_integrations_by_type(client):
     """GET /api/v1/integrations/?integration_type=... filters by type."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], "System A")
-    sys_b = await create_system(client, org["id"], "System B")
-    sys_c = await create_system(client, org["id"], "System C")
+    sys_a = await create_system(client, org["id"], name="System A")
+    sys_b = await create_system(client, org["id"], name="System B")
+    sys_c = await create_system(client, org["id"], name="System C")
 
-    await create_integration(client, sys_a["id"], sys_b["id"], {"integration_type": "api"})
-    await create_integration(client, sys_b["id"], sys_c["id"], {"integration_type": "filöverföring"})
+    await create_integration(client, sys_a["id"], sys_b["id"], integration_type="api")
+    await create_integration(client, sys_b["id"], sys_c["id"], integration_type="filöverföring")
 
     resp = await client.get("/api/v1/integrations/", params={"integration_type": "api"})
 

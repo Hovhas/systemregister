@@ -4,22 +4,12 @@ Tests for /api/v1/systems/{id}/classifications endpoints.
 
 import pytest
 
+from tests.factories import create_org, create_system, create_classification
+
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Constants used in direct POST calls within tests
 # ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-SYSTEM_BASE = {
-    "name": "Procapita",
-    "description": "Verksamhetssystem för individ- och familjeomsorg",
-    "system_category": "verksamhetssystem",
-}
 
 CLASSIFICATION_BASE = {
     "confidentiality": 2,
@@ -28,28 +18,6 @@ CLASSIFICATION_BASE = {
     "traceability": 2,
     "classified_by": "anna.svensson@sundsvall.se",
 }
-
-
-async def create_org(client) -> dict:
-    resp = await client.post("/api/v1/organizations/", json=ORG_PAYLOAD)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, name: str = "Procapita") -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name}
-    resp = await client.post("/api/v1/systems/", json=payload)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_classification(client, system_id: str, overrides: dict | None = None) -> dict:
-    payload = {**CLASSIFICATION_BASE}
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
-    assert resp.status_code == 201, f"Classification creation failed: {resp.text}"
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -90,8 +58,8 @@ async def test_list_classifications(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    await create_classification(client, system_id, {"confidentiality": 1})
-    await create_classification(client, system_id, {"confidentiality": 3})
+    await create_classification(client, system_id, confidentiality=1)
+    await create_classification(client, system_id, confidentiality=3)
 
     resp = await client.get(f"/api/v1/systems/{system_id}/classifications")
 
@@ -132,8 +100,8 @@ async def test_get_latest_classification(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    first = await create_classification(client, system_id, {"confidentiality": 1, "notes": "first"})
-    second = await create_classification(client, system_id, {"confidentiality": 4, "notes": "second"})
+    first = await create_classification(client, system_id, confidentiality=1, notes="first")
+    second = await create_classification(client, system_id, confidentiality=4, notes="second")
 
     resp = await client.get(f"/api/v1/systems/{system_id}/classifications/latest")
 
@@ -333,9 +301,9 @@ async def test_classification_multiple_versions_ordered_newest_first(client):
     system_id = system["id"]
 
     # Create 3 classifications
-    c1 = await create_classification(client, system_id, {"confidentiality": 1})
-    c2 = await create_classification(client, system_id, {"confidentiality": 2})
-    c3 = await create_classification(client, system_id, {"confidentiality": 3})
+    c1 = await create_classification(client, system_id, confidentiality=1)
+    c2 = await create_classification(client, system_id, confidentiality=2)
+    c3 = await create_classification(client, system_id, confidentiality=3)
 
     resp = await client.get(f"/api/v1/systems/{system_id}/classifications")
     assert resp.status_code == 200

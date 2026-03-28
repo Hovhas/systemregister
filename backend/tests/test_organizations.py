@@ -4,9 +4,11 @@ Tests for /api/v1/organizations endpoints.
 
 import pytest
 
+from tests.factories import create_org
+
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Constants used in direct POST calls and as default data
 # ---------------------------------------------------------------------------
 
 ORG_BASE = {
@@ -15,14 +17,6 @@ ORG_BASE = {
     "org_type": "kommun",
     "description": "Moderorganisation",
 }
-
-
-async def create_org(client, payload: dict | None = None) -> dict:
-    """Helper: POST a new organization and return the response JSON."""
-    data = payload or ORG_BASE.copy()
-    resp = await client.post("/api/v1/organizations/", json=data)
-    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +68,7 @@ async def test_create_organization_invalid_org_type(client):
 async def test_list_organizations(client):
     """GET /api/v1/organizations/ returns a list."""
     await create_org(client)
-    await create_org(client, {**ORG_BASE, "name": "Bolag AB", "org_number": "556000-0001", "org_type": "bolag"})
+    await create_org(client, **{**ORG_BASE, "name": "Bolag AB", "org_number": "556000-0001", "org_type": "bolag"})
 
     resp = await client.get("/api/v1/organizations/")
 
@@ -235,7 +229,7 @@ async def test_update_organization_all_fields(client):
 @pytest.mark.asyncio
 async def test_delete_organization_without_systems_succeeds(client):
     """DELETE org without systems returns 204 and org is removed."""
-    org = await create_org(client, {"name": "Ensam Org", "org_type": "samverkan"})
+    org = await create_org(client, name="Ensam Org", org_type="samverkan")
     org_id = org["id"]
 
     delete_resp = await client.delete(f"/api/v1/organizations/{org_id}")
@@ -248,7 +242,7 @@ async def test_delete_organization_without_systems_succeeds(client):
 @pytest.mark.asyncio
 async def test_organization_parent_child_hierarchy(client):
     """POST child organization with parent_org_id links correctly."""
-    parent = await create_org(client, {"name": "Moderorganisation", "org_type": "samverkan"})
+    parent = await create_org(client, name="Moderorganisation", org_type="samverkan")
     child_resp = await client.post("/api/v1/organizations/", json={
         "name": "Dotterbolag",
         "org_type": "bolag",
@@ -262,7 +256,7 @@ async def test_organization_parent_child_hierarchy(client):
 @pytest.mark.asyncio
 async def test_organization_get_after_create_matches(client):
     """GET /organizations/{id} after create returns identical data."""
-    created = await create_org(client, {**ORG_BASE, "name": "Matchningstest Org"})
+    created = await create_org(client, **{**ORG_BASE, "name": "Matchningstest Org"})
     org_id = created["id"]
 
     resp = await client.get(f"/api/v1/organizations/{org_id}")
@@ -275,9 +269,9 @@ async def test_organization_get_after_create_matches(client):
 @pytest.mark.asyncio
 async def test_list_organizations_sorted_alphabetically(client):
     """GET /organizations/ returns organizations sorted by name A-Z."""
-    await create_org(client, {"name": "Östra kommunen", "org_type": "kommun"})
-    await create_org(client, {"name": "Ångermanland AB", "org_type": "bolag"})
-    await create_org(client, {"name": "Alfa samverkan", "org_type": "samverkan"})
+    await create_org(client, name="Östra kommunen", org_type="kommun")
+    await create_org(client, name="Ångermanland AB", org_type="bolag")
+    await create_org(client, name="Alfa samverkan", org_type="samverkan")
 
     resp = await client.get("/api/v1/organizations/")
     assert resp.status_code == 200

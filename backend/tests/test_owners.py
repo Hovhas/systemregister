@@ -4,22 +4,12 @@ Tests for /api/v1/systems/{id}/owners and /api/v1/owners/{id} endpoints.
 
 import pytest
 
+from tests.factories import create_org, create_system, create_owner
+
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Constants used in direct POST calls within tests
 # ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-SYSTEM_BASE = {
-    "name": "Procapita",
-    "description": "Verksamhetssystem för individ- och familjeomsorg",
-    "system_category": "verksamhetssystem",
-}
 
 OWNER_BASE = {
     "organization_id": "00000000-0000-0000-0000-000000000000",  # overridden per test
@@ -28,28 +18,6 @@ OWNER_BASE = {
     "email": "anna.svensson@sundsvall.se",
     "phone": "060-123456",
 }
-
-
-async def create_org(client) -> dict:
-    resp = await client.post("/api/v1/organizations/", json=ORG_PAYLOAD)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, name: str = "Procapita") -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name}
-    resp = await client.post("/api/v1/systems/", json=payload)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_owner(client, system_id: str, org_id: str, overrides: dict | None = None) -> dict:
-    payload = {**OWNER_BASE, "organization_id": org_id}
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post(f"/api/v1/systems/{system_id}/owners", json=payload)
-    assert resp.status_code == 201, f"Owner creation failed: {resp.text}"
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -107,8 +75,8 @@ async def test_list_owners(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    await create_owner(client, system_id, org["id"], {"name": "Person A", "role": "systemägare"})
-    await create_owner(client, system_id, org["id"], {"name": "Person B", "role": "informationsägare"})
+    await create_owner(client, system_id, org["id"], name="Person A", role="systemägare")
+    await create_owner(client, system_id, org["id"], name="Person B", role="informationsägare")
 
     resp = await client.get(f"/api/v1/systems/{system_id}/owners")
 
@@ -155,7 +123,7 @@ async def test_update_owner_role(client):
     """PATCH /api/v1/owners/{id} can update the role."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
-    owner = await create_owner(client, system["id"], org["id"], {"role": "systemägare"})
+    owner = await create_owner(client, system["id"], org["id"], role="systemägare")
 
     resp = await client.patch(f"/api/v1/owners/{owner['id']}", json={"role": "teknisk_förvaltare"})
 

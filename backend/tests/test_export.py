@@ -8,36 +8,7 @@ import json
 
 import pytest
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-SYSTEM_BASE = {
-    "description": "Testbeskrivning",
-    "system_category": "verksamhetssystem",
-    "criticality": "medel",
-}
-
-
-async def create_org(client, name: str = "Sundsvalls kommun", org_number: str = "212000-2723") -> dict:
-    payload = {**ORG_PAYLOAD, "name": name, "org_number": org_number}
-    resp = await client.post("/api/v1/organizations/", json=payload)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, name: str, **kwargs) -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name, **kwargs}
-    resp = await client.post("/api/v1/systems/", json=payload)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
+from tests.factories import create_org, create_system
 
 
 # ---------------------------------------------------------------------------
@@ -49,8 +20,8 @@ async def create_system(client, org_id: str, name: str, **kwargs) -> dict:
 async def test_export_json(client):
     """GET /api/v1/export/systems.json returns a valid JSON array of systems."""
     org = await create_org(client)
-    await create_system(client, org["id"], "Procapita")
-    await create_system(client, org["id"], "Visma Lön")
+    await create_system(client, org["id"], name="Procapita")
+    await create_system(client, org["id"], name="Visma Lön")
 
     resp = await client.get("/api/v1/export/systems.json")
 
@@ -89,8 +60,8 @@ async def test_export_json_empty(client):
 async def test_export_csv(client):
     """GET /api/v1/export/systems.csv returns valid CSV with headers and data rows."""
     org = await create_org(client)
-    await create_system(client, org["id"], "Procapita")
-    await create_system(client, org["id"], "Pulsen Combine")
+    await create_system(client, org["id"], name="Procapita")
+    await create_system(client, org["id"], name="Pulsen Combine")
 
     resp = await client.get("/api/v1/export/systems.csv")
 
@@ -144,7 +115,7 @@ async def test_export_csv_empty(client):
 async def test_export_xlsx(client):
     """GET /api/v1/export/systems.xlsx returns valid XLSX with correct Content-Type."""
     org = await create_org(client)
-    await create_system(client, org["id"], "Procapita")
+    await create_system(client, org["id"], name="Procapita")
 
     resp = await client.get("/api/v1/export/systems.xlsx")
 
@@ -176,8 +147,8 @@ async def test_export_xlsx_parseable(client):
         pytest.skip("openpyxl not installed")
 
     org = await create_org(client)
-    await create_system(client, org["id"], "Procapita")
-    await create_system(client, org["id"], "Visma Lön")
+    await create_system(client, org["id"], name="Procapita")
+    await create_system(client, org["id"], name="Visma Lön")
 
     resp = await client.get("/api/v1/export/systems.xlsx")
     assert resp.status_code == 200
@@ -198,8 +169,8 @@ async def test_export_filtered_by_org(client):
     org1 = await create_org(client, name="Org 1", org_number="111111-1111")
     org2 = await create_org(client, name="Org 2", org_number="222222-2222")
 
-    await create_system(client, org1["id"], "Org1 System")
-    await create_system(client, org2["id"], "Org2 System")
+    await create_system(client, org1["id"], name="Org1 System")
+    await create_system(client, org2["id"], name="Org2 System")
 
     # Export only org1's systems as JSON
     resp = await client.get("/api/v1/export/systems.json", params={"organization_id": org1["id"]})
@@ -216,8 +187,8 @@ async def test_export_filtered_by_org_csv(client):
     org1 = await create_org(client, name="Filter Org A", org_number="333333-3333")
     org2 = await create_org(client, name="Filter Org B", org_number="444444-4444")
 
-    await create_system(client, org1["id"], "Org A System")
-    await create_system(client, org2["id"], "Org B System")
+    await create_system(client, org1["id"], name="Org A System")
+    await create_system(client, org2["id"], name="Org B System")
 
     resp = await client.get("/api/v1/export/systems.csv", params={"organization_id": org1["id"]})
 
@@ -238,9 +209,9 @@ async def test_export_filtered_by_org_csv(client):
 async def test_export_sorted_by_name(client):
     """Exported JSON should be sorted alphabetically by name."""
     org = await create_org(client)
-    await create_system(client, org["id"], "Zebra System")
-    await create_system(client, org["id"], "Alpha System")
-    await create_system(client, org["id"], "Medel System")
+    await create_system(client, org["id"], name="Zebra System")
+    await create_system(client, org["id"], name="Alpha System")
+    await create_system(client, org["id"], name="Medel System")
 
     resp = await client.get("/api/v1/export/systems.json")
 
@@ -260,7 +231,7 @@ async def test_export_csv_parses_all_rows(client):
     """CSV-export innehåller en rad per system, inga extra rader."""
     org = await create_org(client, name="CSVParseOrg", org_number="111222-3333")
     for i in range(3):
-        await create_system(client, org["id"], f"CSV Row Sys {i}")
+        await create_system(client, org["id"], name=f"CSV Row Sys {i}")
 
     resp = await client.get("/api/v1/export/systems.csv", params={"organization_id": org["id"]})
     assert resp.status_code == 200
@@ -274,7 +245,7 @@ async def test_export_csv_parses_all_rows(client):
 async def test_export_csv_contains_expected_columns(client):
     """CSV-exporten innehåller alla förväntade kolumner."""
     org = await create_org(client, name="ColCheckOrg", org_number="555666-7777")
-    await create_system(client, org["id"], "ColCheckSys")
+    await create_system(client, org["id"], name="ColCheckSys")
 
     resp = await client.get("/api/v1/export/systems.csv")
     assert resp.status_code == 200
@@ -292,7 +263,7 @@ async def test_export_csv_contains_expected_columns(client):
 async def test_export_json_contains_required_fields(client):
     """JSON-exporterade objekt innehåller alla nödvändiga fält."""
     org = await create_org(client, name="JSONFieldOrg", org_number="888999-0000")
-    await create_system(client, org["id"], "JSONFieldSys")
+    await create_system(client, org["id"], name="JSONFieldSys")
 
     resp = await client.get("/api/v1/export/systems.json")
     assert resp.status_code == 200
@@ -310,7 +281,7 @@ async def test_export_json_contains_required_fields(client):
 async def test_export_json_nis2_fields_present(client):
     """JSON-export innehåller NIS2-relaterade fält."""
     org = await create_org(client, name="NIS2ExportOrg", org_number="100200-3004")
-    await create_system(client, org["id"], "NIS2ExportSys")
+    await create_system(client, org["id"], name="NIS2ExportSys")
 
     resp = await client.get("/api/v1/export/systems.json")
     assert resp.status_code == 200
@@ -327,7 +298,7 @@ async def test_export_json_nis2_fields_present(client):
 async def test_export_json_gdpr_fields_present(client):
     """JSON-export innehåller GDPR-relaterade flaggor."""
     org = await create_org(client, name="GDPRExportOrg", org_number="100200-3005")
-    await create_system(client, org["id"], "GDPRExportSys")
+    await create_system(client, org["id"], name="GDPRExportSys")
 
     resp = await client.get("/api/v1/export/systems.json")
     assert resp.status_code == 200
@@ -346,8 +317,8 @@ async def test_export_xlsx_org_filter(client):
     org1 = await create_org(client, name="XLSXOrgA", org_number="XA1-001")
     org2 = await create_org(client, name="XLSXOrgB", org_number="XB2-002")
 
-    await create_system(client, org1["id"], "XLSX Org1 Sys")
-    await create_system(client, org2["id"], "XLSX Org2 Sys")
+    await create_system(client, org1["id"], name="XLSX Org1 Sys")
+    await create_system(client, org2["id"], name="XLSX Org2 Sys")
 
     resp = await client.get("/api/v1/export/systems.xlsx",
                              params={"organization_id": org1["id"]})
@@ -419,7 +390,7 @@ async def test_export_json_large_dataset(client):
     """JSON-export hanterar dataset med 50 system."""
     org = await create_org(client, name="LargeExportOrg", org_number="LRG-001")
     for i in range(50):
-        await create_system(client, org["id"], f"LargeExportSys {i:03d}")
+        await create_system(client, org["id"], name=f"LargeExportSys {i:03d}")
 
     resp = await client.get("/api/v1/export/systems.json",
                              params={"organization_id": org["id"]})
@@ -433,7 +404,7 @@ async def test_export_csv_large_dataset(client):
     """CSV-export hanterar dataset med 50 system."""
     org = await create_org(client, name="LargeCSVOrg", org_number="LCV-002")
     for i in range(50):
-        await create_system(client, org["id"], f"LargeCSVSys {i:03d}")
+        await create_system(client, org["id"], name=f"LargeCSVSys {i:03d}")
 
     resp = await client.get("/api/v1/export/systems.csv",
                              params={"organization_id": org["id"]})
@@ -448,7 +419,7 @@ async def test_export_csv_large_dataset(client):
 async def test_export_json_system_with_all_flags(client):
     """JSON-export av system med alla flaggor satta exporterar korrekt."""
     org = await create_org(client, name="FlagExportOrg", org_number="FLAG-001")
-    await create_system(client, org["id"], "FlagExportSys",
+    await create_system(client, org["id"], name="FlagExportSys",
                         criticality="kritisk",
                         lifecycle_status="i_drift",
                         nis2_applicable=True,
@@ -494,7 +465,7 @@ async def test_export_xlsx_content_type(client):
 async def test_export_csv_unicode_in_names(client):
     """CSV-export hanterar svenska tecken och specialtecken korrekt."""
     org = await create_org(client, name="ÅÄÖ Org", org_number="AAO-001")
-    await create_system(client, org["id"], "Åäö System med specialtecken éàü",
+    await create_system(client, org["id"], name="Åäö System med specialtecken éàü",
                         description="Beskrivning med specialtecken")
 
     resp = await client.get("/api/v1/export/systems.csv",
@@ -513,8 +484,8 @@ async def test_export_json_multi_org_no_filter_returns_all(client):
     org_a = await create_org(client, name="MultiExportA", org_number="MEA-001")
     org_b = await create_org(client, name="MultiExportB", org_number="MEB-002")
 
-    sys_a = await create_system(client, org_a["id"], "MultiExportSysA")
-    sys_b = await create_system(client, org_b["id"], "MultiExportSysB")
+    sys_a = await create_system(client, org_a["id"], name="MultiExportSysA")
+    sys_b = await create_system(client, org_b["id"], name="MultiExportSysB")
 
     resp = await client.get("/api/v1/export/systems.json")
     assert resp.status_code == 200

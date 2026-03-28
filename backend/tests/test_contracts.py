@@ -6,22 +6,12 @@ and /api/v1/contracts/expiring endpoints.
 import pytest
 from datetime import date, timedelta
 
+from tests.factories import create_org, create_system, create_contract
+
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Constants used in direct POST calls within tests
 # ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-SYSTEM_BASE = {
-    "name": "Winst",
-    "description": "Ekonomisystem för kommunen",
-    "system_category": "stödsystem",
-}
 
 CONTRACT_BASE = {
     "supplier_name": "CGI Sverige AB",
@@ -36,30 +26,6 @@ CONTRACT_BASE = {
     "procurement_type": "ramavtal",
     "support_level": "8x5 telefonsupport",
 }
-
-
-async def create_org(client) -> dict:
-    resp = await client.post("/api/v1/organizations/", json=ORG_PAYLOAD)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, name: str = "Winst", overrides: dict | None = None) -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name}
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post("/api/v1/systems/", json=payload)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_contract(client, system_id: str, overrides: dict | None = None) -> dict:
-    payload = {**CONTRACT_BASE}
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post(f"/api/v1/systems/{system_id}/contracts", json=payload)
-    assert resp.status_code == 201, f"Contract creation failed: {resp.text}"
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -124,8 +90,8 @@ async def test_list_contracts(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    await create_contract(client, system_id, {"supplier_name": "Leverantör A"})
-    await create_contract(client, system_id, {"supplier_name": "Leverantör B"})
+    await create_contract(client, system_id, supplier_name="Leverantör A")
+    await create_contract(client, system_id, supplier_name="Leverantör B")
 
     resp = await client.get(f"/api/v1/systems/{system_id}/contracts")
 
@@ -155,7 +121,7 @@ async def test_update_contract(client):
     """PATCH /api/v1/contracts/{id} updates fields without touching others."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
-    contract = await create_contract(client, system["id"])
+    contract = await create_contract(client, system["id"], **CONTRACT_BASE)
     contract_id = contract["id"]
 
     patch = {
@@ -237,15 +203,15 @@ async def test_expiring_contracts(client):
 
     contract_soon = await create_contract(
         client, system_id,
-        {"supplier_name": "Expires Soon Inc", "contract_end": expiring_soon}
+        supplier_name="Expires Soon Inc", contract_end=expiring_soon,
     )
     await create_contract(
         client, system_id,
-        {"supplier_name": "Expires Later Inc", "contract_end": expiring_later}
+        supplier_name="Expires Later Inc", contract_end=expiring_later,
     )
     await create_contract(
         client, system_id,
-        {"supplier_name": "Already Expired Inc", "contract_end": already_expired}
+        supplier_name="Already Expired Inc", contract_end=already_expired,
     )
 
     resp = await client.get("/api/v1/contracts/expiring?days=90")
@@ -284,7 +250,7 @@ async def test_expiring_contracts_custom_days(client):
 
     contract = await create_contract(
         client, system_id,
-        {"supplier_name": "Sixty Days AB", "contract_end": expiring_60_days}
+        supplier_name="Sixty Days AB", contract_end=expiring_60_days,
     )
 
     # Should appear with days=90
@@ -335,7 +301,7 @@ async def test_expiring_contracts_today_boundary(client):
     today = date.today()
     contract = await create_contract(
         client, system["id"],
-        {"supplier_name": "Today Expiry AB", "contract_end": today.isoformat()}
+        supplier_name="Today Expiry AB", contract_end=today.isoformat(),
     )
 
     resp = await client.get("/api/v1/contracts/expiring?days=1")
@@ -353,7 +319,7 @@ async def test_expiring_contracts_no_end_date_excluded(client):
 
     contract_no_end = await create_contract(
         client, system["id"],
-        {"supplier_name": "No End Date AB"}
+        supplier_name="No End Date AB",
     )
     assert contract_no_end["contract_end"] is None
 
@@ -374,7 +340,7 @@ async def test_expiring_contracts_large_days_window(client):
     far_future = (date.today() + timedelta(days=3000)).isoformat()
     contract = await create_contract(
         client, system["id"],
-        {"supplier_name": "Far Future AB", "contract_end": far_future}
+        supplier_name="Far Future AB", contract_end=far_future,
     )
 
     resp = await client.get("/api/v1/contracts/expiring?days=3650")
@@ -425,7 +391,7 @@ async def test_expiring_contracts_response_includes_system_id(client):
     expiring = (date.today() + timedelta(days=15)).isoformat()
     contract = await create_contract(
         client, system["id"],
-        {"supplier_name": "Response Fields AB", "contract_end": expiring}
+        supplier_name="Response Fields AB", contract_end=expiring,
     )
 
     resp = await client.get("/api/v1/contracts/expiring?days=30")

@@ -9,80 +9,14 @@ The import exists (line 17) but app.include_router(reports_router, ...) is missi
 import pytest
 from datetime import date, timedelta
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-SYSTEM_BASE = {
-    "name": "Integrationsplattform",
-    "description": "Meddelandebaserad integrationsplattform",
-    "system_category": "infrastruktur",
-}
-
-
-async def create_org(client) -> dict:
-    resp = await client.post("/api/v1/organizations/", json=ORG_PAYLOAD)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, name: str = "Integrationsplattform", overrides: dict | None = None) -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name}
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post("/api/v1/systems/", json=payload)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_classification(client, system_id: str) -> dict:
-    payload = {
-        "system_id": system_id,
-        "confidentiality": 2,
-        "integrity": 2,
-        "availability": 3,
-        "classified_by": "test@sundsvall.se",
-    }
-    resp = await client.post(f"/api/v1/systems/{system_id}/classifications", json=payload)
-    assert resp.status_code == 201, f"Classification creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_owner(client, system_id: str, org_id: str) -> dict:
-    payload = {
-        "system_id": system_id,
-        "organization_id": org_id,
-        "role": "systemägare",
-        "name": "Test Ägare",
-        "email": "agare@sundsvall.se",
-    }
-    resp = await client.post(f"/api/v1/systems/{system_id}/owners", json=payload)
-    assert resp.status_code == 201, f"Owner creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_gdpr_treatment(client, system_id: str) -> dict:
-    resp = await client.post(f"/api/v1/systems/{system_id}/gdpr", json={
-        "legal_basis": "Artikel 6.1(e)"
-    })
-    assert resp.status_code == 201, f"GDPR treatment creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_contract(client, system_id: str, contract_end: str | None = None) -> dict:
-    payload = {"supplier_name": "Test Leverantör AB"}
-    if contract_end:
-        payload["contract_end"] = contract_end
-    resp = await client.post(f"/api/v1/systems/{system_id}/contracts", json=payload)
-    assert resp.status_code == 201, f"Contract creation failed: {resp.text}"
-    return resp.json()
+from tests.factories import (
+    create_org,
+    create_system,
+    create_classification,
+    create_owner,
+    create_gdpr_treatment,
+    create_contract,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -96,12 +30,12 @@ async def test_nis2_report_json(client):
     org = await create_org(client)
 
     # Create a NIS2-applicable system
-    system = await create_system(client, org["id"], overrides={
-        "nis2_applicable": True,
-        "nis2_classification": "väsentlig",
-        "criticality": "kritisk",
-        "last_risk_assessment_date": "2024-06-01",
-    })
+    system = await create_system(client, org["id"],
+        nis2_applicable=True,
+        nis2_classification="väsentlig",
+        criticality="kritisk",
+        last_risk_assessment_date="2024-06-01",
+    )
 
     resp = await client.get("/api/v1/reports/nis2")
 
@@ -137,9 +71,7 @@ async def test_nis2_report_excludes_non_nis2_systems(client):
     """GET /api/v1/reports/nis2 should not include systems with nis2_applicable=False."""
     org = await create_org(client)
 
-    non_nis2 = await create_system(client, org["id"], name="NonNIS2System", overrides={
-        "nis2_applicable": False,
-    })
+    non_nis2 = await create_system(client, org["id"], name="NonNIS2System", nis2_applicable=False)
 
     resp = await client.get("/api/v1/reports/nis2")
 
@@ -154,10 +86,10 @@ async def test_nis2_report_summary_counts_without_classification(client):
     org = await create_org(client)
 
     # System with nis2_applicable but no classification
-    await create_system(client, org["id"], name="UnclassifiedNIS2", overrides={
-        "nis2_applicable": True,
-        "nis2_classification": None,
-    })
+    await create_system(client, org["id"], name="UnclassifiedNIS2",
+        nis2_applicable=True,
+        nis2_classification=None,
+    )
 
     resp = await client.get("/api/v1/reports/nis2")
     assert resp.status_code == 200
@@ -170,12 +102,8 @@ async def test_nis2_report_has_gdpr_treatment_flag(client):
     """NIS2 report should correctly indicate has_gdpr_treatment."""
     org = await create_org(client)
 
-    system_with_gdpr = await create_system(client, org["id"], name="SystemWithGDPR", overrides={
-        "nis2_applicable": True,
-    })
-    system_without_gdpr = await create_system(client, org["id"], name="SystemWithoutGDPR", overrides={
-        "nis2_applicable": True,
-    })
+    system_with_gdpr = await create_system(client, org["id"], name="SystemWithGDPR", nis2_applicable=True)
+    system_without_gdpr = await create_system(client, org["id"], name="SystemWithoutGDPR", nis2_applicable=True)
 
     await create_gdpr_treatment(client, system_with_gdpr["id"])
 
@@ -318,9 +246,7 @@ async def test_compliance_gap_system_with_owner_not_in_missing(client):
 async def test_compliance_gap_personal_data_without_gdpr(client):
     """System with treats_personal_data=True but no GDPR treatment should appear in gap."""
     org = await create_org(client)
-    system = await create_system(client, org["id"], name="PersonalDataNoGDPR", overrides={
-        "treats_personal_data": True,
-    })
+    system = await create_system(client, org["id"], name="PersonalDataNoGDPR", treats_personal_data=True)
     # No GDPR treatment created
 
     resp = await client.get("/api/v1/reports/compliance-gap")
@@ -337,9 +263,7 @@ async def test_compliance_gap_personal_data_without_gdpr(client):
 async def test_compliance_gap_personal_data_with_gdpr_not_in_gap(client):
     """System with personal data AND a GDPR treatment should NOT be in the gap."""
     org = await create_org(client)
-    system = await create_system(client, org["id"], name="PersonalDataWithGDPR", overrides={
-        "treats_personal_data": True,
-    })
+    system = await create_system(client, org["id"], name="PersonalDataWithGDPR", treats_personal_data=True)
     await create_gdpr_treatment(client, system["id"])
 
     resp = await client.get("/api/v1/reports/compliance-gap")

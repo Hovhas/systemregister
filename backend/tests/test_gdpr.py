@@ -4,22 +4,12 @@ Tests for /api/v1/systems/{id}/gdpr and /api/v1/gdpr/{id} endpoints.
 
 import pytest
 
+from tests.factories import create_org, create_system, create_gdpr_treatment
+
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Constants used in direct POST calls within tests
 # ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
-
-SYSTEM_BASE = {
-    "name": "Lifecare",
-    "description": "Verksamhetssystem för hälso- och sjukvård",
-    "system_category": "verksamhetssystem",
-}
 
 GDPR_BASE = {
     "ropa_reference_id": "ROPA-2024-001",
@@ -35,30 +25,6 @@ GDPR_BASE = {
     "dpia_date": "2024-03-15",
     "dpia_link": "https://gdpr.sundsvall.se/dpia/lifecare",
 }
-
-
-async def create_org(client) -> dict:
-    resp = await client.post("/api/v1/organizations/", json=ORG_PAYLOAD)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, name: str = "Lifecare", overrides: dict | None = None) -> dict:
-    payload = {**SYSTEM_BASE, "organization_id": org_id, "name": name}
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post("/api/v1/systems/", json=payload)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_gdpr_treatment(client, system_id: str, overrides: dict | None = None) -> dict:
-    payload = {**GDPR_BASE}
-    if overrides:
-        payload.update(overrides)
-    resp = await client.post(f"/api/v1/systems/{system_id}/gdpr", json=payload)
-    assert resp.status_code == 201, f"GDPR treatment creation failed: {resp.text}"
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -113,8 +79,8 @@ async def test_list_gdpr_treatments(client):
     system = await create_system(client, org["id"])
     system_id = system["id"]
 
-    await create_gdpr_treatment(client, system_id, {"ropa_reference_id": "ROPA-001"})
-    await create_gdpr_treatment(client, system_id, {"ropa_reference_id": "ROPA-002"})
+    await create_gdpr_treatment(client, system_id, ropa_reference_id="ROPA-001")
+    await create_gdpr_treatment(client, system_id, ropa_reference_id="ROPA-002")
 
     resp = await client.get(f"/api/v1/systems/{system_id}/gdpr")
 
@@ -144,7 +110,7 @@ async def test_update_gdpr_treatment(client):
     """PATCH /api/v1/gdpr/{id} updates fields without touching others."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
-    treatment = await create_gdpr_treatment(client, system["id"])
+    treatment = await create_gdpr_treatment(client, system["id"], **GDPR_BASE)
     treatment_id = treatment["id"]
 
     patch = {
@@ -402,9 +368,7 @@ async def test_gdpr_sub_processors_list(client):
 async def test_gdpr_connection_to_treats_personal_data_flag(client):
     """System med treats_personal_data=True kan ha GDPR-behandling."""
     org = await create_org(client)
-    system = await create_system(client, org["id"], overrides={
-        "treats_personal_data": True,
-    })
+    system = await create_system(client, org["id"], treats_personal_data=True)
 
     resp = await client.post(f"/api/v1/systems/{system['id']}/gdpr", json={
         "data_categories": ["vanliga"],
@@ -437,9 +401,9 @@ async def test_gdpr_multiple_treatments_same_system(client):
     org = await create_org(client)
     system = await create_system(client, org["id"])
 
-    await create_gdpr_treatment(client, system["id"], {"ropa_reference_id": "ROPA-001"})
-    await create_gdpr_treatment(client, system["id"], {"ropa_reference_id": "ROPA-002"})
-    await create_gdpr_treatment(client, system["id"], {"ropa_reference_id": "ROPA-003"})
+    await create_gdpr_treatment(client, system["id"], ropa_reference_id="ROPA-001")
+    await create_gdpr_treatment(client, system["id"], ropa_reference_id="ROPA-002")
+    await create_gdpr_treatment(client, system["id"], ropa_reference_id="ROPA-003")
 
     resp = await client.get(f"/api/v1/systems/{system['id']}/gdpr")
     assert len(resp.json()) == 3
@@ -451,7 +415,7 @@ async def test_gdpr_patch_data_categories(client):
     org = await create_org(client)
     system = await create_system(client, org["id"])
     treatment = await create_gdpr_treatment(client, system["id"],
-                                             {"data_categories": ["vanliga"]})
+                                             data_categories=["vanliga"])
 
     resp = await client.patch(f"/api/v1/gdpr/{treatment['id']}", json={
         "data_categories": ["vanliga", "känsliga_art9"],
@@ -467,7 +431,7 @@ async def test_gdpr_patch_dpia_status(client):
     org = await create_org(client)
     system = await create_system(client, org["id"])
     treatment = await create_gdpr_treatment(client, system["id"],
-                                             {"dpia_conducted": False})
+                                             dpia_conducted=False)
 
     resp = await client.patch(f"/api/v1/gdpr/{treatment['id']}", json={
         "dpia_conducted": True,
@@ -484,7 +448,7 @@ async def test_gdpr_patch_processor_agreement(client):
     org = await create_org(client)
     system = await create_system(client, org["id"])
     treatment = await create_gdpr_treatment(client, system["id"],
-                                             {"processor_agreement_status": "under_framtagande"})
+                                             processor_agreement_status="under_framtagande")
 
     resp = await client.patch(f"/api/v1/gdpr/{treatment['id']}", json={
         "processor_agreement_status": "ja",
@@ -497,9 +461,7 @@ async def test_gdpr_patch_processor_agreement(client):
 async def test_gdpr_compliance_gap_appears_when_missing(client):
     """System med treats_personal_data utan GDPR syns i compliance-gap."""
     org = await create_org(client)
-    system = await create_system(client, org["id"], name="GDPRGapSys", overrides={
-        "treats_personal_data": True,
-    })
+    system = await create_system(client, org["id"], name="GDPRGapSys", treats_personal_data=True)
 
     resp = await client.get("/api/v1/reports/compliance-gap")
     assert resp.status_code == 200
@@ -511,9 +473,7 @@ async def test_gdpr_compliance_gap_appears_when_missing(client):
 async def test_gdpr_compliance_gap_resolved_when_treatment_added(client):
     """System försvinner från compliance-gap när GDPR-behandling läggs till."""
     org = await create_org(client)
-    system = await create_system(client, org["id"], name="GDPRFixedSys", overrides={
-        "treats_personal_data": True,
-    })
+    system = await create_system(client, org["id"], name="GDPRFixedSys", treats_personal_data=True)
 
     await create_gdpr_treatment(client, system["id"])
 

@@ -4,16 +4,12 @@ Tests for /api/v1/systems endpoints.
 
 import pytest
 
+from tests.factories import create_org, create_system
+
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Constants used in direct POST calls within tests
 # ---------------------------------------------------------------------------
-
-ORG_PAYLOAD = {
-    "name": "Sundsvalls kommun",
-    "org_number": "212000-2723",
-    "org_type": "kommun",
-}
 
 SYSTEM_BASE = {
     "name": "Procapita",
@@ -21,23 +17,6 @@ SYSTEM_BASE = {
     "system_category": "verksamhetssystem",
     "criticality": "hög",
 }
-
-
-async def create_org(client) -> dict:
-    """Helper: create a test organization."""
-    resp = await client.post("/api/v1/organizations/", json=ORG_PAYLOAD)
-    assert resp.status_code == 201, f"Org creation failed: {resp.text}"
-    return resp.json()
-
-
-async def create_system(client, org_id: str, payload: dict | None = None) -> dict:
-    """Helper: create a test system under the given org."""
-    data = {**SYSTEM_BASE, "organization_id": org_id}
-    if payload:
-        data.update(payload)
-    resp = await client.post("/api/v1/systems/", json=data)
-    assert resp.status_code == 201, f"System creation failed: {resp.text}"
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +89,7 @@ async def test_list_systems(client):
     """GET /api/v1/systems/ returns paginated response with items."""
     org = await create_org(client)
     await create_system(client, org["id"])
-    await create_system(client, org["id"], {"name": "Pulsen Combine"})
+    await create_system(client, org["id"], name="Pulsen Combine")
 
     resp = await client.get("/api/v1/systems/")
 
@@ -139,8 +118,8 @@ async def test_list_systems_empty(client):
 async def test_filter_systems_by_category(client):
     """GET /api/v1/systems/?system_category=... filters correctly."""
     org = await create_org(client)
-    await create_system(client, org["id"], {"name": "Verksamhetssystem A", "system_category": "verksamhetssystem"})
-    await create_system(client, org["id"], {"name": "Infrastruktur B", "system_category": "infrastruktur"})
+    await create_system(client, org["id"], name="Verksamhetssystem A", system_category="verksamhetssystem")
+    await create_system(client, org["id"], name="Infrastruktur B", system_category="infrastruktur")
 
     resp = await client.get("/api/v1/systems/", params={"system_category": "infrastruktur"})
 
@@ -157,8 +136,8 @@ async def test_filter_systems_by_category(client):
 async def test_filter_systems_by_criticality(client):
     """GET /api/v1/systems/?criticality=... filters correctly."""
     org = await create_org(client)
-    await create_system(client, org["id"], {"name": "Kritiskt system", "criticality": "kritisk"})
-    await create_system(client, org["id"], {"name": "Låg prio", "criticality": "låg"})
+    await create_system(client, org["id"], name="Kritiskt system", criticality="kritisk")
+    await create_system(client, org["id"], name="Låg prio", criticality="låg")
 
     resp = await client.get("/api/v1/systems/", params={"criticality": "kritisk"})
 
@@ -175,8 +154,8 @@ async def test_filter_systems_by_criticality(client):
 async def test_search_systems_by_name(client):
     """GET /api/v1/systems/?q=... filters by name (case-insensitive)."""
     org = await create_org(client)
-    await create_system(client, org["id"], {"name": "Procapita IFO", "description": "IFO-system"})
-    await create_system(client, org["id"], {"name": "Visma Lön", "description": "Lönesystem"})
+    await create_system(client, org["id"], name="Procapita IFO", description="IFO-system")
+    await create_system(client, org["id"], name="Visma Lön", description="Lönesystem")
 
     resp = await client.get("/api/v1/systems/", params={"q": "procapita"})
 
@@ -191,10 +170,10 @@ async def test_search_systems_by_name(client):
 async def test_search_systems_by_description(client):
     """GET /api/v1/systems/?q=... also matches description text."""
     org = await create_org(client)
-    await create_system(client, org["id"], {
-        "name": "Obskyr produkt",
-        "description": "Hanterar patientjournaler i vården",
-    })
+    await create_system(client, org["id"],
+        name="Obskyr produkt",
+        description="Hanterar patientjournaler i vården",
+    )
 
     resp = await client.get("/api/v1/systems/", params={"q": "patientjournaler"})
 
@@ -303,18 +282,18 @@ async def test_delete_system_not_found(client):
 async def test_system_stats_overview(client):
     """GET /api/v1/systems/stats/overview returns correct structure."""
     org = await create_org(client)
-    await create_system(client, org["id"], {
-        "name": "System A",
-        "criticality": "kritisk",
-        "lifecycle_status": "i_drift",
-        "nis2_applicable": True,
-        "treats_personal_data": True,
-    })
-    await create_system(client, org["id"], {
-        "name": "System B",
-        "criticality": "låg",
-        "lifecycle_status": "planerad",
-    })
+    await create_system(client, org["id"],
+        name="System A",
+        criticality="kritisk",
+        lifecycle_status="i_drift",
+        nis2_applicable=True,
+        treats_personal_data=True,
+    )
+    await create_system(client, org["id"],
+        name="System B",
+        criticality="låg",
+        lifecycle_status="planerad",
+    )
 
     resp = await client.get("/api/v1/systems/stats/overview")
 
@@ -346,8 +325,8 @@ async def test_system_stats_filtered_by_org(client):
     assert org2_resp.status_code == 201
     org2 = org2_resp.json()
 
-    await create_system(client, org1["id"], {"name": "Org1 System"})
-    await create_system(client, org2["id"], {"name": "Org2 System"})
+    await create_system(client, org1["id"], name="Org1 System")
+    await create_system(client, org2["id"], name="Org2 System")
 
     resp = await client.get("/api/v1/systems/stats/overview", params={"organization_id": org1["id"]})
 
@@ -442,9 +421,9 @@ async def test_system_stats_empty_db_returns_zeros(client):
 async def test_system_stats_by_lifecycle_status_distribution(client):
     """Stats by_lifecycle_status accurately reflects created systems per status."""
     org = await create_org(client)
-    await create_system(client, org["id"], {"name": "Plan 1", "lifecycle_status": "planerad"})
-    await create_system(client, org["id"], {"name": "Plan 2", "lifecycle_status": "planerad"})
-    await create_system(client, org["id"], {"name": "Drift 1", "lifecycle_status": "i_drift"})
+    await create_system(client, org["id"], name="Plan 1", lifecycle_status="planerad")
+    await create_system(client, org["id"], name="Plan 2", lifecycle_status="planerad")
+    await create_system(client, org["id"], name="Drift 1", lifecycle_status="i_drift")
 
     resp = await client.get(
         "/api/v1/systems/stats/overview",
@@ -463,9 +442,9 @@ async def test_system_stats_by_lifecycle_status_distribution(client):
 async def test_system_stats_by_criticality_distribution(client):
     """Stats by_criticality accurately reflects created systems per criticality."""
     org = await create_org(client)
-    await create_system(client, org["id"], {"name": "Krit A", "criticality": "kritisk"})
-    await create_system(client, org["id"], {"name": "Krit B", "criticality": "kritisk"})
-    await create_system(client, org["id"], {"name": "Låg A", "criticality": "låg"})
+    await create_system(client, org["id"], name="Krit A", criticality="kritisk")
+    await create_system(client, org["id"], name="Krit B", criticality="kritisk")
+    await create_system(client, org["id"], name="Låg A", criticality="låg")
 
     resp = await client.get(
         "/api/v1/systems/stats/overview",
@@ -525,7 +504,7 @@ async def test_create_system_preserves_all_optional_fields(client):
 async def test_delete_system_removes_from_list(client):
     """After DELETE, system no longer appears in GET /systems/ list."""
     org = await create_org(client)
-    system = await create_system(client, org["id"], {"name": "Ska Tas Bort"})
+    system = await create_system(client, org["id"], name="Ska Tas Bort")
     system_id = system["id"]
 
     await client.delete(f"/api/v1/systems/{system_id}")
@@ -543,9 +522,9 @@ async def test_filter_systems_by_organization_returns_correct_count(client):
     assert org_b_resp.status_code == 201
     org_b = org_b_resp.json()
 
-    await create_system(client, org_a["id"], {"name": "A-system 1"})
-    await create_system(client, org_a["id"], {"name": "A-system 2"})
-    await create_system(client, org_b["id"], {"name": "B-system 1"})
+    await create_system(client, org_a["id"], name="A-system 1")
+    await create_system(client, org_a["id"], name="A-system 2")
+    await create_system(client, org_b["id"], name="B-system 1")
 
     resp = await client.get("/api/v1/systems/", params={"organization_id": org_a["id"]})
     assert resp.status_code == 200
