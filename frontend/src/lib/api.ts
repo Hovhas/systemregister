@@ -29,6 +29,14 @@ const api = axios.create({
   },
 })
 
+// Säkerställ trailing slash — FastAPI matchar bara /path/ (inte /path)
+api.interceptors.request.use((config) => {
+  if (config.url && !config.url.endsWith("/")) {
+    config.url += "/"
+  }
+  return config
+})
+
 // --- Organisationer ---
 
 export async function getOrganizations(): Promise<Organization[]> {
