@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useParams, useNavigate, useBlocker } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import axios from "axios"
@@ -22,13 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Breadcrumb } from "@/components/Breadcrumb"
 
 // --- Etiketter ---
@@ -273,11 +266,6 @@ export default function SystemFormPage() {
     return () => window.removeEventListener("beforeunload", handler)
   }, [isDirty])
 
-  // Varna vid in-app navigering
-  const blocker = useBlocker(
-    isDirty && !submitted
-  )
-
   function handleParseError(err: unknown) {
     if (axios.isAxiosError(err) && err.response?.data?.detail) {
       const detail = err.response.data.detail
@@ -386,36 +374,7 @@ export default function SystemFormPage() {
         ]}
       />
 
-      {/* Varningsdialog vid in-app navigering med osparade ändringar */}
-      <Dialog
-        open={blocker.state === "blocked"}
-        onOpenChange={(open) => {
-          if (!open && blocker.state === "blocked") blocker.reset()
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Osparade ändringar</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Du har osparade ändringar. Vill du verkligen lämna sidan?
-          </p>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => blocker.reset?.()}
-            >
-              Stanna kvar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => blocker.proceed?.()}
-            >
-              Lämna utan att spara
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">
