@@ -128,8 +128,9 @@ const mockSystem = {
 const mockAuditEntries = [
   {
     id: "audit-1",
+    table_name: "systems",
     record_id: "sys-1",
-    action: "create",
+    action: "INSERT",
     changed_at: "2020-01-01T10:00:00Z",
     changed_by: "admin",
     old_values: null,
@@ -137,8 +138,9 @@ const mockAuditEntries = [
   },
   {
     id: "audit-2",
+    table_name: "systems",
     record_id: "sys-1",
-    action: "update",
+    action: "UPDATE",
     changed_at: "2024-01-01T12:00:00Z",
     changed_by: "per.persson",
     old_values: { name: "Gammalt namn" },
@@ -189,16 +191,18 @@ function renderDetail(id = "sys-1") {
 
 describe("SystemDetailPage", () => {
   describe("Laddning och fel", () => {
-    it("visar laddningstext initialt", () => {
+    it("visar skeleton-laddning initialt", () => {
       renderDetail()
-      expect(screen.getByText(/laddar system/i)).toBeInTheDocument()
+      const skeletons = document.querySelectorAll(".skeleton")
+      expect(skeletons.length).toBeGreaterThan(0)
     })
 
-    it("döljer laddningstext efter data laddats", async () => {
+    it("döljer skeleton efter data laddats", async () => {
       renderDetail()
-      await waitFor(() =>
-        expect(screen.queryByText(/laddar system/i)).not.toBeInTheDocument()
-      )
+      await waitFor(() => {
+        const matches = screen.getAllByText("Lönesystem")
+        expect(matches.length).toBeGreaterThanOrEqual(1)
+      })
     })
 
     it("visar felmeddelande vid 404", async () => {
@@ -323,11 +327,11 @@ describe("SystemDetailPage", () => {
 
     it("visar beskrivning", async () => {
       renderDetail()
-      await waitFor(() =>
-        expect(
-          screen.getByText("Hanterar löner och HR-data")
-        ).toBeInTheDocument()
-      )
+      await waitFor(() => {
+        // Description appears in both header and Oversikt tab
+        const matches = screen.getAllByText("Hanterar löner och HR-data")
+        expect(matches.length).toBeGreaterThanOrEqual(1)
+      })
     })
 
     it("visar business_area (HR)", async () => {
@@ -535,9 +539,10 @@ describe("SystemDetailPage", () => {
         await screen.findByRole("tab", { name: /övrig data/i })
       )
       await waitFor(() => {
-        expect(screen.getByText("projekt_nummer")).toBeInTheDocument()
+        // formatKey converts "projekt_nummer" to "Projekt Nummer"
+        expect(screen.getByText("Projekt Nummer")).toBeInTheDocument()
         expect(screen.getByText("P-2020-001")).toBeInTheDocument()
-        expect(screen.getByText("ansvarig_chef")).toBeInTheDocument()
+        expect(screen.getByText("Ansvarig Chef")).toBeInTheDocument()
         expect(screen.getByText("Anna Andersson")).toBeInTheDocument()
       })
     })

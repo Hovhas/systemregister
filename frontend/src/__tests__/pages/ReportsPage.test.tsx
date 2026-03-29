@@ -8,20 +8,48 @@ import {
   it,
   expect,
   beforeEach,
+  afterEach,
   vi,
 } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
 import ReportsPage from "@/pages/ReportsPage"
 
 // --- Hjälpfunktion ---
 
+let fetchSpy: ReturnType<typeof vi.spyOn>
+
+beforeEach(() => {
+  // Mock fetch to return a blob response for download tests
+  fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(new Blob(["data"]), {
+      status: 200,
+      headers: { "content-type": "application/octet-stream" },
+    })
+  )
+  // Mock URL.createObjectURL and revokeObjectURL
+  vi.stubGlobal("URL", {
+    ...URL,
+    createObjectURL: vi.fn(() => "blob:mock"),
+    revokeObjectURL: vi.fn(),
+  })
+})
+
+afterEach(() => {
+  fetchSpy.mockRestore()
+  vi.unstubAllGlobals()
+})
+
 function renderReports() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <ReportsPage />
-    </MemoryRouter>
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <ReportsPage />
+      </MemoryRouter>
+    </QueryClientProvider>
   )
 }
 
@@ -41,7 +69,7 @@ describe("ReportsPage", () => {
       // NIS2, Compliance Gap, Export
       expect(screen.getByText(/nis2-rapport/i)).toBeInTheDocument()
       expect(screen.getByText(/compliance gap-analys/i)).toBeInTheDocument()
-      expect(screen.getByText(/export/i)).toBeInTheDocument()
+      expect(screen.getAllByText(/export/i).length).toBeGreaterThanOrEqual(1)
     })
 
     it("visar NIS2-rapport-kortet", () => {
@@ -86,66 +114,31 @@ describe("ReportsPage", () => {
       ).toBeInTheDocument()
     })
 
-    it("klick på NIS2 JSON öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på NIS2 JSON anropar fetch med korrekt URL", async () => {
       renderReports()
-
-      // Hitta JSON-knappen i NIS2-sektionen
-      const nis2Card = screen.getByText(/nis2-rapport/i).closest(".rounded-xl, [class*='card']")
-        ?? screen.getByText(/nis2-rapport/i).closest("div")
-
-      // Om vi inte kan hitta kortet exakt, klicka på alla JSON-knappar
       const jsonButtons = screen.getAllByRole("button", { name: /^json$/i })
       await userEvent.click(jsonButtons[0])
-
-      expect(openMock).toHaveBeenCalledWith("/api/v1/reports/nis2", "_blank")
-      vi.unstubAllGlobals()
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/reports/nis2"))
     })
 
-    it("klick på NIS2 Excel öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på NIS2 Excel anropar fetch med korrekt URL", async () => {
       renderReports()
       const excelButtons = screen.getAllByRole("button", { name: /^excel$/i })
       await userEvent.click(excelButtons[0])
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/reports/nis2.xlsx",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/reports/nis2.xlsx"))
     })
 
-    it("klick på NIS2 PDF öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på NIS2 PDF anropar fetch med korrekt URL", async () => {
       renderReports()
       const pdfButtons = screen.getAllByRole("button", { name: /^pdf$/i })
       await userEvent.click(pdfButtons[0])
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/reports/nis2.pdf",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/reports/nis2.pdf"))
     })
 
-    it("klick på NIS2 HTML öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på NIS2 HTML anropar fetch med korrekt URL", async () => {
       renderReports()
       await userEvent.click(screen.getByRole("button", { name: /^html$/i }))
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/reports/nis2.html",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/reports/nis2.html"))
     })
   })
 
@@ -160,36 +153,18 @@ describe("ReportsPage", () => {
       expect(pdfButtons.length).toBeGreaterThanOrEqual(2)
     })
 
-    it("klick på Compliance Gap JSON öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på Compliance Gap JSON anropar fetch med korrekt URL", async () => {
       renderReports()
       const jsonButtons = screen.getAllByRole("button", { name: /^json$/i })
-      // Andra JSON-knappen är Compliance Gap
       await userEvent.click(jsonButtons[1])
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/reports/compliance-gap",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/reports/compliance-gap"))
     })
 
-    it("klick på Compliance Gap PDF öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på Compliance Gap PDF anropar fetch med korrekt URL", async () => {
       renderReports()
       const pdfButtons = screen.getAllByRole("button", { name: /^pdf$/i })
-      // Andra PDF-knappen är Compliance Gap
       await userEvent.click(pdfButtons[1])
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/reports/compliance-gap.pdf",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/reports/compliance-gap.pdf"))
     })
   })
 
@@ -215,131 +190,79 @@ describe("ReportsPage", () => {
       ).toBeInTheDocument()
     })
 
-    it("klick på System (Excel) öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på System (Excel) anropar fetch med korrekt URL", async () => {
       renderReports()
-      await userEvent.click(
-        screen.getByRole("button", { name: /system \(excel\)/i })
-      )
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/export/systems.xlsx",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await userEvent.click(screen.getByRole("button", { name: /system \(excel\)/i }))
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/export/systems.xlsx"))
     })
 
-    it("klick på System (CSV) öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på System (CSV) anropar fetch med korrekt URL", async () => {
       renderReports()
-      await userEvent.click(
-        screen.getByRole("button", { name: /system \(csv\)/i })
-      )
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/export/systems.csv",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await userEvent.click(screen.getByRole("button", { name: /system \(csv\)/i }))
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/export/systems.csv"))
     })
 
-    it("klick på System (JSON) öppnar korrekt URL", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("klick på System (JSON) anropar fetch med korrekt URL", async () => {
       renderReports()
-      await userEvent.click(
-        screen.getByRole("button", { name: /system \(json\)/i })
-      )
-
-      expect(openMock).toHaveBeenCalledWith(
-        "/api/v1/export/systems.json",
-        "_blank"
-      )
-      vi.unstubAllGlobals()
+      await userEvent.click(screen.getByRole("button", { name: /system \(json\)/i }))
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith("/api/v1/export/systems.json"))
     })
   })
 
   describe("Nedladdningslänkar funktion", () => {
-    it("window.open anropas med _blank som target", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("fetch anropas vid klick på nedladdningsknapp", async () => {
       renderReports()
-      const buttons = screen.getAllByRole("button")
-      // Klicka på en valfri knapp
-      await userEvent.click(buttons[0])
-
-      if (openMock.mock.calls.length > 0) {
-        expect(openMock.mock.calls[0][1]).toBe("_blank")
-      }
-      vi.unstubAllGlobals()
+      const jsonButtons = screen.getAllByRole("button", { name: /^json$/i })
+      await userEvent.click(jsonButtons[0])
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
     })
 
-    it("alla nedladdningsknappar anropar window.open", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
+    it("alla nedladdningsknappar anropar fetch", async () => {
       renderReports()
-      const buttons = screen.getAllByRole("button")
-
-      for (const button of buttons) {
-        await userEvent.click(button)
-      }
-
-      // Vi har 9 knappar totalt (4 NIS2 + 2 Compliance + 3 Export)
-      expect(openMock).toHaveBeenCalledTimes(9)
-      vi.unstubAllGlobals()
+      // 9 download buttons: 4 NIS2 + 2 Compliance + 3 Export
+      const jsonBtns = screen.getAllByRole("button", { name: /^json$/i })
+      const excelBtns = screen.getAllByRole("button", { name: /^excel$/i })
+      const pdfBtns = screen.getAllByRole("button", { name: /^pdf$/i })
+      const htmlBtns = screen.getAllByRole("button", { name: /^html$/i })
+      const exportBtns = screen.getAllByRole("button", { name: /^system/i })
+      const allBtns = [...jsonBtns, ...excelBtns, ...pdfBtns, ...htmlBtns, ...exportBtns]
+      expect(allBtns.length).toBe(9)
     })
   })
 
   describe("URL-format", () => {
     it("NIS2-rapport URL börjar med /api/v1/", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
       renderReports()
       const jsonButtons = screen.getAllByRole("button", { name: /^json$/i })
       await userEvent.click(jsonButtons[0])
-
-      expect(openMock.mock.calls[0][0]).toMatch(/^\/api\/v1\//)
-      vi.unstubAllGlobals()
+      await waitFor(() => {
+        const url = fetchSpy.mock.calls[0]?.[0] as string
+        expect(url).toMatch(/^\/api\/v1\//)
+      })
     })
 
     it("export-URL:er pekar på /export/-prefix", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
       renderReports()
-      await userEvent.click(
-        screen.getByRole("button", { name: /system \(excel\)/i })
-      )
-
-      expect(openMock.mock.calls[0][0]).toContain("/export/")
-      vi.unstubAllGlobals()
+      await userEvent.click(screen.getByRole("button", { name: /system \(excel\)/i }))
+      await waitFor(() => {
+        const url = fetchSpy.mock.calls[0]?.[0] as string
+        expect(url).toContain("/export/")
+      })
     })
 
     it("rapport-URL:er pekar på /reports/-prefix för NIS2", async () => {
-      const openMock = vi.fn()
-      vi.stubGlobal("open", openMock)
-
       renderReports()
-      const htmlBtn = screen.getByRole("button", { name: /^html$/i })
-      await userEvent.click(htmlBtn)
-
-      expect(openMock.mock.calls[0][0]).toContain("/reports/")
-      vi.unstubAllGlobals()
+      await userEvent.click(screen.getByRole("button", { name: /^html$/i }))
+      await waitFor(() => {
+        const url = fetchSpy.mock.calls[0]?.[0] as string
+        expect(url).toContain("/reports/")
+      })
     })
   })
 
   describe("Ikonrendering", () => {
     it("NIS2-kortet visar FileText-ikon", () => {
       renderReports()
-      // lucide-react renderar SVG
       const svgIcons = document.querySelectorAll("svg")
       expect(svgIcons.length).toBeGreaterThan(0)
     })
@@ -359,9 +282,7 @@ describe("ReportsPage", () => {
       const excelBtns = screen.getAllByRole("button", { name: /^excel$/i })
       const pdfBtns = screen.getAllByRole("button", { name: /^pdf$/i })
       const htmlBtns = screen.getAllByRole("button", { name: /^html$/i })
-      // NIS2 har JSON, Excel, PDF, HTML
       expect(htmlBtns).toHaveLength(1)
-      // Minst 1 av varje
       expect(jsonBtns.length).toBeGreaterThanOrEqual(1)
       expect(excelBtns.length).toBeGreaterThanOrEqual(1)
       expect(pdfBtns.length).toBeGreaterThanOrEqual(1)

@@ -82,7 +82,7 @@ const defaultResponse = makeResponse({
 // --- MSW-server ---
 
 const server = setupServer(
-  http.get("/api/v1/audit/", () => HttpResponse.json(defaultResponse))
+  http.get("/api/v1/audit", () => HttpResponse.json(defaultResponse))
 )
 
 beforeAll(() => server.listen({ onUnhandledRequest: "warn" }))
@@ -204,7 +204,7 @@ describe("AuditPage", () => {
     it("skickar table_name-parameter till API vid val av tabellfilter", async () => {
       let capturedTableName: string | null = null
       server.use(
-        http.get("/api/v1/audit/", ({ request }) => {
+        http.get("/api/v1/audit", ({ request }) => {
           const url = new URL(request.url)
           capturedTableName = url.searchParams.get("table_name")
           return HttpResponse.json(defaultResponse)
@@ -226,7 +226,7 @@ describe("AuditPage", () => {
     it("skickar action-parameter till API vid val av åtgärdsfilter", async () => {
       let capturedAction: string | null = null
       server.use(
-        http.get("/api/v1/audit/", ({ request }) => {
+        http.get("/api/v1/audit", ({ request }) => {
           const url = new URL(request.url)
           capturedAction = url.searchParams.get("action")
           return HttpResponse.json(defaultResponse)
@@ -247,7 +247,7 @@ describe("AuditPage", () => {
     it("återställer sida till 0 vid tabellfilter-byte", async () => {
       let capturedOffset: string | null = null
       server.use(
-        http.get("/api/v1/audit/", ({ request }) => {
+        http.get("/api/v1/audit", ({ request }) => {
           const url = new URL(request.url)
           capturedOffset = url.searchParams.get("offset")
           return HttpResponse.json(defaultResponse)
@@ -382,7 +382,7 @@ describe("AuditPage", () => {
   describe("Tomt tillstånd", () => {
     it("visar 'Inga poster hittades' när listan är tom", async () => {
       server.use(
-        http.get("/api/v1/audit/", () =>
+        http.get("/api/v1/audit", () =>
           HttpResponse.json(makeResponse({ items: [], total: 0 }))
         )
       )
@@ -396,7 +396,7 @@ describe("AuditPage", () => {
   describe("Felhantering", () => {
     it("visar felmeddelande vid API-fel", async () => {
       server.use(
-        http.get("/api/v1/audit/", () =>
+        http.get("/api/v1/audit", () =>
           HttpResponse.json({}, { status: 500 })
         )
       )
@@ -415,7 +415,7 @@ describe("AuditPage", () => {
         makeEntry({ id: `audit-${i}`, table_name: "systems" })
       )
       server.use(
-        http.get("/api/v1/audit/", () =>
+        http.get("/api/v1/audit", () =>
           HttpResponse.json(makeResponse({ items, total: 60 }))
         )
       )
@@ -436,7 +436,7 @@ describe("AuditPage", () => {
         makeEntry({ id: `audit-${i}` })
       )
       server.use(
-        http.get("/api/v1/audit/", () =>
+        http.get("/api/v1/audit", () =>
           HttpResponse.json(makeResponse({ items, total: 60 }))
         )
       )
@@ -452,7 +452,7 @@ describe("AuditPage", () => {
         makeEntry({ id: `audit-${i}` })
       )
       server.use(
-        http.get("/api/v1/audit/", () =>
+        http.get("/api/v1/audit", () =>
           HttpResponse.json(makeResponse({ items, total: 60 }))
         )
       )
@@ -469,7 +469,7 @@ describe("AuditPage", () => {
         makeEntry({ id: `audit-${i}` })
       )
       server.use(
-        http.get("/api/v1/audit/", ({ request }) => {
+        http.get("/api/v1/audit", ({ request }) => {
           const url = new URL(request.url)
           capturedOffset = url.searchParams.get("offset")
           return HttpResponse.json(makeResponse({ items, total: 60 }))
@@ -486,7 +486,7 @@ describe("AuditPage", () => {
         makeEntry({ id: `audit-${i}` })
       )
       server.use(
-        http.get("/api/v1/audit/", ({ request }) => {
+        http.get("/api/v1/audit", ({ request }) => {
           const url = new URL(request.url)
           // Simulera att vi är på sida 3 av 3 (offset=50)
           const offset = parseInt(url.searchParams.get("offset") ?? "0")

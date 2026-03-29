@@ -13,6 +13,7 @@ import {
 } from "vitest"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
 import { setupServer, http, HttpResponse } from "../setup"
 import DependenciesPage from "@/pages/DependenciesPage"
@@ -20,9 +21,9 @@ import DependenciesPage from "@/pages/DependenciesPage"
 // --- Testdata ---
 
 const mockSystems = [
-  { id: "sys-1", name: "Ekonomisystem", criticality: "HIGH" },
-  { id: "sys-2", name: "HR-system", criticality: "MEDIUM" },
-  { id: "sys-3", name: "Vårdsystem", criticality: "CRITICAL" },
+  { id: "sys-1", name: "Ekonomisystem", criticality: "hög", organization_id: "org-1", system_category: "verksamhetssystem", lifecycle_status: "i_drift", nis2_applicable: false },
+  { id: "sys-2", name: "HR-system", criticality: "medel", organization_id: "org-1", system_category: "verksamhetssystem", lifecycle_status: "i_drift", nis2_applicable: false },
+  { id: "sys-3", name: "Vårdsystem", criticality: "kritisk", organization_id: "org-1", system_category: "verksamhetssystem", lifecycle_status: "i_drift", nis2_applicable: false },
 ]
 
 const mockIntegrations = [
@@ -30,11 +31,11 @@ const mockIntegrations = [
     id: "int-1",
     source_system_id: "sys-1",
     target_system_id: "sys-2",
-    integration_type: "REST_API",
+    integration_type: "api",
     data_types: "Löndata",
     frequency: "Dagligen",
     description: "Ekonomi till HR",
-    criticality: "HIGH",
+    criticality: "hög",
     is_external: false,
     external_party: null,
     created_at: "2024-01-01T00:00:00Z",
@@ -43,11 +44,11 @@ const mockIntegrations = [
     id: "int-2",
     source_system_id: "sys-2",
     target_system_id: "sys-3",
-    integration_type: "FILE_TRANSFER",
+    integration_type: "filöverföring",
     data_types: null,
     frequency: "Månadsvis",
     description: "HR till vård",
-    criticality: "CRITICAL",
+    criticality: "kritisk",
     is_external: false,
     external_party: null,
     created_at: "2024-01-01T00:00:00Z",
@@ -56,7 +57,7 @@ const mockIntegrations = [
     id: "int-3",
     source_system_id: "sys-3",
     target_system_id: "sys-1",
-    integration_type: "OTHER",
+    integration_type: "manuell",
     data_types: null,
     frequency: null,
     description: "Extern partner",
@@ -71,7 +72,7 @@ const mockIntegrations = [
 
 const server = setupServer(
   http.get("/api/v1/integrations", () => HttpResponse.json(mockIntegrations)),
-  http.get("/api/v1/systems", () => HttpResponse.json(mockSystems))
+  http.get("/api/v1/systems", () => HttpResponse.json({ items: mockSystems, total: mockSystems.length, limit: 200, offset: 0 }))
 )
 
 beforeAll(() => server.listen({ onUnhandledRequest: "warn" }))
@@ -81,10 +82,13 @@ afterAll(() => server.close())
 // --- Hjälpfunktion ---
 
 function renderDependencies() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <DependenciesPage />
-    </MemoryRouter>
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <DependenciesPage />
+      </MemoryRouter>
+    </QueryClientProvider>
   )
 }
 
@@ -150,10 +154,10 @@ describe("DependenciesPage", () => {
       )
     })
 
-    it("KPI-kort visar — under laddning", () => {
+    it("KPI-kort visar skeleton under laddning", () => {
       renderDependencies()
-      const dashes = screen.getAllByText("—")
-      expect(dashes.length).toBeGreaterThanOrEqual(2)
+      const skeletons = document.querySelectorAll(".skeleton")
+      expect(skeletons.length).toBeGreaterThanOrEqual(1)
     })
 
     it("KPI-kort visar kritisk-antal i röd färg", async () => {
@@ -261,7 +265,7 @@ describe("DependenciesPage", () => {
 
     it("visar integrations-typ som badge", async () => {
       await switchToTable()
-      expect(screen.getByText("REST API")).toBeInTheDocument()
+      expect(screen.getByText("API")).toBeInTheDocument()
     })
 
     it("visar frekvens Dagligen", async () => {
@@ -293,7 +297,8 @@ describe("DependenciesPage", () => {
     it("SVG har rätt viewBox", async () => {
       renderDependencies()
       await waitFor(() => {
-        const svg = document.querySelector("svg")
+        // Use role="img" to find the dependency graph SVG, not icon SVGs
+        const svg = screen.getByRole("img", { name: /beroendevisualisering/i })
         expect(svg?.getAttribute("viewBox")).toBe("0 0 800 560")
       })
     })
@@ -327,7 +332,7 @@ describe("DependenciesPage", () => {
       renderDependencies()
       await waitFor(() => {
         expect(screen.getByText("Låg")).toBeInTheDocument()
-        expect(screen.getByText("Medium")).toBeInTheDocument()
+        expect(screen.getByText("Medel")).toBeInTheDocument()
         expect(screen.getByText("Hög")).toBeInTheDocument()
         expect(screen.getByText("Kritisk")).toBeInTheDocument()
       })
@@ -405,12 +410,12 @@ describe("DependenciesPage", () => {
       )
     })
 
-    it("visar Övrigt som integrationstyp i tabell", async () => {
+    it("visar Manuell som integrationstyp i tabell", async () => {
       renderDependencies()
       await waitFor(() => screen.getByRole("tab", { name: /tabell/i }))
       await userEvent.click(screen.getByRole("tab", { name: /tabell/i }))
       await waitFor(() =>
-        expect(screen.getByText("Övrigt")).toBeInTheDocument()
+        expect(screen.getByText("Manuell")).toBeInTheDocument()
       )
     })
   })

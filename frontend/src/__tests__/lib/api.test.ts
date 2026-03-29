@@ -99,11 +99,11 @@ const mockSystemDetail = {
 }
 
 const mockStats = {
-  total: 42,
+  total_systems: 42,
   by_criticality: { kritisk: 5, hög: 10, medel: 20, låg: 7 },
   by_lifecycle_status: { i_drift: 35, planerad: 7 },
-  by_system_category: { verksamhetssystem: 20 },
-  nis2_count: 10,
+  nis2_applicable_count: 10,
+  treats_personal_data_count: 15,
 }
 
 const mockClassification = {
@@ -148,10 +148,10 @@ const mockIntegration = {
 
 const server = setupServer(
   // Organisationer
-  http.get("/api/v1/organizations/", () => HttpResponse.json([mockOrg])),
+  http.get("/api/v1/organizations", () => HttpResponse.json([mockOrg])),
 
   // System
-  http.get("/api/v1/systems/", ({ request }) => {
+  http.get("/api/v1/systems", ({ request }) => {
     const url = new URL(request.url)
     const items = [mockSystem]
     return HttpResponse.json({
@@ -170,7 +170,7 @@ const server = setupServer(
     }
     return HttpResponse.json(mockSystemDetail)
   }),
-  http.post("/api/v1/systems/", async ({ request }) => {
+  http.post("/api/v1/systems", async ({ request }) => {
     const body = await request.json() as object
     return HttpResponse.json({ ...mockSystem, ...body }, { status: 201 })
   }),
@@ -183,19 +183,19 @@ const server = setupServer(
   ),
 
   // Klassningar
-  http.get("/api/v1/systems/:id/classifications/", () =>
+  http.get("/api/v1/systems/:id/classifications", () =>
     HttpResponse.json([mockClassification])
   ),
-  http.post("/api/v1/systems/:id/classifications/", async ({ request }) => {
+  http.post("/api/v1/systems/:id/classifications", async ({ request }) => {
     const body = await request.json() as object
     return HttpResponse.json({ ...mockClassification, ...body }, { status: 201 })
   }),
 
   // Ägare
-  http.get("/api/v1/systems/:id/owners/", () =>
+  http.get("/api/v1/systems/:id/owners", () =>
     HttpResponse.json([mockOwner])
   ),
-  http.post("/api/v1/systems/:id/owners/", async ({ request }) => {
+  http.post("/api/v1/systems/:id/owners", async ({ request }) => {
     const body = await request.json() as object
     return HttpResponse.json({ ...mockOwner, ...body }, { status: 201 })
   }),
@@ -204,13 +204,13 @@ const server = setupServer(
   ),
 
   // Integrationer
-  http.get("/api/v1/integrations/", () =>
+  http.get("/api/v1/integrations", () =>
     HttpResponse.json([mockIntegration])
   ),
-  http.get("/api/v1/systems/:id/integrations/", () =>
+  http.get("/api/v1/systems/:id/integrations", () =>
     HttpResponse.json([mockIntegration])
   ),
-  http.post("/api/v1/integrations/", async ({ request }) => {
+  http.post("/api/v1/integrations", async ({ request }) => {
     const body = await request.json() as object
     return HttpResponse.json({ ...mockIntegration, ...body }, { status: 201 })
   }),
@@ -219,8 +219,8 @@ const server = setupServer(
   ),
 
   // GDPR
-  http.get("/api/v1/systems/:id/gdpr/", () => HttpResponse.json([])),
-  http.post("/api/v1/systems/:id/gdpr/", () =>
+  http.get("/api/v1/systems/:id/gdpr", () => HttpResponse.json([])),
+  http.post("/api/v1/systems/:id/gdpr", () =>
     HttpResponse.json(
       {
         id: "gdpr-1",
@@ -237,8 +237,8 @@ const server = setupServer(
   ),
 
   // Contracts
-  http.get("/api/v1/systems/:id/contracts/", () => HttpResponse.json([])),
-  http.post("/api/v1/systems/:id/contracts/", () =>
+  http.get("/api/v1/systems/:id/contracts", () => HttpResponse.json([])),
+  http.post("/api/v1/systems/:id/contracts", () =>
     HttpResponse.json(
       {
         id: "con-1",
@@ -278,7 +278,7 @@ describe("API-klient", () => {
 
     it("kastar fel vid 500", async () => {
       server.use(
-        http.get("/api/v1/organizations/", () =>
+        http.get("/api/v1/organizations", () =>
           HttpResponse.json({}, { status: 500 })
         )
       )
@@ -297,7 +297,7 @@ describe("API-klient", () => {
     it("skickar query-parametrar korrekt", async () => {
       let capturedParams: URLSearchParams | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           capturedParams = new URL(request.url).searchParams
           return HttpResponse.json({
             items: [mockSystem],
@@ -321,7 +321,7 @@ describe("API-klient", () => {
     it("skickar lifecycle_status som query-parameter", async () => {
       let capturedStatus: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           capturedStatus = new URL(request.url).searchParams.get(
             "lifecycle_status"
           )
@@ -335,7 +335,7 @@ describe("API-klient", () => {
     it("skickar criticality som query-parameter", async () => {
       let capturedCrit: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           capturedCrit = new URL(request.url).searchParams.get("criticality")
           return HttpResponse.json({ items: [], total: 0, limit: 25, offset: 0 })
         })
@@ -346,7 +346,7 @@ describe("API-klient", () => {
 
     it("kastar fel vid nätverksfel", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({}, { status: 503 })
         )
       )
@@ -383,8 +383,8 @@ describe("API-klient", () => {
   describe("getSystemStats", () => {
     it("returnerar statistik utan organization_id", async () => {
       const result = await getSystemStats()
-      expect(result.total).toBe(42)
-      expect(result.nis2_count).toBe(10)
+      expect(result.total_systems).toBe(42)
+      expect(result.nis2_applicable_count).toBe(10)
     })
 
     it("skickar organization_id som query-param", async () => {
@@ -420,7 +420,7 @@ describe("API-klient", () => {
     it("POST till /systems/ med korrekt body", async () => {
       let capturedBody: unknown = null
       server.use(
-        http.post("/api/v1/systems/", async ({ request }) => {
+        http.post("/api/v1/systems", async ({ request }) => {
           capturedBody = await request.json()
           return HttpResponse.json(
             { ...mockSystem, name: "Nytt" },
@@ -451,7 +451,7 @@ describe("API-klient", () => {
     it("Content-Type är application/json", async () => {
       let contentType: string | null = null
       server.use(
-        http.post("/api/v1/systems/", async ({ request }) => {
+        http.post("/api/v1/systems", async ({ request }) => {
           contentType = request.headers.get("content-type")
           return HttpResponse.json(mockSystem, { status: 201 })
         })
@@ -525,13 +525,13 @@ describe("API-klient", () => {
     it("anropar URL /systems/:id/classifications/", async () => {
       let url: string | null = null
       server.use(
-        http.get("/api/v1/systems/:id/classifications/", ({ request }) => {
+        http.get("/api/v1/systems/:id/classifications", ({ request }) => {
           url = new URL(request.url).pathname
           return HttpResponse.json([mockClassification])
         })
       )
       await getClassifications("sys-99")
-      expect(url).toBe("/api/v1/systems/sys-99/classifications/")
+      expect(url).toBe("/api/v1/systems/sys-99/classifications")
     })
   })
 
@@ -539,7 +539,7 @@ describe("API-klient", () => {
     it("POST klassning med korrekt data", async () => {
       let body: unknown = null
       server.use(
-        http.post("/api/v1/systems/:id/classifications/", async ({ request }) => {
+        http.post("/api/v1/systems/:id/classifications", async ({ request }) => {
           body = await request.json()
           return HttpResponse.json(mockClassification, { status: 201 })
         })
@@ -587,7 +587,7 @@ describe("API-klient", () => {
     it("skickar system_id query-param om angivet", async () => {
       let param: string | null = null
       server.use(
-        http.get("/api/v1/integrations/", ({ request }) => {
+        http.get("/api/v1/integrations", ({ request }) => {
           param = new URL(request.url).searchParams.get("system_id")
           return HttpResponse.json([mockIntegration])
         })
@@ -601,13 +601,13 @@ describe("API-klient", () => {
     it("anropar /systems/:id/integrations/", async () => {
       let url: string | null = null
       server.use(
-        http.get("/api/v1/systems/:id/integrations/", ({ request }) => {
+        http.get("/api/v1/systems/:id/integrations", ({ request }) => {
           url = new URL(request.url).pathname
           return HttpResponse.json([mockIntegration])
         })
       )
       await getSystemIntegrations("sys-5")
-      expect(url).toBe("/api/v1/systems/sys-5/integrations/")
+      expect(url).toBe("/api/v1/systems/sys-5/integrations")
     })
   })
 
@@ -615,7 +615,7 @@ describe("API-klient", () => {
     it("POST integration med korrekt body", async () => {
       let body: unknown = null
       server.use(
-        http.post("/api/v1/integrations/", async ({ request }) => {
+        http.post("/api/v1/integrations", async ({ request }) => {
           body = await request.json()
           return HttpResponse.json(mockIntegration, { status: 201 })
         })
@@ -691,7 +691,7 @@ describe("API-klient", () => {
     it("createGDPRTreatment POST till /systems/:id/gdpr/", async () => {
       let url: string | null = null
       server.use(
-        http.post("/api/v1/systems/:id/gdpr/", ({ request }) => {
+        http.post("/api/v1/systems/:id/gdpr", ({ request }) => {
           url = new URL(request.url).pathname
           return HttpResponse.json(
             {
@@ -706,7 +706,7 @@ describe("API-klient", () => {
         })
       )
       await createGDPRTreatment("sys-1", { dpia_conducted: false })
-      expect(url).toBe("/api/v1/systems/sys-1/gdpr/")
+      expect(url).toBe("/api/v1/systems/sys-1/gdpr")
     })
 
     it("deleteGDPRTreatment DELETE till /gdpr/:id", async () => {
@@ -731,7 +731,7 @@ describe("API-klient", () => {
     it("createContract POST till /systems/:id/contracts/", async () => {
       let body: unknown = null
       server.use(
-        http.post("/api/v1/systems/:id/contracts/", async ({ request }) => {
+        http.post("/api/v1/systems/:id/contracts", async ({ request }) => {
           body = await request.json()
           return HttpResponse.json(
             {
@@ -766,7 +766,7 @@ describe("API-klient", () => {
   describe("Felhantering - HTTP-statuskoder", () => {
     it("getSystems kastar vid 401 Unauthorized", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({ detail: "Unauthorized" }, { status: 401 })
         )
       )
@@ -784,7 +784,7 @@ describe("API-klient", () => {
 
     it("createSystem kastar vid 422 Validation Error", async () => {
       server.use(
-        http.post("/api/v1/systems/", () =>
+        http.post("/api/v1/systems", () =>
           HttpResponse.json(
             { detail: [{ loc: ["body", "name"], msg: "required" }] },
             { status: 422 }
@@ -812,7 +812,7 @@ describe("API-klient", () => {
 
     it("getOrganizations kastar vid nätverksfel", async () => {
       server.use(
-        http.get("/api/v1/organizations/", () =>
+        http.get("/api/v1/organizations", () =>
           HttpResponse.error()
         )
       )
@@ -824,7 +824,7 @@ describe("API-klient", () => {
     it("axios sätter Accept: application/json som standard", async () => {
       let acceptHeader: string | null = null
       server.use(
-        http.get("/api/v1/organizations/", ({ request }) => {
+        http.get("/api/v1/organizations", ({ request }) => {
           acceptHeader = request.headers.get("accept")
           return HttpResponse.json([mockOrg])
         })
@@ -836,7 +836,7 @@ describe("API-klient", () => {
     it("baseURL är /api/v1", async () => {
       let capturedPath: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           capturedPath = new URL(request.url).pathname
           return HttpResponse.json({ items: [], total: 0, limit: 25, offset: 0 })
         })
@@ -850,7 +850,7 @@ describe("API-klient", () => {
     it("POST owner med korrekt body", async () => {
       let body: unknown = null
       server.use(
-        http.post("/api/v1/systems/:id/owners/", async ({ request }) => {
+        http.post("/api/v1/systems/:id/owners", async ({ request }) => {
           body = await request.json()
           return HttpResponse.json(mockOwner, { status: 201 })
         })

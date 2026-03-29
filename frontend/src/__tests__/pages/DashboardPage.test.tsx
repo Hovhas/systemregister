@@ -22,15 +22,15 @@ const mockStats = {
   total_systems: 42,
   by_lifecycle_status: {
     planerad: 5,
-    aktiv: 30,
-    avveckling: 4,
+    i_drift: 30,
+    under_avveckling: 4,
     avvecklad: 3,
   },
   by_criticality: {
     kritisk: 8,
-    hog: 12,
-    medium: 15,
-    lag: 7,
+    hög: 12,
+    medel: 15,
+    låg: 7,
   },
   nis2_applicable_count: 10,
   treats_personal_data_count: 18,
@@ -38,8 +38,8 @@ const mockStats = {
 
 const mockStatsOrg1 = {
   total_systems: 15,
-  by_lifecycle_status: { planerad: 2, aktiv: 12, avveckling: 1 },
-  by_criticality: { kritisk: 3, hog: 5, medium: 4, lag: 3 },
+  by_lifecycle_status: { planerad: 2, i_drift: 12, under_avveckling: 1 },
+  by_criticality: { kritisk: 3, hög: 5, medel: 4, låg: 3 },
   nis2_applicable_count: 4,
   treats_personal_data_count: 7,
 }
@@ -61,7 +61,8 @@ const server = setupServer(
     const orgId = url.searchParams.get("organization_id")
     if (orgId === "org-1") return HttpResponse.json(mockStatsOrg1)
     return HttpResponse.json(mockStats)
-  })
+  }),
+  http.get(/\/api\/v1\/contracts\/expiring/, () => HttpResponse.json([]))
 )
 
 beforeAll(() => server.listen({ onUnhandledRequest: "warn" }))
@@ -85,15 +86,17 @@ function renderDashboard() {
 
 describe("DashboardPage", () => {
   describe("Laddningsläge", () => {
-    it("visar laddningsindikator initialt", () => {
+    it("visar skeleton-laddningsindikator initialt", () => {
       renderDashboard()
-      expect(screen.getByText(/laddar statistik/i)).toBeInTheDocument()
+      // Production code uses skeleton loaders, not text
+      const skeletons = document.querySelectorAll(".skeleton")
+      expect(skeletons.length).toBeGreaterThan(0)
     })
 
-    it("döljer laddningsindikator efter data laddats", async () => {
+    it("döljer skeleton efter data laddats", async () => {
       renderDashboard()
       await waitFor(() =>
-        expect(screen.queryByText(/laddar statistik/i)).not.toBeInTheDocument()
+        expect(screen.getByText("42")).toBeInTheDocument()
       )
     })
   })
@@ -173,10 +176,10 @@ describe("DashboardPage", () => {
       )
     })
 
-    it("visar lifecycle-status Aktiv med antal 30", async () => {
+    it("visar lifecycle-status I drift med antal 30", async () => {
       renderDashboard()
       await waitFor(() => {
-        expect(screen.getByText("Aktiv")).toBeInTheDocument()
+        expect(screen.getByText("I drift")).toBeInTheDocument()
         expect(screen.getByText("30")).toBeInTheDocument()
       })
     })
@@ -189,10 +192,10 @@ describe("DashboardPage", () => {
       })
     })
 
-    it("visar lifecycle-status Avveckling", async () => {
+    it("visar lifecycle-status Under avveckling", async () => {
       renderDashboard()
       await waitFor(() =>
-        expect(screen.getByText("Avveckling")).toBeInTheDocument()
+        expect(screen.getByText("Under avveckling")).toBeInTheDocument()
       )
     })
 
@@ -208,7 +211,7 @@ describe("DashboardPage", () => {
       renderDashboard()
       await waitFor(() => {
         expect(screen.getByText("Hög")).toBeInTheDocument()
-        expect(screen.getByText("Medium")).toBeInTheDocument()
+        expect(screen.getByText("Medel")).toBeInTheDocument()
         expect(screen.getByText("Låg")).toBeInTheDocument()
       })
     })
@@ -365,10 +368,10 @@ describe("DashboardPage", () => {
       await waitFor(() => expect(screen.getByText("Hög")).toBeInTheDocument())
     })
 
-    it("Medium-badge renderas korrekt", async () => {
+    it("Medel-badge renderas korrekt", async () => {
       renderDashboard()
       await waitFor(() =>
-        expect(screen.getByText("Medium")).toBeInTheDocument()
+        expect(screen.getByText("Medel")).toBeInTheDocument()
       )
     })
 
@@ -395,7 +398,7 @@ describe("DashboardPage", () => {
       })
     })
 
-    it("medium-antal i tabell är 15", async () => {
+    it("medel-antal i tabell är 15", async () => {
       renderDashboard()
       await waitFor(() => {
         const cells = screen.getAllByText("15")
@@ -403,7 +406,7 @@ describe("DashboardPage", () => {
       })
     })
 
-    it("avveckling-status visar 4", async () => {
+    it("under_avveckling-status visar 4", async () => {
       renderDashboard()
       await waitFor(() => {
         const cells = screen.getAllByText("4")

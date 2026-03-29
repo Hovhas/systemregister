@@ -93,7 +93,7 @@ const mockOrgs = [
 
 const server = setupServer(
   http.get("/api/v1/organizations", () => HttpResponse.json(mockOrgs)),
-  http.get("/api/v1/systems/", () =>
+  http.get("/api/v1/systems", () =>
     HttpResponse.json(paginatedResponse())
   )
 )
@@ -104,7 +104,8 @@ afterAll(() => server.close())
 
 // --- Hjälpfunktioner ---
 
-// Hämtar select-knapp (combobox) via index: 0=Kategori, 1=Livscykelstatus, 2=Kritikalitet
+// Hämtar select-knapp (combobox) via index:
+// 0=Organisation, 1=Kategori, 2=Livscykelstatus, 3=Kritikalitet
 function getSelectByIndex(index: number) {
   return screen.getAllByRole("combobox")[index]
 }
@@ -224,14 +225,16 @@ describe("SystemsPage", () => {
   })
 
   describe("Laddning och fel", () => {
-    it("visar laddningsrad när data hämtas", () => {
+    it("visar skeleton-laddningsrader när data hämtas", () => {
       renderSystems()
-      expect(screen.getByText(/laddar/i)).toBeInTheDocument()
+      // Production code uses skeleton loaders, not text
+      const skeletons = document.querySelectorAll(".skeleton")
+      expect(skeletons.length).toBeGreaterThan(0)
     })
 
     it("visar felmeddelande vid API-fel", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({}, { status: 500 })
         )
       )
@@ -245,7 +248,7 @@ describe("SystemsPage", () => {
 
     it("visar 'Inga system matchar sökningen' vid tom lista", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({ items: [], total: 0, limit: 25, offset: 0 })
         )
       )
@@ -259,7 +262,7 @@ describe("SystemsPage", () => {
 
     it("visar 'Inga system hittade' i undertexten vid tom lista", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({ items: [], total: 0, limit: 25, offset: 0 })
         )
       )
@@ -330,7 +333,7 @@ describe("SystemsPage", () => {
     it("debounce-sökning triggar ny request efter 300ms (simulerat)", async () => {
       let searchParam: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           searchParam = url.searchParams.get("q")
           return HttpResponse.json(paginatedResponse())
@@ -354,7 +357,7 @@ describe("SystemsPage", () => {
     it("sökning rensar offset till 0", async () => {
       let capturedOffset: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           capturedOffset = url.searchParams.get("offset")
           return HttpResponse.json(paginatedResponse())
@@ -378,16 +381,16 @@ describe("SystemsPage", () => {
     it("kategori-filter skickar system_category till API", async () => {
       let capturedCategory: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           capturedCategory = url.searchParams.get("system_category")
           return HttpResponse.json(paginatedResponse())
         })
       )
       renderSystems()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(3))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
 
-      await userEvent.click(getSelectByIndex(0))
+      await userEvent.click(getSelectByIndex(1))
       await waitFor(() => screen.getByRole("option", { name: /infrastruktur/i }))
       await userEvent.click(screen.getByRole("option", { name: /infrastruktur/i }))
 
@@ -399,16 +402,16 @@ describe("SystemsPage", () => {
     it("livscykel-filter skickar lifecycle_status till API", async () => {
       let capturedLifecycle: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           capturedLifecycle = url.searchParams.get("lifecycle_status")
           return HttpResponse.json(paginatedResponse())
         })
       )
       renderSystems()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(3))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
 
-      await userEvent.click(getSelectByIndex(1))
+      await userEvent.click(getSelectByIndex(2))
       await waitFor(() => screen.getByRole("option", { name: /planerad/i }))
       await userEvent.click(screen.getByRole("option", { name: /planerad/i }))
 
@@ -419,16 +422,16 @@ describe("SystemsPage", () => {
     it("kritikalitet-filter skickar criticality till API", async () => {
       let capturedCriticality: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           capturedCriticality = url.searchParams.get("criticality")
           return HttpResponse.json(paginatedResponse())
         })
       )
       renderSystems()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(3))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
 
-      await userEvent.click(getSelectByIndex(2))
+      await userEvent.click(getSelectByIndex(3))
       await waitFor(() => screen.getByRole("option", { name: /kritisk/i }))
       await userEvent.click(screen.getByRole("option", { name: /kritisk/i }))
 
@@ -439,16 +442,16 @@ describe("SystemsPage", () => {
     it("filter återställer offset till 0 vid val", async () => {
       let lastOffset: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           lastOffset = url.searchParams.get("offset")
           return HttpResponse.json(paginatedResponse())
         })
       )
       renderSystems()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(3))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
 
-      await userEvent.click(getSelectByIndex(0))
+      await userEvent.click(getSelectByIndex(1))
       await waitFor(() => screen.getByRole("option", { name: /plattform/i }))
       await userEvent.click(screen.getByRole("option", { name: /plattform/i }))
 
@@ -460,7 +463,7 @@ describe("SystemsPage", () => {
   describe("Pagination", () => {
     it("visar paginering när total > 25", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({
             items: systemsList,
             total: 60,
@@ -483,7 +486,7 @@ describe("SystemsPage", () => {
 
     it("Föregående-knapp är inaktiverad på första sidan", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({
             items: systemsList,
             total: 60,
@@ -501,7 +504,7 @@ describe("SystemsPage", () => {
 
     it("Nästa-knapp är aktiv på första sidan när fler sidor finns", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({
             items: systemsList,
             total: 60,
@@ -520,7 +523,7 @@ describe("SystemsPage", () => {
     it("klick på Nästa ökar offset med PAGE_SIZE (25)", async () => {
       let capturedOffset: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           capturedOffset = url.searchParams.get("offset")
           return HttpResponse.json({
@@ -542,7 +545,7 @@ describe("SystemsPage", () => {
 
     it("Nästa-knapp är inaktiverad på sista sidan", async () => {
       server.use(
-        http.get("/api/v1/systems/", () =>
+        http.get("/api/v1/systems", () =>
           HttpResponse.json({
             items: systemsList,
             total: 5,
@@ -561,7 +564,7 @@ describe("SystemsPage", () => {
     it("visar 25 items per sida (PAGE_SIZE)", async () => {
       let capturedLimit: string | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
           capturedLimit = url.searchParams.get("limit")
           return HttpResponse.json(paginatedResponse())
@@ -578,20 +581,20 @@ describe("SystemsPage", () => {
     it("kan sätta kategori + livscykel-filter samtidigt", async () => {
       let params: URLSearchParams | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           params = new URL(request.url).searchParams
           return HttpResponse.json(paginatedResponse())
         })
       )
       renderSystems()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(3))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
 
-      await userEvent.click(getSelectByIndex(0))
+      await userEvent.click(getSelectByIndex(1))
       await waitFor(() => screen.getByRole("option", { name: /plattform/i }))
       await userEvent.click(screen.getByRole("option", { name: /plattform/i }))
       await waitFor(() => expect(screen.queryByRole("option")).not.toBeInTheDocument())
 
-      await userEvent.click(getSelectByIndex(1))
+      await userEvent.click(getSelectByIndex(2))
       await waitFor(() => screen.getByRole("option", { name: /i drift/i }))
       await userEvent.click(screen.getByRole("option", { name: /i drift/i }))
       await waitFor(() => expect(screen.queryByRole("option")).not.toBeInTheDocument())
@@ -605,16 +608,16 @@ describe("SystemsPage", () => {
     it("rensa ett filter (Alla kategorier) tar bort category-param", async () => {
       let params: URLSearchParams | null = null
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           params = new URL(request.url).searchParams
           return HttpResponse.json(paginatedResponse())
         })
       )
       renderSystems()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(3))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
 
       // Välj kategori
-      await userEvent.click(getSelectByIndex(0))
+      await userEvent.click(getSelectByIndex(1))
       await waitFor(() => screen.getByRole("option", { name: /infrastruktur/i }))
       await userEvent.click(screen.getByRole("option", { name: /infrastruktur/i }))
       await waitFor(() => expect(screen.queryByRole("option")).not.toBeInTheDocument())
@@ -622,7 +625,7 @@ describe("SystemsPage", () => {
       await waitFor(() => expect(params?.get("system_category")).toBe("infrastruktur"))
 
       // Rensa till Alla kategorier
-      await userEvent.click(getSelectByIndex(0))
+      await userEvent.click(getSelectByIndex(1))
       await waitFor(() => screen.getByRole("option", { name: /alla kategorier/i }))
       await userEvent.click(screen.getByRole("option", { name: /alla kategorier/i }))
       await waitFor(() => expect(screen.queryByRole("option")).not.toBeInTheDocument())

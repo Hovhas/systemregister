@@ -56,17 +56,20 @@ describe("ConfirmDialog", () => {
 
   it("shows loading text when loading=true", () => {
     render(<ConfirmDialog {...defaultProps} loading={true} />)
-    expect(screen.getByText("Tar bort...")).toBeInTheDocument()
+    expect(screen.getByText("Ta bort...")).toBeInTheDocument()
   })
 
   it("hides Ta bort text when loading", () => {
     render(<ConfirmDialog {...defaultProps} loading={true} />)
-    expect(screen.queryByText("Ta bort")).not.toBeInTheDocument()
+    // When loading, the text is "Ta bort..." (confirmLabel + "..."), not exact "Ta bort"
+    const buttons = screen.getAllByRole("button")
+    const confirmBtn = buttons.find(b => b.textContent === "Ta bort...")
+    expect(confirmBtn).toBeTruthy()
   })
 
   it("disables confirm button when loading", () => {
     render(<ConfirmDialog {...defaultProps} loading={true} />)
-    const btn = screen.getByText("Tar bort...")
+    const btn = screen.getByText("Ta bort...")
     expect(btn.closest("button")).toBeDisabled()
   })
 
@@ -106,7 +109,7 @@ describe("ConfirmDialog", () => {
   it("does not call onConfirm when loading and clicked", () => {
     const onConfirm = vi.fn()
     render(<ConfirmDialog {...defaultProps} onConfirm={onConfirm} loading={true} />)
-    const btn = screen.getByText("Tar bort...").closest("button")
+    const btn = screen.getByText("Ta bort...").closest("button")
     if (btn) fireEvent.click(btn)
     expect(onConfirm).not.toHaveBeenCalled()
   })

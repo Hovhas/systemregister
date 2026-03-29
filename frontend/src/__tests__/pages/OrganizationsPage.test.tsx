@@ -79,9 +79,9 @@ const mockSystemsResponse = {
 // --- MSW-server ---
 
 const server = setupServer(
-  http.get("/api/v1/organizations/", () => HttpResponse.json(mockOrgs)),
-  http.get("/api/v1/systems/", () => HttpResponse.json(mockSystemsResponse)),
-  http.post("/api/v1/organizations/", async ({ request }) => {
+  http.get("/api/v1/organizations", () => HttpResponse.json(mockOrgs)),
+  http.get("/api/v1/systems", () => HttpResponse.json(mockSystemsResponse)),
+  http.post("/api/v1/organizations", async ({ request }) => {
     const body = await request.json() as Record<string, unknown>
     return HttpResponse.json(
       makeOrg({ id: "org-new", name: body.name as string }),
@@ -235,9 +235,9 @@ describe("OrganizationsPage", () => {
     it("hämtar systemlistan för att beräkna antal per organisation", async () => {
       let systemsRequested = false
       server.use(
-        http.get("/api/v1/systems/", ({ request }) => {
+        http.get("/api/v1/systems", ({ request }) => {
           const url = new URL(request.url)
-          if (url.searchParams.get("limit") === "1000") {
+          if (url.searchParams.get("limit") === "200") {
             systemsRequested = true
           }
           return HttpResponse.json(mockSystemsResponse)
@@ -255,7 +255,7 @@ describe("OrganizationsPage", () => {
   describe("Tom lista", () => {
     it("visar 'Inga organisationer hittades' när listan är tom", async () => {
       server.use(
-        http.get("/api/v1/organizations/", () => HttpResponse.json([]))
+        http.get("/api/v1/organizations", () => HttpResponse.json([]))
       )
       renderPage()
       await waitFor(() =>
@@ -269,7 +269,7 @@ describe("OrganizationsPage", () => {
   describe("Felhantering", () => {
     it("visar felmeddelande vid API-fel", async () => {
       server.use(
-        http.get("/api/v1/organizations/", () =>
+        http.get("/api/v1/organizations", () =>
           HttpResponse.json({}, { status: 500 })
         )
       )
@@ -331,7 +331,7 @@ describe("OrganizationsPage", () => {
     it("skickar POST-request vid ifyllt formulär och submit", async () => {
       let postedBody: Record<string, unknown> | null = null
       server.use(
-        http.post("/api/v1/organizations/", async ({ request }) => {
+        http.post("/api/v1/organizations", async ({ request }) => {
           postedBody = await request.json() as Record<string, unknown>
           return HttpResponse.json(
             makeOrg({ id: "org-new", name: postedBody.name as string }),

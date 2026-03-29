@@ -11,7 +11,7 @@ import {
   afterAll,
   afterEach,
 } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
@@ -64,6 +64,18 @@ function renderImport() {
 
 function createFile(name: string, type: string): File {
   return new File(["innehåll"], name, { type })
+}
+
+/**
+ * All 3 tab panels render simultaneously in DOM.
+ * Index: 0=System, 1=Klassningar, 2=Ägare
+ */
+function getImportBtn(idx: number): HTMLElement {
+  return screen.getAllByRole("button", { name: /^importera$/i })[idx]
+}
+
+function getFileInputByIdx(idx: number): HTMLInputElement {
+  return document.querySelectorAll('input[type="file"]')[idx] as HTMLInputElement
 }
 
 // --- Tester ---
@@ -258,7 +270,7 @@ describe("ImportPage", () => {
       renderImport()
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /importera/i })
+          getImportBtn(0)
         ).toBeDisabled()
       )
     })
@@ -273,7 +285,7 @@ describe("ImportPage", () => {
 
       // Fil vald men ingen organisation => inaktiverad
       expect(
-        screen.getByRole("button", { name: /importera/i })
+        getImportBtn(0)
       ).toBeDisabled()
     })
 
@@ -282,14 +294,14 @@ describe("ImportPage", () => {
       await waitFor(() => screen.getByRole("tab", { name: /klassningar/i }))
       await userEvent.click(screen.getByRole("tab", { name: /klassningar/i }))
 
-      await waitFor(() => document.querySelector('input[type="file"]'))
+      await waitFor(() => document.querySelector('input[type="file"]') as HTMLInputElement)
       const file = createFile("cls.csv", "text/csv")
       const input = document.querySelector('input[type="file"]') as HTMLInputElement
       await userEvent.upload(input, file)
 
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /importera/i })
+          getImportBtn(0)
         ).not.toBeDisabled()
       )
     })
@@ -301,17 +313,17 @@ describe("ImportPage", () => {
       await waitFor(() => screen.getByRole("tab", { name: /klassningar/i }))
       await userEvent.click(screen.getByRole("tab", { name: /klassningar/i }))
 
-      await waitFor(() => document.querySelector('input[type="file"]'))
+      await waitFor(() => document.querySelector('input[type="file"]') as HTMLInputElement)
       const file = createFile("cls.csv", "text/csv")
       const input = document.querySelector('input[type="file"]') as HTMLInputElement
       await userEvent.upload(input, file)
 
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /importera/i })
+          getImportBtn(0)
         ).not.toBeDisabled()
       )
-      await userEvent.click(screen.getByRole("button", { name: /importera/i }))
+      await userEvent.click(getImportBtn(0))
 
       await waitFor(() =>
         expect(screen.getByText(/5 poster importerade/i)).toBeInTheDocument()
@@ -334,10 +346,10 @@ describe("ImportPage", () => {
 
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /importera/i })
+          getImportBtn(0)
         ).not.toBeDisabled()
       )
-      await userEvent.click(screen.getByRole("button", { name: /importera/i }))
+      await userEvent.click(getImportBtn(0))
 
       await waitFor(() => {
         expect(screen.getByText(/3 poster importerade/i)).toBeInTheDocument()
@@ -363,10 +375,10 @@ describe("ImportPage", () => {
 
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /importera/i })
+          getImportBtn(0)
         ).not.toBeDisabled()
       )
-      await userEvent.click(screen.getByRole("button", { name: /importera/i }))
+      await userEvent.click(getImportBtn(0))
 
       await waitFor(() =>
         // Axios kastar Error med statusmeddelande, inte "Import misslyckades"
@@ -393,9 +405,9 @@ describe("ImportPage", () => {
       await userEvent.upload(input, file)
 
       await waitFor(() =>
-        screen.getByRole("button", { name: /importera/i })
+        getImportBtn(0)
       )
-      await userEvent.click(screen.getByRole("button", { name: /importera/i }))
+      await userEvent.click(getImportBtn(0))
 
       await waitFor(() =>
         expect(
@@ -455,9 +467,9 @@ describe("ImportPage", () => {
       await userEvent.upload(input, file)
 
       await waitFor(() =>
-        screen.getByRole("button", { name: /importera/i })
+        getImportBtn(0)
       )
-      await userEvent.click(screen.getByRole("button", { name: /importera/i }))
+      await userEvent.click(getImportBtn(0))
 
       await waitFor(() =>
         expect(screen.getByText(/1 fel/i)).toBeInTheDocument()
@@ -482,9 +494,9 @@ describe("ImportPage", () => {
       await userEvent.upload(input, file)
 
       await waitFor(() =>
-        screen.getByRole("button", { name: /importera/i })
+        getImportBtn(0)
       )
-      await userEvent.click(screen.getByRole("button", { name: /importera/i }))
+      await userEvent.click(getImportBtn(0))
 
       await waitFor(() =>
         expect(screen.getByText(/0 poster importerade/i)).toBeInTheDocument()
@@ -498,14 +510,14 @@ describe("ImportPage", () => {
       await waitFor(() => screen.getByRole("tab", { name: /ägare/i }))
       await userEvent.click(screen.getByRole("tab", { name: /ägare/i }))
 
-      await waitFor(() => document.querySelector('input[type="file"]'))
+      await waitFor(() => document.querySelector('input[type="file"]') as HTMLInputElement)
       const file = createFile("owners.csv", "text/csv")
       const input = document.querySelector('input[type="file"]') as HTMLInputElement
       await userEvent.upload(input, file)
 
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /importera/i })
+          getImportBtn(0)
         ).not.toBeDisabled()
       )
     })
@@ -515,7 +527,7 @@ describe("ImportPage", () => {
       await waitFor(() => screen.getByRole("tab", { name: /klassningar/i }))
       await userEvent.click(screen.getByRole("tab", { name: /klassningar/i }))
 
-      await waitFor(() => document.querySelector('input[type="file"]'))
+      await waitFor(() => document.querySelector('input[type="file"]') as HTMLInputElement)
       const input = document.querySelector('input[type="file"]') as HTMLInputElement
 
       await userEvent.upload(input, createFile("first.csv", "text/csv"))
@@ -558,10 +570,10 @@ describe("ImportPage", () => {
 
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /importera/i })
+          getImportBtn(0)
         ).not.toBeDisabled()
       )
-      await userEvent.click(screen.getByRole("button", { name: /importera/i }))
+      await userEvent.click(getImportBtn(0))
 
       await waitFor(() =>
         expect(capturedUrl).toContain("organization_id=org-1")

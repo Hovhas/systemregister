@@ -37,7 +37,7 @@ register_audit_listeners()
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql+asyncpg://systemregister:devpassword@localhost:5432/systemregister_test",
+    "postgresql+asyncpg://systemregister:devpassword@db:5432/systemregister_test",
 )
 
 

@@ -81,7 +81,7 @@ const fullResponse = makeResponse({
 // --- MSW-server ---
 
 const server = setupServer(
-  http.get("/api/v1/notifications/", () => HttpResponse.json(fullResponse))
+  http.get("/api/v1/notifications", () => HttpResponse.json(fullResponse))
 )
 
 beforeAll(() => server.listen({ onUnhandledRequest: "warn" }))
@@ -214,7 +214,7 @@ describe("NotificationsPage", () => {
         system_id: "sys-9",
       })
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json(
             makeResponse({
               items: [criticalNotification, extraCritical, warningNotification],
@@ -236,7 +236,7 @@ describe("NotificationsPage", () => {
   describe("Tomt tillstånd", () => {
     it("visar 'Inga aktiva notifikationer' när listan är tom", async () => {
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json(makeResponse())
         )
       )
@@ -250,7 +250,7 @@ describe("NotificationsPage", () => {
 
     it("visar undertexten 'Alla system ser bra ut' vid tomt tillstånd", async () => {
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json(makeResponse())
         )
       )
@@ -264,7 +264,7 @@ describe("NotificationsPage", () => {
 
     it("visar inte notifikationsgrupper när listan är tom", async () => {
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json(makeResponse())
         )
       )
@@ -278,7 +278,7 @@ describe("NotificationsPage", () => {
   describe("Felhantering", () => {
     it("visar felmeddelande vid API-fel", async () => {
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json({}, { status: 500 })
         )
       )
@@ -292,7 +292,7 @@ describe("NotificationsPage", () => {
 
     it("visar inte laddningstext efter fel", async () => {
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json({}, { status: 500 })
         )
       )
@@ -311,7 +311,7 @@ describe("NotificationsPage", () => {
         makeNotification({ title: `Notis ${i}`, severity: "warning" })
       )
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json(
             makeResponse({
               items,
@@ -332,7 +332,7 @@ describe("NotificationsPage", () => {
         makeNotification({ title: `Notis ${i}`, severity: "warning" })
       )
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json(
             makeResponse({
               items,
@@ -354,7 +354,7 @@ describe("NotificationsPage", () => {
         makeNotification({ title: `Notis ${i}`, severity: "info" })
       )
       server.use(
-        http.get("/api/v1/notifications/", () =>
+        http.get("/api/v1/notifications", () =>
           HttpResponse.json(
             makeResponse({
               items,
@@ -377,7 +377,7 @@ describe("NotificationsPage", () => {
         makeNotification({ title: `Notis ${i}`, severity: "info" })
       )
       server.use(
-        http.get("/api/v1/notifications/", ({ request }) => {
+        http.get("/api/v1/notifications", ({ request }) => {
           const url = new URL(request.url)
           capturedOffset = url.searchParams.get("offset")
           return HttpResponse.json(
