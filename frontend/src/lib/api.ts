@@ -38,12 +38,12 @@ const api = axios.create({
 // --- Organisationer ---
 
 export async function getOrganizations(): Promise<Organization[]> {
-  const res = await api.get<Organization[]>("/organizations/")
+  const res = await api.get<Organization[]>("/organizations")
   return res.data
 }
 
 export async function createOrganization(data: OrganizationCreate): Promise<Organization> {
-  const res = await api.post<Organization>("/organizations/", data)
+  const res = await api.post<Organization>("/organizations", data)
   return res.data
 }
 
@@ -61,7 +61,7 @@ export async function deleteOrganization(id: string): Promise<void> {
 export async function getSystems(
   params?: SystemSearchParams
 ): Promise<PaginatedResponse<System>> {
-  const res = await api.get<PaginatedResponse<System>>("/systems/", { params })
+  const res = await api.get<PaginatedResponse<System>>("/systems", { params })
   return res.data
 }
 
@@ -85,7 +85,7 @@ export async function getClassifications(
   systemId: string
 ): Promise<Classification[]> {
   const res = await api.get<Classification[]>(
-    `/systems/${systemId}/classifications/`
+    `/systems/${systemId}/classifications`
   )
   return res.data
 }
@@ -95,7 +95,7 @@ export async function createClassification(
   data: ClassificationCreate
 ): Promise<Classification> {
   const res = await api.post<Classification>(
-    `/systems/${systemId}/classifications/`,
+    `/systems/${systemId}/classifications`,
     data
   )
   return res.data
@@ -104,7 +104,7 @@ export async function createClassification(
 // --- Ägare ---
 
 export async function getOwners(systemId: string): Promise<Owner[]> {
-  const res = await api.get<Owner[]>(`/systems/${systemId}/owners/`)
+  const res = await api.get<Owner[]>(`/systems/${systemId}/owners`)
   return res.data
 }
 
@@ -112,7 +112,7 @@ export async function createOwner(
   systemId: string,
   data: OwnerCreate
 ): Promise<Owner> {
-  const res = await api.post<Owner>(`/systems/${systemId}/owners/`, data)
+  const res = await api.post<Owner>(`/systems/${systemId}/owners`, data)
   return res.data
 }
 
@@ -121,21 +121,21 @@ export async function createOwner(
 export async function getIntegrations(
   params?: IntegrationSearchParams
 ): Promise<Integration[]> {
-  const res = await api.get<Integration[]>("/integrations/", { params })
+  const res = await api.get<Integration[]>("/integrations", { params })
   return res.data
 }
 
 export async function getSystemIntegrations(
   systemId: string
 ): Promise<Integration[]> {
-  const res = await api.get<Integration[]>(`/systems/${systemId}/integrations/`)
+  const res = await api.get<Integration[]>(`/systems/${systemId}/integrations`)
   return res.data
 }
 
 // --- System CRUD ---
 
 export async function createSystem(data: SystemCreate): Promise<System> {
-  const res = await api.post<System>("/systems/", data)
+  const res = await api.post<System>("/systems", data)
   return res.data
 }
 
@@ -157,7 +157,7 @@ export async function deleteOwner(ownerId: string): Promise<void> {
 // --- Integration CRUD ---
 
 export async function createIntegration(data: IntegrationCreate): Promise<Integration> {
-  const res = await api.post<Integration>("/integrations/", data)
+  const res = await api.post<Integration>("/integrations", data)
   return res.data
 }
 
@@ -168,7 +168,7 @@ export async function deleteIntegration(id: string): Promise<void> {
 // --- GDPR ---
 
 export async function getGDPRTreatments(systemId: string): Promise<GDPRTreatment[]> {
-  const res = await api.get<GDPRTreatment[]>(`/systems/${systemId}/gdpr/`)
+  const res = await api.get<GDPRTreatment[]>(`/systems/${systemId}/gdpr`)
   return res.data
 }
 
@@ -176,7 +176,7 @@ export async function createGDPRTreatment(
   systemId: string,
   data: GDPRTreatmentCreate
 ): Promise<GDPRTreatment> {
-  const res = await api.post<GDPRTreatment>(`/systems/${systemId}/gdpr/`, data)
+  const res = await api.post<GDPRTreatment>(`/systems/${systemId}/gdpr`, data)
   return res.data
 }
 
@@ -187,7 +187,7 @@ export async function deleteGDPRTreatment(id: string): Promise<void> {
 // --- Contracts ---
 
 export async function getContracts(systemId: string): Promise<Contract[]> {
-  const res = await api.get<Contract[]>(`/systems/${systemId}/contracts/`)
+  const res = await api.get<Contract[]>(`/systems/${systemId}/contracts`)
   return res.data
 }
 
@@ -195,7 +195,7 @@ export async function createContract(
   systemId: string,
   data: ContractCreate
 ): Promise<Contract> {
-  const res = await api.post<Contract>(`/systems/${systemId}/contracts/`, data)
+  const res = await api.post<Contract>(`/systems/${systemId}/contracts`, data)
   return res.data
 }
 
@@ -234,7 +234,7 @@ export async function getAuditLog(params?: {
   limit?: number
   offset?: number
 }): Promise<AuditResponse> {
-  const res = await api.get<AuditResponse>("/audit/", { params })
+  const res = await api.get<AuditResponse>("/audit", { params })
   return res.data
 }
 
@@ -249,7 +249,7 @@ export async function getNotifications(params?: {
   limit?: number
   offset?: number
 }): Promise<NotificationsResponse> {
-  const res = await api.get<NotificationsResponse>("/notifications/", { params })
+  const res = await api.get<NotificationsResponse>("/notifications", { params })
   return res.data
 }
 
