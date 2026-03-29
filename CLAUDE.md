@@ -23,6 +23,40 @@ IT-systemregister för Sundsvalls kommunkoncern. Multi-org-stöd för DigIT (13+
       └──── Traefik ───────┘
 ```
 
+## UX-kontext
+
+Målgrupp: IT-förvaltare och systemägare i kommunal sektor
+Teknisk nivå: Medel — vana vid IT-system men inte utvecklare
+Primära uppgifter: Registrera system, uppdatera ägarskap, följa upp efterlevnadsstatus
+UX-principer: Få klick, tydlig återkoppling, förlåtande (lätt att ångra/korrigera)
+Tillgänglighet: Minst WCAG 2.1 AA (krav enligt DOS-lagen)
+
+### Kravställning för frontend
+
+Förbättra formulär och sidor genom att:
+- Inline-validering med tydliga felmeddelanden på svenska
+- Förloppsindikator vid flerstegsflöden
+- Bekräfta destruktiva åtgärder med dialogruta
+- Återkoppling efter sparande (toast-notis)
+- Synliga etiketter på alla formulärfält, inte bara platshållartext
+
+### UX-heuristiker (checklista)
+
+För varje komponent/sida, kontrollera:
+1. Systemstatus synlig — vet användaren alltid vad som händer?
+2. Felprevention — bekräftas destruktiva åtgärder?
+3. Igenkänning före minnesbelastning — är alternativ synliga, inte dolda?
+4. Konsekvens — samma mönster som resten av appen?
+5. Hjälp och dokumentation — är tomma vyer informativa?
+
+### Tillgänglighet (separat pass)
+
+Granska tillgängligheten på alla sidor. Åtgärda:
+- Saknade aria-etiketter
+- Otillräcklig färgkontrast (WCAG AA = 4.5:1)
+- Brister i tangentbordsnavigering
+- Saknade fokusindikatorer
+
 ## Konventioner
 
 - **Språk i kod:** Engelska (variabelnamn, kommentarer, docstrings)
@@ -69,42 +103,15 @@ NIS2- och compliance-attribut lagras direkt på systems: nis2_applicable (bool),
 
 ## Fas-plan
 
-### Fas 1 — Datamodell + API (PÅGÅENDE)
-- [x] SQLAlchemy-modeller
-- [x] Alembic-setup
-- [x] CRUD endpoints: organizations, systems
-- [x] Docker Compose
-- [ ] Sök/filter med query params
-- [ ] Audit trail via SQLAlchemy events
-- [ ] Grundläggande tester
+### Fas 1–5 — KLAR
+Backend (52+ endpoints), frontend (10 sidor), Docker, K8s deploy, Flux CD — allt live på intern.hovhas.se.
 
-### Fas 2 — Kärnfunktionalitet
-- [ ] Informationsklassning (K/R/T) med historik
-- [ ] Ägarskapshantering (roller)
-- [ ] Multi-org RLS i PostgreSQL
-- [ ] Import/export (Excel, CSV, JSON)
-- [ ] Systemintegrationer/beroenden
-
-### Fas 3 — Frontend
-- [ ] React-app med Vite + shadcn/ui
-- [ ] Systemlista med sök/filter/sortering
-- [ ] Detaljvy med flikar per attributkategori
-- [ ] Dashboard med KPI:er (antal system, klassningsstatus, compliance-gap)
-- [ ] Beroendekartan (d3 eller vis.js)
-
-### Fas 4 — GDPR + compliance
-- [ ] ROPA-koppling
-- [ ] PuB-avtal-tracking
-- [ ] NIS2-flaggning och rapporter
-- [ ] PDF/Excel-rapportgenerering
-
-### Fas 5 — K8s deploy
-- [ ] Dockerfile (multi-stage)
-- [ ] Kustomize base + overlays (dev/prod)
-- [ ] Flux GitRepository + Kustomization
-- [ ] Traefik IngressRoute
-- [ ] SOPS-krypterade secrets
-- [ ] CronJob: backup till TrueNAS
+### Fas 6 — UX-förbättringar och polish
+- [ ] Inline-validering i formulär
+- [ ] Toast-notiser efter CRUD-operationer
+- [ ] WCAG 2.1 AA tillgänglighetspass
+- [ ] Responsivitet för surfplatta/mobil
+- [ ] OIDC-autentisering (Authentik/Keycloak)
 
 ## Kommandon
 
