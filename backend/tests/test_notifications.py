@@ -61,7 +61,7 @@ async def test_notifications_total_matches_list_length(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["total"] == len(body["items"]), (
-        f"total={body['total']} but len(notifications)={len(body['notifications'])}"
+        f"total={body['total']} but len(items)={len(body['items'])}"
     )
 
 

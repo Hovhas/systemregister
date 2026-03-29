@@ -400,3 +400,25 @@ async def test_expiring_contracts_response_includes_system_id(client):
     assert len(matching) == 1
     assert "system_id" in matching[0], "Expiring contract response must include system_id"
     assert matching[0]["system_id"] == system["id"]
+
+
+@pytest.mark.asyncio
+async def test_contract_end_before_start_rejected_or_accepted(client):
+    """POST contract med contract_end före contract_start skall ge 422.
+
+    ContractCreate-schemat har en model_validator som validerar
+    att contract_end >= contract_start.
+    """
+    org = await create_org(client)
+    system = await create_system(client, org["id"])
+
+    resp = await client.post(f"/api/v1/systems/{system['id']}/contracts", json={
+        "supplier_name": "Ogiltigt Avtal AB",
+        "contract_start": "2025-12-31",
+        "contract_end": "2024-01-01",  # slut före start
+    })
+    assert resp.status_code == 422, (
+        f"contract_end före contract_start borde ge 422, fick {resp.status_code}: {resp.text}"
+    )
+    body = resp.json()
+    assert "detail" in body, "Svaret borde innehålla 'detail' med valideringsfel"

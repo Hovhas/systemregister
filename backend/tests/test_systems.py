@@ -61,27 +61,20 @@ async def test_create_system_invalid_category(client):
 
 @pytest.mark.asyncio
 async def test_create_system_invalid_org(client):
-    """POST with non-existent organization_id should fail (FK violation).
+    """POST with non-existent organization_id should return 422.
 
-    NOTE: The API currently does not catch FK violations explicitly and returns
-    500 instead of 400/422. This test verifies that creation is rejected (not 201),
-    regardless of the specific error status code.
-    See: the endpoint in app/api/systems.py has no FK pre-validation.
+    FK-violation fångas av systems.py (IntegrityError → 422) med
+    ett beskrivande felmeddelande.
     """
     fake_org_id = "00000000-0000-0000-0000-000000000000"
     payload = {**SYSTEM_BASE, "organization_id": fake_org_id}
 
-    try:
-        resp = await client.post("/api/v1/systems/", json=payload)
-        # If we get a response (not an exception), it must not be 201
-        assert resp.status_code != 201, "Should not create system with invalid org_id"
-    except Exception as exc:
-        # FK violation bubbles up as IntegrityError from asyncpg — this also
-        # confirms the FK constraint is enforced. The session is poisoned after
-        # this, but the rollback in conftest.py handles cleanup.
-        assert "ForeignKey" in type(exc).__name__ or "Integrity" in str(exc), (
-            f"Unexpected exception type: {type(exc).__name__}: {exc}"
-        )
+    resp = await client.post("/api/v1/systems/", json=payload)
+    assert resp.status_code == 422, (
+        f"FK-violation borde ge 422, fick {resp.status_code}: {resp.text}"
+    )
+    body = resp.json()
+    assert "detail" in body, "Svaret borde innehålla 'detail' med felmeddelande"
 
 
 @pytest.mark.asyncio
