@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { PencilIcon, Trash2Icon, PlusIcon, BuildingIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -78,7 +78,7 @@ function OrgFormDialog({
   )
   const [nameError, setNameError] = useState("")
 
-  // Återställ fält när dialogen öppnas med nytt editing-värde
+  // Återställ fält när dialogen öppnas eller editing-värde ändras
   const resetForm = () => {
     setName(editing?.name ?? "")
     setOrgNumber(editing?.org_number ?? "")
@@ -86,6 +86,14 @@ function OrgFormDialog({
     setParentOrgId(editing?.parent_org_id ?? "")
     setNameError("")
   }
+
+  // Säkerställ att formuläret alltid återställs korrekt vid öppning
+  useEffect(() => {
+    if (open) {
+      resetForm()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id])
 
   const createMutation = useMutation({
     mutationFn: (data: OrganizationCreate) => createOrganization(data),

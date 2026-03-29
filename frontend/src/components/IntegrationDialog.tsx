@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { FormField } from "@/components/FormField"
 
 // --- Etiketter ---
 
@@ -36,28 +37,6 @@ const criticalityLabels: Record<Criticality, string> = {
   [Criticality.MEDIUM]: "Medel",
   [Criticality.HIGH]: "Hög",
   [Criticality.CRITICAL]: "Kritisk",
-}
-
-// --- Hjälpkomponent ---
-
-function FormField({
-  label,
-  required,
-  children,
-}: {
-  label: string
-  required?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-muted-foreground">
-        {label}
-        {required && <span className="text-destructive ml-0.5">*</span>}
-      </label>
-      {children}
-    </div>
-  )
 }
 
 // --- Props ---
@@ -160,105 +139,116 @@ export default function IntegrationDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <FormField label="Källsystem" required>
-            <Select
-              value={form.source_system_id || undefined}
-              onValueChange={(v) => setForm((f) => ({ ...f, source_system_id: v ?? "" }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Välj källsystem...">
-                  {form.source_system_id
-                    ? (systemNameMap[form.source_system_id] ?? form.source_system_id)
-                    : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {allSystems
-                  .filter((s) => s.id !== form.target_system_id)
-                  .map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            {(id) => (
+              <Select
+                value={form.source_system_id || undefined}
+                onValueChange={(v) => setForm((f) => ({ ...f, source_system_id: v ?? "" }))}
+              >
+                <SelectTrigger id={id} className="w-full">
+                  <SelectValue placeholder="Välj källsystem...">
+                    {form.source_system_id
+                      ? (systemNameMap[form.source_system_id] ?? form.source_system_id)
+                      : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {allSystems
+                    .filter((s) => s.id !== form.target_system_id)
+                    .map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            )}
           </FormField>
 
           <FormField label="Målsystem" required>
-            <Select
-              value={form.target_system_id || undefined}
-              onValueChange={(v) => setForm((f) => ({ ...f, target_system_id: v ?? "" }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Välj målsystem...">
-                  {form.target_system_id
-                    ? (systemNameMap[form.target_system_id] ?? form.target_system_id)
-                    : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {allSystems
-                  .filter((s) => s.id !== form.source_system_id)
-                  .map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            {(id) => (
+              <Select
+                value={form.target_system_id || undefined}
+                onValueChange={(v) => setForm((f) => ({ ...f, target_system_id: v ?? "" }))}
+              >
+                <SelectTrigger id={id} className="w-full">
+                  <SelectValue placeholder="Välj målsystem...">
+                    {form.target_system_id
+                      ? (systemNameMap[form.target_system_id] ?? form.target_system_id)
+                      : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {allSystems
+                    .filter((s) => s.id !== form.source_system_id)
+                    .map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            )}
           </FormField>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Typ" required>
-              <Select
-                value={form.integration_type || undefined}
-                onValueChange={(v) => setForm((f) => ({ ...f, integration_type: v ?? "" }))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Välj typ...">
-                    {form.integration_type
-                      ? (integrationTypeLabels[form.integration_type] ?? form.integration_type)
-                      : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(integrationTypeLabels).map(([val, label]) => (
-                    <SelectItem key={val} value={val}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select
+                  value={form.integration_type || undefined}
+                  onValueChange={(v) => setForm((f) => ({ ...f, integration_type: v ?? "" }))}
+                >
+                  <SelectTrigger id={id} className="w-full">
+                    <SelectValue placeholder="Välj typ...">
+                      {form.integration_type
+                        ? (integrationTypeLabels[form.integration_type] ?? form.integration_type)
+                        : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(integrationTypeLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
 
             <FormField label="Kritikalitet">
-              <Select
-                value={form.criticality || undefined}
-                onValueChange={(v) => setForm((f) => ({ ...f, criticality: v ?? "" }))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Välj...">
-                    {form.criticality
-                      ? (criticalityLabels[form.criticality as Criticality] ?? form.criticality)
-                      : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(criticalityLabels).map(([val, label]) => (
-                    <SelectItem key={val} value={val}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select
+                  value={form.criticality || undefined}
+                  onValueChange={(v) => setForm((f) => ({ ...f, criticality: v ?? "" }))}
+                >
+                  <SelectTrigger id={id} className="w-full">
+                    <SelectValue placeholder="V��lj...">
+                      {form.criticality
+                        ? (criticalityLabels[form.criticality as Criticality] ?? form.criticality)
+                        : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(criticalityLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
           </div>
 
           <FormField label="Frekvens">
-            <Input
-              value={form.frequency}
-              onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value }))}
-              placeholder="t.ex. Realtid, Dagligen"
-            />
+            {(id) => (
+              <Input
+                id={id}
+                value={form.frequency}
+                onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value }))}
+                placeholder="t.ex. Realtid, Dagligen"
+              />
+            )}
           </FormField>
 
           <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
@@ -273,22 +263,28 @@ export default function IntegrationDialog({
 
           {form.is_external && (
             <FormField label="Extern part (namn)">
-              <Input
-                value={form.external_party}
-                onChange={(e) => setForm((f) => ({ ...f, external_party: e.target.value }))}
-                placeholder="t.ex. Leverantörens namn"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.external_party}
+                  onChange={(e) => setForm((f) => ({ ...f, external_party: e.target.value }))}
+                  placeholder="t.ex. Leverantörens namn"
+                />
+              )}
             </FormField>
           )}
 
           <FormField label="Beskrivning">
-            <textarea
-              className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 placeholder:text-muted-foreground resize-none"
-              rows={2}
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Valfri beskrivning..."
-            />
+            {(id) => (
+              <textarea
+                id={id}
+                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 placeholder:text-muted-foreground resize-none"
+                rows={2}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Valfri beskrivning..."
+              />
+            )}
           </FormField>
 
           {error && <p className="text-xs text-destructive">{error}</p>}

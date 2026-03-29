@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeftIcon, PencilIcon, TrashIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 import { Breadcrumb } from "@/components/Breadcrumb"
+import { FormField } from "@/components/FormField"
 
 import {
   getSystem,
@@ -166,16 +167,7 @@ function CiaBar({ label, title, value }: { label: string; title?: string; value:
   )
 }
 
-function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-muted-foreground">
-        {label}{required && <span className="text-destructive ml-0.5">*</span>}
-      </label>
-      {children}
-    </div>
-  )
-}
+// FormField importeras centralt från @/components/FormField
 
 // --- Flikar ---
 
@@ -402,65 +394,86 @@ function KlassningTab({
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Konfidentialitet (K)" required>
-                <Input
-                  type="number"
-                  min={0}
-                  max={4}
-                  value={form.confidentiality}
-                  onChange={(e) => setForm((f) => ({ ...f, confidentiality: e.target.value }))}
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    max={4}
+                    value={form.confidentiality}
+                    onChange={(e) => setForm((f) => ({ ...f, confidentiality: e.target.value }))}
+                  />
+                )}
               </FormField>
               <FormField label="Riktighet (R)" required>
-                <Input
-                  type="number"
-                  min={0}
-                  max={4}
-                  value={form.integrity}
-                  onChange={(e) => setForm((f) => ({ ...f, integrity: e.target.value }))}
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    max={4}
+                    value={form.integrity}
+                    onChange={(e) => setForm((f) => ({ ...f, integrity: e.target.value }))}
+                  />
+                )}
               </FormField>
               <FormField label="Tillgänglighet (T)" required>
-                <Input
-                  type="number"
-                  min={0}
-                  max={4}
-                  value={form.availability}
-                  onChange={(e) => setForm((f) => ({ ...f, availability: e.target.value }))}
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    max={4}
+                    value={form.availability}
+                    onChange={(e) => setForm((f) => ({ ...f, availability: e.target.value }))}
+                  />
+                )}
               </FormField>
               <FormField label="Spårbarhet (S)">
-                <Input
-                  type="number"
-                  min={0}
-                  max={4}
-                  placeholder="Valfritt"
-                  value={form.traceability}
-                  onChange={(e) => setForm((f) => ({ ...f, traceability: e.target.value }))}
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    max={4}
+                    placeholder="Valfritt"
+                    value={form.traceability}
+                    onChange={(e) => setForm((f) => ({ ...f, traceability: e.target.value }))}
+                  />
+                )}
               </FormField>
             </div>
             <FormField label="Klassad av" required>
-              <Input
-                value={form.classified_by}
-                onChange={(e) => setForm((f) => ({ ...f, classified_by: e.target.value }))}
-                placeholder="Namn eller e-post"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.classified_by}
+                  onChange={(e) => setForm((f) => ({ ...f, classified_by: e.target.value }))}
+                  placeholder="Namn eller e-post"
+                />
+              )}
             </FormField>
             <FormField label="Giltig till">
-              <Input
-                type="date"
-                value={form.valid_until}
-                onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={form.valid_until}
+                  onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
+                />
+              )}
             </FormField>
             <FormField label="Anteckningar">
-              <textarea
-                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 placeholder:text-muted-foreground resize-none"
-                rows={3}
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Valfria anteckningar..."
-              />
+              {(id) => (
+                <textarea
+                  id={id}
+                  className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 placeholder:text-muted-foreground resize-none"
+                  rows={3}
+                  value={form.notes}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  placeholder="Valfria anteckningar..."
+                />
+              )}
             </FormField>
             {error && <p className="text-xs text-destructive">{error}</p>}
             <DialogFooter>
@@ -613,56 +626,69 @@ function AgareTab({
           </DialogHeader>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <FormField label="Roll" required>
-              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v ?? "" }))}>
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {form.role ? ownerRoleLabels[form.role] ?? form.role : "Välj roll..."}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ownerRoleLabels).map(([val, label]) => (
-                    <SelectItem key={val} value={val}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v ?? "" }))}>
+                  <SelectTrigger id={id} className="w-full">
+                    <SelectValue>
+                      {form.role ? ownerRoleLabels[form.role] ?? form.role : "Välj roll..."}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ownerRoleLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
             <FormField label="Namn" required>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Fullständigt namn"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Fullständigt namn"
+                />
+              )}
             </FormField>
             <FormField label="E-post" required>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="namn@sundsvall.se"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="namn@sundsvall.se"
+                />
+              )}
             </FormField>
             <FormField label="Telefon">
-              <Input
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="Valfritt"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="Valfritt"
+                />
+              )}
             </FormField>
             <FormField label="Organisation" required>
-              <Select value={form.organization_id} onValueChange={(v) => setForm((f) => ({ ...f, organization_id: v ?? "" }))}>
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {form.organization_id
-                      ? (orgs?.find((o) => o.id === form.organization_id)?.name ?? form.organization_id)
-                      : "Välj organisation..."}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {(orgs ?? []).map((org) => (
-                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select value={form.organization_id} onValueChange={(v) => setForm((f) => ({ ...f, organization_id: v ?? "" }))}>
+                  <SelectTrigger id={id} className="w-full">
+                    <SelectValue>
+                      {form.organization_id
+                        ? (orgs?.find((o) => o.id === form.organization_id)?.name ?? form.organization_id)
+                        : "Välj organisation..."}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(orgs ?? []).map((org) => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
             {error && <p className="text-xs text-destructive">{error}</p>}
             <DialogFooter>
@@ -949,46 +975,60 @@ function GdprTab({
           </DialogHeader>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <FormField label="Kategorier av personuppgifter">
-              <Input
-                value={form.data_categories}
-                onChange={(e) => setForm((f) => ({ ...f, data_categories: e.target.value }))}
-                placeholder="Kommaseparerat, t.ex. namn, adress"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.data_categories}
+                  onChange={(e) => setForm((f) => ({ ...f, data_categories: e.target.value }))}
+                  placeholder="Kommaseparerat, t.ex. namn, adress"
+                />
+              )}
             </FormField>
             <FormField label="Kategorier av registrerade">
-              <Input
-                value={form.categories_of_data_subjects}
-                onChange={(e) => setForm((f) => ({ ...f, categories_of_data_subjects: e.target.value }))}
-                placeholder="t.ex. anställda, medborgare"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.categories_of_data_subjects}
+                  onChange={(e) => setForm((f) => ({ ...f, categories_of_data_subjects: e.target.value }))}
+                  placeholder="t.ex. anställda, medborgare"
+                />
+              )}
             </FormField>
             <FormField label="Rättslig grund">
-              <Select value={form.legal_basis} onValueChange={(v) => setForm((f) => ({ ...f, legal_basis: v ?? "" }))}>
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {form.legal_basis ? legalBasisLabels[form.legal_basis] ?? form.legal_basis : "Välj rättslig grund..."}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(legalBasisLabels).map(([val, label]) => (
-                    <SelectItem key={val} value={val}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select value={form.legal_basis} onValueChange={(v) => setForm((f) => ({ ...f, legal_basis: v ?? "" }))}>
+                  <SelectTrigger id={id} className="w-full">
+                    <SelectValue>
+                      {form.legal_basis ? legalBasisLabels[form.legal_basis] ?? form.legal_basis : "Välj rättslig grund..."}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(legalBasisLabels).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
             <FormField label="Gallringspolicy">
-              <Input
-                value={form.retention_policy}
-                onChange={(e) => setForm((f) => ({ ...f, retention_policy: e.target.value }))}
-                placeholder="t.ex. 7 år efter avslutad tjänst"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.retention_policy}
+                  onChange={(e) => setForm((f) => ({ ...f, retention_policy: e.target.value }))}
+                  placeholder="t.ex. 7 år efter avslutad tjänst"
+                />
+              )}
             </FormField>
             <FormField label="RoPA-referens">
-              <Input
-                value={form.ropa_reference_id}
-                onChange={(e) => setForm((f) => ({ ...f, ropa_reference_id: e.target.value }))}
-                placeholder="Valfritt referens-ID"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.ropa_reference_id}
+                  onChange={(e) => setForm((f) => ({ ...f, ropa_reference_id: e.target.value }))}
+                  placeholder="Valfritt referens-ID"
+                />
+              )}
             </FormField>
             <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
               <input
@@ -1225,71 +1265,95 @@ function AvtalTab({ systemId }: { systemId: string }) {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <FormField label="Leverantör" required>
-              <Input
-                value={form.supplier_name}
-                onChange={(e) => setForm((f) => ({ ...f, supplier_name: e.target.value }))}
-                placeholder="Leverantörens namn"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.supplier_name}
+                  onChange={(e) => setForm((f) => ({ ...f, supplier_name: e.target.value }))}
+                  placeholder="Leverantörens namn"
+                />
+              )}
             </FormField>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Startdatum">
-                <Input
-                  type="date"
-                  value={form.contract_start}
-                  onChange={(e) => setForm((f) => ({ ...f, contract_start: e.target.value }))}
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="date"
+                    value={form.contract_start}
+                    onChange={(e) => setForm((f) => ({ ...f, contract_start: e.target.value }))}
+                  />
+                )}
               </FormField>
               <FormField label="Slutdatum">
-                <Input
-                  type="date"
-                  value={form.contract_end}
-                  onChange={(e) => setForm((f) => ({ ...f, contract_end: e.target.value }))}
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="date"
+                    value={form.contract_end}
+                    onChange={(e) => setForm((f) => ({ ...f, contract_end: e.target.value }))}
+                  />
+                )}
               </FormField>
             </div>
             <FormField label="Licensmodell">
-              <Input
-                value={form.license_model}
-                onChange={(e) => setForm((f) => ({ ...f, license_model: e.target.value }))}
-                placeholder="t.ex. Per användare, Namngivna licenser"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.license_model}
+                  onChange={(e) => setForm((f) => ({ ...f, license_model: e.target.value }))}
+                  placeholder="t.ex. Per användare, Namngivna licenser"
+                />
+              )}
             </FormField>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Årlig licenskostnad (kr)">
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.annual_license_cost}
-                  onChange={(e) => setForm((f) => ({ ...f, annual_license_cost: e.target.value }))}
-                  placeholder="0"
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    value={form.annual_license_cost}
+                    onChange={(e) => setForm((f) => ({ ...f, annual_license_cost: e.target.value }))}
+                    placeholder="0"
+                  />
+                )}
               </FormField>
               <FormField label="Årlig driftskostnad (kr)">
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.annual_operations_cost}
-                  onChange={(e) => setForm((f) => ({ ...f, annual_operations_cost: e.target.value }))}
-                  placeholder="0"
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    value={form.annual_operations_cost}
+                    onChange={(e) => setForm((f) => ({ ...f, annual_operations_cost: e.target.value }))}
+                    placeholder="0"
+                  />
+                )}
               </FormField>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Uppsägningstid (månader)">
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.notice_period_months}
-                  onChange={(e) => setForm((f) => ({ ...f, notice_period_months: e.target.value }))}
-                  placeholder="0"
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    value={form.notice_period_months}
+                    onChange={(e) => setForm((f) => ({ ...f, notice_period_months: e.target.value }))}
+                    placeholder="0"
+                  />
+                )}
               </FormField>
               <FormField label="SLA-nivå">
-                <Input
-                  value={form.sla_description}
-                  onChange={(e) => setForm((f) => ({ ...f, sla_description: e.target.value }))}
-                  placeholder="t.ex. 99.9%"
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    value={form.sla_description}
+                    onChange={(e) => setForm((f) => ({ ...f, sla_description: e.target.value }))}
+                    placeholder="t.ex. 99.9%"
+                  />
+                )}
               </FormField>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer select-none">

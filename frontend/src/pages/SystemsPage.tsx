@@ -355,7 +355,9 @@ export default function SystemsPage() {
                   <TableRow
                     key={system.id}
                     className="cursor-pointer"
+                    tabIndex={0}
                     onClick={() => navigate(`/systems/${system.id}`)}
+                    onKeyDown={(e) => { if (e.key === "Enter") navigate(`/systems/${system.id}`) }}
                   >
                     <TableCell className="font-medium">{system.name}</TableCell>
                     <TableCell className="text-muted-foreground">

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
-import { UploadIcon, CheckCircleIcon, AlertCircleIcon } from "lucide-react"
+import { UploadIcon, CheckCircleIcon, AlertCircleIcon, Loader2Icon } from "lucide-react"
 
 import { getOrganizations, importFile } from "@/lib/api"
 import type { ImportResult } from "@/types"
@@ -92,7 +92,11 @@ function ImportTabPanel({ type }: TabPanelProps) {
 
       <div
         className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+        role="button"
+        tabIndex={0}
+        aria-label="Välj fil att importera"
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click() } }}
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
         onDrop={handleDrop}
       >
@@ -123,8 +127,22 @@ function ImportTabPanel({ type }: TabPanelProps) {
         disabled={!canImport || mutation.isPending}
         className="w-full"
       >
-        {mutation.isPending ? "Importerar..." : "Importera"}
+        {mutation.isPending ? (
+          <>
+            <Loader2Icon className="mr-2 size-4 animate-spin" />
+            Importerar...
+          </>
+        ) : (
+          "Importera"
+        )}
       </Button>
+
+      {mutation.isPending && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2Icon className="size-4 animate-spin" />
+          <span>Importerar fil, vänta...</span>
+        </div>
+      )}
 
       {result && (
         <div className="space-y-2">

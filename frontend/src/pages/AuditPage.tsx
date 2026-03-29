@@ -177,7 +177,10 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
     <>
       <TableRow
         className="cursor-pointer hover:bg-muted/50"
+        tabIndex={0}
+        aria-expanded={expanded}
         onClick={() => setExpanded((v) => !v)}
+        onKeyDown={(e) => { if (e.key === "Enter") setExpanded((v) => !v) }}
       >
         <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
           {formatDateTime(entry.changed_at)}

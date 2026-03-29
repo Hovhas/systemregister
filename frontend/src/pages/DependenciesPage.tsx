@@ -173,8 +173,10 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="w-full max-w-3xl mx-auto"
-        style={{ minHeight: 400 }}
+        className="w-full mx-auto"
+        style={{ minHeight: 400, maxWidth: "100%" }}
+        role="img"
+        aria-label="Beroendevisualisering mellan system"
         onMouseLeave={() => {
           setTooltip(null)
           setHoveredEdge(null)
@@ -462,6 +464,8 @@ export default function DependenciesPage() {
     queryFn: () => getIntegrations(),
   })
 
+  // TODO: limit: 500 är en hårdkodad gräns — behöver backend-stöd för paginering
+  // eller ett dedikerat endpoint för att hämta alla system-namn/id.
   const { data: systemsData, isLoading: isLoadingSystems } = useQuery({
     queryKey: ["systems", { limit: 500 }],
     queryFn: () => getSystems({ limit: 500 }),

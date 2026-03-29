@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Breadcrumb } from "@/components/Breadcrumb"
+import { FormField } from "@/components/FormField"
 
 // --- Etiketter ---
 
@@ -132,38 +133,6 @@ const defaultForm: FormState = {
   security_protection: false,
   last_risk_assessment_date: "",
   klassa_reference_id: "",
-}
-
-// --- Hjälpkomponent ---
-
-function FormField({
-  label,
-  required,
-  error,
-  helpText,
-  children,
-}: {
-  label: string
-  required?: boolean
-  error?: string
-  helpText?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium">
-        {label}
-        {required && <span className="ml-0.5 text-destructive">*</span>}
-      </label>
-      {children}
-      {helpText && !error && (
-        <p className="text-xs text-muted-foreground">{helpText}</p>
-      )}
-      {error && (
-        <p className="text-xs text-destructive" role="alert">{error}</p>
-      )}
-    </div>
-  )
 }
 
 // --- Huvudkomponent ---
@@ -380,6 +349,21 @@ export default function SystemFormPage() {
     setApiError(null)
   }
 
+  // onBlur-validering för obligatoriska fält
+  function validateField(key: keyof FormState) {
+    const value = form[key]
+    const requiredFields: Partial<Record<keyof FormState, string>> = {
+      name: "Namn är obligatoriskt",
+      organization_id: "Organisation är obligatorisk",
+      description: "Beskrivning är obligatorisk",
+    }
+    const msg = requiredFields[key]
+    if (!msg) return
+    if (typeof value === "string" && !value.trim()) {
+      setErrors((prev) => ({ ...prev, [key]: msg }))
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <Breadcrumb
@@ -412,79 +396,98 @@ export default function SystemFormPage() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <FormField label="Namn" required error={errors.name}>
-              <Input
-                value={form.name}
-                onChange={(e) => { set("name", e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: undefined })) }}
-                placeholder="Systemets namn"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.name}
+                  onChange={(e) => { set("name", e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: undefined })) }}
+                  onBlur={() => validateField("name")}
+                  placeholder="Systemets namn"
+                />
+              )}
             </FormField>
 
             <FormField label="Organisation" required error={errors.organization_id}>
-              <Select
-                value={form.organization_id}
-                onValueChange={(val) => { set("organization_id", val ?? ""); if (errors.organization_id) setErrors((p) => ({ ...p, organization_id: undefined })) }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation">
-                    {organizations.find((o) => o.id === form.organization_id)?.name}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select
+                  value={form.organization_id}
+                  onValueChange={(val) => { set("organization_id", val ?? ""); if (errors.organization_id) setErrors((p) => ({ ...p, organization_id: undefined })); }}
+                  onOpenChange={(open) => { if (!open) validateField("organization_id") }}
+                >
+                  <SelectTrigger id={id}>
+                    <SelectValue placeholder="Välj organisation">
+                      {organizations.find((o) => o.id === form.organization_id)?.name}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
 
             <div className="md:col-span-2">
               <FormField label="Beskrivning" required error={errors.description}>
-                <textarea
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                  value={form.description}
-                  onChange={(e) => { set("description", e.target.value); if (errors.description) setErrors((p) => ({ ...p, description: undefined })) }}
-                  placeholder="Beskriv systemets syfte och funktion"
-                />
+                {(id) => (
+                  <textarea
+                    id={id}
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                    value={form.description}
+                    onChange={(e) => { set("description", e.target.value); if (errors.description) setErrors((p) => ({ ...p, description: undefined })) }}
+                    onBlur={() => validateField("description")}
+                    placeholder="Beskriv systemets syfte och funktion"
+                  />
+                )}
               </FormField>
             </div>
 
             <FormField label="Kategori">
-              <Select
-                value={form.system_category}
-                onValueChange={(val) => set("system_category", val as SystemCategory)}
-              >
-                <SelectTrigger>
-                  <SelectValue>
-                    {categoryLabels[form.system_category]}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(SystemCategory).map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {categoryLabels[cat]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select
+                  value={form.system_category}
+                  onValueChange={(val) => set("system_category", val as SystemCategory)}
+                >
+                  <SelectTrigger id={id}>
+                    <SelectValue>
+                      {categoryLabels[form.system_category]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(SystemCategory).map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {categoryLabels[cat]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
 
             <FormField label="Verksamhetsområde">
-              <Input
-                value={form.business_area}
-                onChange={(e) => set("business_area", e.target.value)}
-                placeholder="t.ex. HR, Ekonomi, Vård"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.business_area}
+                  onChange={(e) => set("business_area", e.target.value)}
+                  placeholder="t.ex. HR, Ekonomi, Vård"
+                />
+              )}
             </FormField>
 
             <div className="md:col-span-2">
               <FormField label="Alternativa namn">
-                <Input
-                  value={form.aliases}
-                  onChange={(e) => set("aliases", e.target.value)}
-                  placeholder="Alternativa namn, kommaseparerat"
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    value={form.aliases}
+                    onChange={(e) => set("aliases", e.target.value)}
+                    placeholder="Alternativa namn, kommaseparerat"
+                  />
+                )}
               </FormField>
             </div>
           </CardContent>
@@ -497,43 +500,47 @@ export default function SystemFormPage() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <FormField label="Livscykelstatus">
-              <Select
-                value={form.lifecycle_status}
-                onValueChange={(val) => set("lifecycle_status", val as LifecycleStatus)}
-              >
-                <SelectTrigger>
-                  <SelectValue>
-                    {lifecycleLabels[form.lifecycle_status]}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(LifecycleStatus).map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {lifecycleLabels[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select
+                  value={form.lifecycle_status}
+                  onValueChange={(val) => set("lifecycle_status", val as LifecycleStatus)}
+                >
+                  <SelectTrigger id={id}>
+                    <SelectValue>
+                      {lifecycleLabels[form.lifecycle_status]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(LifecycleStatus).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {lifecycleLabels[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
 
             <FormField label="Kritikalitet">
-              <Select
-                value={form.criticality}
-                onValueChange={(val) => set("criticality", val as Criticality)}
-              >
-                <SelectTrigger>
-                  <SelectValue>
-                    {criticalityLabels[form.criticality]}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(Criticality).map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {criticalityLabels[c]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {(id) => (
+                <Select
+                  value={form.criticality}
+                  onValueChange={(val) => set("criticality", val as Criticality)}
+                >
+                  <SelectTrigger id={id}>
+                    <SelectValue>
+                      {criticalityLabels[form.criticality]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(Criticality).map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {criticalityLabels[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
           </CardContent>
         </Card>
@@ -545,43 +552,58 @@ export default function SystemFormPage() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <FormField label="Driftsättningsmodell">
-              <Input
-                value={form.hosting_model}
-                onChange={(e) => set("hosting_model", e.target.value)}
-                placeholder="on-premise / cloud / hybrid"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.hosting_model}
+                  onChange={(e) => set("hosting_model", e.target.value)}
+                  placeholder="on-premise / cloud / hybrid"
+                />
+              )}
             </FormField>
 
             <FormField label="Molnleverantör">
-              <Input
-                value={form.cloud_provider}
-                onChange={(e) => set("cloud_provider", e.target.value)}
-                placeholder="t.ex. Azure, AWS, GCP"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.cloud_provider}
+                  onChange={(e) => set("cloud_provider", e.target.value)}
+                  placeholder="t.ex. Azure, AWS, GCP"
+                />
+              )}
             </FormField>
 
             <FormField label="Datalagringsland">
-              <Input
-                value={form.data_location_country}
-                onChange={(e) => set("data_location_country", e.target.value)}
-                placeholder="t.ex. Sverige, EU"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.data_location_country}
+                  onChange={(e) => set("data_location_country", e.target.value)}
+                  placeholder="t.ex. Sverige, EU"
+                />
+              )}
             </FormField>
 
             <FormField label="Produktnamn">
-              <Input
-                value={form.product_name}
-                onChange={(e) => set("product_name", e.target.value)}
-                placeholder="t.ex. Visma, SAP, Agresso"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.product_name}
+                  onChange={(e) => set("product_name", e.target.value)}
+                  placeholder="t.ex. Visma, SAP, Agresso"
+                />
+              )}
             </FormField>
 
             <FormField label="Produktversion">
-              <Input
-                value={form.product_version}
-                onChange={(e) => set("product_version", e.target.value)}
-                placeholder="t.ex. 2024.1"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.product_version}
+                  onChange={(e) => set("product_version", e.target.value)}
+                  placeholder="t.ex. 2024.1"
+                />
+              )}
             </FormField>
           </CardContent>
         </Card>
@@ -593,27 +615,36 @@ export default function SystemFormPage() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <FormField label="Driftsättningsdatum">
-              <Input
-                type="date"
-                value={form.deployment_date}
-                onChange={(e) => set("deployment_date", e.target.value)}
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={form.deployment_date}
+                  onChange={(e) => set("deployment_date", e.target.value)}
+                />
+              )}
             </FormField>
 
             <FormField label="Planerat avvecklingsdatum">
-              <Input
-                type="date"
-                value={form.planned_decommission_date}
-                onChange={(e) => set("planned_decommission_date", e.target.value)}
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={form.planned_decommission_date}
+                  onChange={(e) => set("planned_decommission_date", e.target.value)}
+                />
+              )}
             </FormField>
 
             <FormField label="Slut på support">
-              <Input
-                type="date"
-                value={form.end_of_support_date}
-                onChange={(e) => set("end_of_support_date", e.target.value)}
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  type="date"
+                  value={form.end_of_support_date}
+                  onChange={(e) => set("end_of_support_date", e.target.value)}
+                />
+              )}
             </FormField>
           </CardContent>
         </Card>
@@ -625,33 +656,42 @@ export default function SystemFormPage() {
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <FormField label="Backupfrekvens">
-              <Input
-                value={form.backup_frequency}
-                onChange={(e) => set("backup_frequency", e.target.value)}
-                placeholder="t.ex. Dagligen, Timvis"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.backup_frequency}
+                  onChange={(e) => set("backup_frequency", e.target.value)}
+                  placeholder="t.ex. Dagligen, Timvis"
+                />
+              )}
             </FormField>
 
             <FormField
               label="RPO (Recovery Point Objective)"
               helpText="Recovery Point Objective — hur mycket data som max får förloras"
             >
-              <Input
-                value={form.rpo}
-                onChange={(e) => set("rpo", e.target.value)}
-                placeholder="t.ex. 1 timme, 24 timmar"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.rpo}
+                  onChange={(e) => set("rpo", e.target.value)}
+                  placeholder="t.ex. 1 timme, 24 timmar"
+                />
+              )}
             </FormField>
 
             <FormField
               label="RTO (Recovery Time Objective)"
               helpText="Recovery Time Objective — max tillåten återställningstid"
             >
-              <Input
-                value={form.rto}
-                onChange={(e) => set("rto", e.target.value)}
-                placeholder="t.ex. 4 timmar, 1 dygn"
-              />
+              {(id) => (
+                <Input
+                  id={id}
+                  value={form.rto}
+                  onChange={(e) => set("rto", e.target.value)}
+                  placeholder="t.ex. 4 timmar, 1 dygn"
+                />
+              )}
             </FormField>
 
             <div className="md:col-span-2">
@@ -748,47 +788,55 @@ export default function SystemFormPage() {
 
             {form.nis2_applicable && (
               <FormField label="NIS2-klassificering" helpText="EU-direktiv för cybersäkerhet — gäller samhällsviktiga verksamheter">
-                <Select
-                  value={form.nis2_classification || undefined}
-                  onValueChange={(val) => set("nis2_classification", (val as NIS2Classification) || "")}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Välj klassificering">
-                      {form.nis2_classification
-                        ? nis2ClassificationLabels[form.nis2_classification as NIS2Classification]
-                        : undefined}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NIS2Classification.ESSENTIAL}>
-                      {nis2ClassificationLabels[NIS2Classification.ESSENTIAL]}
-                    </SelectItem>
-                    <SelectItem value={NIS2Classification.IMPORTANT}>
-                      {nis2ClassificationLabels[NIS2Classification.IMPORTANT]}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                {(id) => (
+                  <Select
+                    value={form.nis2_classification || undefined}
+                    onValueChange={(val) => set("nis2_classification", (val as NIS2Classification) || "")}
+                  >
+                    <SelectTrigger id={id}>
+                      <SelectValue placeholder="Välj klassificering">
+                        {form.nis2_classification
+                          ? nis2ClassificationLabels[form.nis2_classification as NIS2Classification]
+                          : undefined}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NIS2Classification.ESSENTIAL}>
+                        {nis2ClassificationLabels[NIS2Classification.ESSENTIAL]}
+                      </SelectItem>
+                      <SelectItem value={NIS2Classification.IMPORTANT}>
+                        {nis2ClassificationLabels[NIS2Classification.IMPORTANT]}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </FormField>
             )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Senaste riskbedömning">
-                <Input
-                  type="date"
-                  value={form.last_risk_assessment_date}
-                  onChange={(e) => set("last_risk_assessment_date", e.target.value)}
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="date"
+                    value={form.last_risk_assessment_date}
+                    onChange={(e) => set("last_risk_assessment_date", e.target.value)}
+                  />
+                )}
               </FormField>
 
               <FormField
                 label="KLASSA-referens-ID"
                 helpText="MSB:s verktyg för att klassificera information"
               >
-                <Input
-                  value={form.klassa_reference_id}
-                  onChange={(e) => set("klassa_reference_id", e.target.value)}
-                  placeholder="KLASSA-referens-ID"
-                />
+                {(id) => (
+                  <Input
+                    id={id}
+                    value={form.klassa_reference_id}
+                    onChange={(e) => set("klassa_reference_id", e.target.value)}
+                    placeholder="KLASSA-referens-ID"
+                  />
+                )}
               </FormField>
             </div>
           </CardContent>
