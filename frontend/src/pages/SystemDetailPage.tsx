@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeftIcon, PencilIcon, TrashIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
+import { Breadcrumb } from "@/components/Breadcrumb"
 
 import {
   getSystem,
@@ -1117,6 +1118,38 @@ function AvtalTab({ systemId }: { systemId: string }) {
     return ""
   }
 
+  function ContractExpiryBadge({ contract }: { contract: Contract }) {
+    if (!contract.contract_end) return null
+    const daysLeft = Math.ceil(
+      (new Date(contract.contract_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysLeft < 0) {
+      return (
+        <Badge variant="destructive" className="text-xs ml-1">
+          Utgånget
+        </Badge>
+      )
+    }
+    if (daysLeft <= 30) {
+      return (
+        <Badge variant="destructive" className="text-xs ml-1">
+          Går ut om {daysLeft} dag{daysLeft === 1 ? "" : "ar"}
+        </Badge>
+      )
+    }
+    if (daysLeft <= 90) {
+      return (
+        <Badge
+          variant="outline"
+          className="text-xs ml-1 text-orange-600 border-orange-300"
+        >
+          Går ut om {daysLeft} dagar
+        </Badge>
+      )
+    }
+    return null
+  }
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Laddar...</p>
 
   return (
@@ -1151,8 +1184,9 @@ function AvtalTab({ systemId }: { systemId: string }) {
                   <TableCell className="text-muted-foreground text-sm">
                     {c.contract_start ?? "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {c.contract_end ?? "—"}
+                  <TableCell className="text-sm">
+                    <span className="text-muted-foreground">{c.contract_end ?? "—"}</span>
+                    <ContractExpiryBadge contract={c} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {c.annual_license_cost != null
@@ -1290,6 +1324,12 @@ function AvtalTab({ systemId }: { systemId: string }) {
   )
 }
 
+function formatKey(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 function ExtendedAttributesTab({ attributes }: { attributes: Record<string, unknown> | null }) {
   if (!attributes || Object.keys(attributes).length === 0) {
     return <p className="text-sm text-muted-foreground py-4">Ingen övrig data registrerad</p>
@@ -1309,7 +1349,7 @@ function ExtendedAttributesTab({ attributes }: { attributes: Record<string, unkn
         <TableBody>
           {entries.map(([key, value]) => (
             <TableRow key={key}>
-              <TableCell className="font-medium text-sm">{key}</TableCell>
+              <TableCell className="font-medium text-sm">{formatKey(key)}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {value === null || value === undefined ? "—" : String(value)}
               </TableCell>
@@ -1439,6 +1479,13 @@ export default function SystemDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <Breadcrumb
+        items={[
+          { label: "System", href: "/systems" },
+          { label: system.name },
+        ]}
+      />
+
       {/* Sidhuvud */}
       <div className="flex items-start gap-4">
         <Button

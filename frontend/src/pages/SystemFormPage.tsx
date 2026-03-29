@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useBlocker } from "react-router-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
+import axios from "axios"
 
 import { SystemCategory, LifecycleStatus, Criticality, NIS2Classification } from "@/types"
 import type { SystemCreate, SystemUpdate } from "@/types"
@@ -21,6 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Breadcrumb } from "@/components/Breadcrumb"
 
 // --- Etiketter ---
 
@@ -167,6 +176,7 @@ export default function SystemFormPage() {
   const [form, setForm] = useState<FormState>(defaultForm)
   const [apiError, setApiError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
+  const [submitted, setSubmitted] = useState(false)
 
   // Hämta befintligt system vid redigering
   const { data: existingSystem } = useQuery({
@@ -218,22 +228,93 @@ export default function SystemFormPage() {
     }
   }, [existingSystem])
 
+  // isDirty: formuläret är ändrat om det skiljer sig från defaultForm (nytt) eller prefyllda värden (redigering)
+  const baselineForm = isEdit && existingSystem
+    ? {
+        name: existingSystem.name,
+        organization_id: existingSystem.organization_id,
+        description: existingSystem.description,
+        system_category: existingSystem.system_category,
+        lifecycle_status: existingSystem.lifecycle_status,
+        criticality: existingSystem.criticality,
+        business_area: existingSystem.business_area ?? "",
+        aliases: existingSystem.aliases ?? "",
+        hosting_model: existingSystem.hosting_model ?? "",
+        cloud_provider: existingSystem.cloud_provider ?? "",
+        data_location_country: existingSystem.data_location_country ?? "Sverige",
+        product_name: existingSystem.product_name ?? "",
+        product_version: existingSystem.product_version ?? "",
+        deployment_date: existingSystem.deployment_date ?? "",
+        planned_decommission_date: existingSystem.planned_decommission_date ?? "",
+        end_of_support_date: existingSystem.end_of_support_date ?? "",
+        backup_frequency: existingSystem.backup_frequency ?? "",
+        rpo: existingSystem.rpo ?? "",
+        rto: existingSystem.rto ?? "",
+        dr_plan_exists: existingSystem.dr_plan_exists,
+        nis2_applicable: existingSystem.nis2_applicable,
+        nis2_classification: existingSystem.nis2_classification ?? "" as NIS2Classification | "",
+        treats_personal_data: existingSystem.treats_personal_data,
+        treats_sensitive_data: existingSystem.treats_sensitive_data,
+        third_country_transfer: existingSystem.third_country_transfer,
+        has_elevated_protection: existingSystem.has_elevated_protection,
+        security_protection: existingSystem.security_protection,
+        last_risk_assessment_date: existingSystem.last_risk_assessment_date ?? "",
+        klassa_reference_id: existingSystem.klassa_reference_id ?? "",
+      }
+    : defaultForm
+
+  const isDirty = !submitted && JSON.stringify(form) !== JSON.stringify(baselineForm)
+
+  // Varna vid stängning av flik/webbläsare
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener("beforeunload", handler)
+    return () => window.removeEventListener("beforeunload", handler)
+  }, [isDirty])
+
+  // Varna vid in-app navigering
+  const blocker = useBlocker(
+    isDirty && !submitted
+  )
+
+  function handleParseError(err: unknown) {
+    if (axios.isAxiosError(err) && err.response?.data?.detail) {
+      const detail = err.response.data.detail
+      if (Array.isArray(detail)) {
+        const fieldErrors: Partial<Record<keyof FormState, string>> = {}
+        for (const e of detail) {
+          const field = e.loc?.[e.loc.length - 1] as keyof FormState | undefined
+          if (field) fieldErrors[field] = e.msg
+        }
+        setErrors(fieldErrors)
+        toast.error("Kontrollera fälten och försök igen")
+      } else {
+        toast.error(typeof detail === "string" ? detail : "Kunde inte spara")
+      }
+    } else {
+      toast.error("Ett oväntat fel uppstod")
+    }
+  }
+
   const createMutation = useMutation({
     mutationFn: (data: SystemCreate) => createSystem(data),
     onSuccess: (system) => {
+      setSubmitted(true)
       toast.success("System skapat")
       navigate(`/systems/${system.id}`)
     },
-    onError: () => setApiError("Kunde inte skapa system. Kontrollera fälten och försök igen."),
+    onError: handleParseError,
   })
 
   const updateMutation = useMutation({
     mutationFn: (data: SystemUpdate) => updateSystem(id!, data),
     onSuccess: (system) => {
+      setSubmitted(true)
       toast.success("System uppdaterat")
       navigate(`/systems/${system.id}`)
     },
-    onError: () => setApiError("Kunde inte uppdatera system. Kontrollera fälten och försök igen."),
+    onError: handleParseError,
   })
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -298,6 +379,44 @@ export default function SystemFormPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
+      <Breadcrumb
+        items={[
+          { label: "System", href: "/systems" },
+          { label: isEdit ? "Redigera" : "Nytt system" },
+        ]}
+      />
+
+      {/* Varningsdialog vid in-app navigering med osparade ändringar */}
+      <Dialog
+        open={blocker.state === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && blocker.state === "blocked") blocker.reset()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Osparade ändringar</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Du har osparade ändringar. Vill du verkligen lämna sidan?
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => blocker.reset?.()}
+            >
+              Stanna kvar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => blocker.proceed?.()}
+            >
+              Lämna utan att spara
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">
           {isEdit ? "Redigera system" : "Nytt system"}

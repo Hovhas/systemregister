@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, PlusIcon } from "lucide-react"
+import { SearchIcon, PlusIcon, ChevronUpIcon, ChevronDownIcon, XIcon } from "lucide-react"
 
 import { getSystems, getOrganizations } from "@/lib/api"
 import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
@@ -87,6 +87,8 @@ export default function SystemsPage() {
   const [lifecycle, setLifecycle] = useState<LifecycleStatus | "">("")
   const [criticality, setCriticality] = useState<Criticality | "">("")
   const [offset, setOffset] = useState(0)
+  const [sortField, setSortField] = useState<string>("name")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
   // Debounce sökning 300ms
   const debounceRef = useCallback(
@@ -116,6 +118,18 @@ export default function SystemsPage() {
     (orgs ?? []).map((o) => [o.id, o.name])
   )
 
+  const hasFilters = !!(organization || category || lifecycle || criticality || debouncedSearch)
+
+  function clearFilters() {
+    setSearchInput("")
+    setDebouncedSearch("")
+    setOrganization("")
+    setCategory("")
+    setLifecycle("")
+    setCriticality("")
+    setOffset(0)
+  }
+
   const { data, isLoading, isError } = useQuery({
     queryKey: [
       "systems",
@@ -125,6 +139,8 @@ export default function SystemsPage() {
       lifecycle,
       criticality,
       offset,
+      sortField,
+      sortDir,
     ],
     queryFn: () =>
       getSystems({
@@ -135,12 +151,41 @@ export default function SystemsPage() {
         criticality: criticality || undefined,
         limit: PAGE_SIZE,
         offset,
+        sort_by: sortField,
+        sort_dir: sortDir,
       }),
   })
 
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+
+  function SortHeader({ field, label }: { field: string; label: string }) {
+    const active = sortField === field
+    return (
+      <TableHead
+        className="cursor-pointer select-none hover:text-foreground transition-colors"
+        onClick={() => {
+          if (active) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+          else {
+            setSortField(field)
+            setSortDir("asc")
+          }
+          setOffset(0)
+        }}
+      >
+        <span className="flex items-center gap-1">
+          {label}
+          {active &&
+            (sortDir === "asc" ? (
+              <ChevronUpIcon className="size-3" />
+            ) : (
+              <ChevronDownIcon className="size-3" />
+            ))}
+        </span>
+      </TableHead>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -255,6 +300,18 @@ export default function SystemsPage() {
             ))}
           </SelectContent>
         </Select>
+
+        {hasFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <XIcon className="mr-1 size-4" />
+            Rensa
+          </Button>
+        )}
       </div>
 
       {/* Tabell */}
@@ -267,11 +324,11 @@ export default function SystemsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Namn</TableHead>
-                <TableHead>Organisation</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Kritikalitet</TableHead>
-                <TableHead>Status</TableHead>
+                <SortHeader field="name" label="Namn" />
+                <SortHeader field="organization_id" label="Organisation" />
+                <SortHeader field="system_category" label="Kategori" />
+                <SortHeader field="criticality" label="Kritikalitet" />
+                <SortHeader field="lifecycle_status" label="Status" />
                 <TableHead>NIS2</TableHead>
               </TableRow>
             </TableHeader>
