@@ -29,7 +29,7 @@ class Organization(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     org_number: Mapped[str | None] = mapped_column(String(20), unique=True)
     org_type: Mapped[OrganizationType] = mapped_column(_enum(OrganizationType), nullable=False)
-    parent_org_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organizations.id"))
+    parent_org_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("organizations.id", ondelete="SET NULL"))
     description: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, ConfigDict, model_validator, field_valida
 from app.models.enums import (
     OrganizationType, SystemCategory, LifecycleStatus, Criticality,
     OwnerRole, IntegrationType, NIS2Classification, ProcessorAgreementStatus,
+    AuditAction,
 )
 
 
@@ -464,3 +465,44 @@ class ComplianceGapResponse(BaseModel):
     generated_at: datetime
     gaps: ComplianceGaps
     summary: ComplianceGapSummary
+
+
+# --- Audit ---
+
+class AuditEntryResponse(BaseModel):
+    """Enskild audit-logg-post."""
+    id: UUID
+    table_name: str
+    record_id: UUID
+    action: AuditAction
+    changed_by: str | None
+    changed_at: datetime | None
+    old_values: dict | None
+    new_values: dict | None
+    ip_address: str | None = None
+
+
+class AuditListResponse(PaginatedResponse[AuditEntryResponse]):
+    """Paginerad lista av audit-poster."""
+    pass
+
+
+# --- Notifications ---
+
+class NotificationItem(BaseModel):
+    """Enskild notifiering/varning."""
+    type: str
+    severity: str
+    title: str
+    description: str
+    system_id: UUID
+    record_id: UUID | None = None
+
+
+class NotificationListResponse(BaseModel):
+    """Paginerad lista av notifieringar med sammanfattning."""
+    items: list[NotificationItem]
+    total: int
+    limit: int
+    offset: int
+    by_severity: dict[str, int]

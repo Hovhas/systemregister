@@ -21,10 +21,13 @@ import {
   getContracts,
   createContract,
   deleteContract,
+  getAuditForRecord,
 } from "@/lib/api"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import IntegrationDialog from "@/components/IntegrationDialog"
-import { Criticality, LifecycleStatus, SystemCategory, OwnerRole } from "@/types"
+import { Criticality, OwnerRole } from "@/types"
+import type { AuditEntry } from "@/types"
+import { categoryLabels, lifecycleLabels, criticalityLabels, ownerRoleLabels, integrationTypeLabels } from "@/lib/labels"
 import type {
   Classification,
   ClassificationCreate,
@@ -73,48 +76,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-
-// --- Etiketter ---
-
-const categoryLabels: Record<SystemCategory, string> = {
-  [SystemCategory.VERKSAMHETSSYSTEM]: "Verksamhetssystem",
-  [SystemCategory.STODSYSTEM]: "Stödsystem",
-  [SystemCategory.INFRASTRUKTUR]: "Infrastruktur",
-  [SystemCategory.PLATTFORM]: "Plattform",
-  [SystemCategory.IOT]: "IoT",
-}
-
-const lifecycleLabels: Record<LifecycleStatus, string> = {
-  [LifecycleStatus.PLANNED]: "Planerad",
-  [LifecycleStatus.IMPLEMENTING]: "Under införande",
-  [LifecycleStatus.ACTIVE]: "I drift",
-  [LifecycleStatus.DECOMMISSIONING]: "Under avveckling",
-  [LifecycleStatus.DECOMMISSIONED]: "Avvecklad",
-}
-
-const criticalityLabels: Record<Criticality, string> = {
-  [Criticality.LOW]: "Låg",
-  [Criticality.MEDIUM]: "Medel",
-  [Criticality.HIGH]: "Hög",
-  [Criticality.CRITICAL]: "Kritisk",
-}
-
-const ownerRoleLabels: Record<string, string> = {
-  systemägare: "Systemägare",
-  informationsägare: "Informationsägare",
-  systemförvaltare: "Systemförvaltare",
-  teknisk_förvaltare: "Teknisk förvaltare",
-  it_kontakt: "IT-kontakt",
-  dataskyddsombud: "Dataskyddsombud",
-}
-
-const integrationTypeLabels: Record<string, string> = {
-  api: "API",
-  filöverföring: "Filöverföring",
-  databasreplikering: "Databasreplikering",
-  event: "Event",
-  manuell: "Manuell",
-}
 
 const legalBasisLabels: Record<string, string> = {
   samtycke: "Samtycke",
@@ -630,7 +591,7 @@ function AgareTab({
                 <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v ?? "" }))}>
                   <SelectTrigger id={id} className="w-full">
                     <SelectValue>
-                      {form.role ? ownerRoleLabels[form.role] ?? form.role : "Välj roll..."}
+                      {form.role ? ownerRoleLabels[form.role as OwnerRole] ?? form.role : "Välj roll..."}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -1427,14 +1388,6 @@ function ExtendedAttributesTab({ attributes }: { attributes: Record<string, unkn
   )
 }
 
-// --- Audit API ---
-
-async function getAuditForRecord(recordId: string) {
-  const res = await fetch(`/api/v1/audit/record/${recordId}`)
-  if (!res.ok) throw new Error("Kunde inte hämta ändringslogg")
-  return res.json()
-}
-
 // --- Ändringslogg-komponent ---
 
 function AuditTimeline({ systemId }: { systemId: string }) {
@@ -1448,26 +1401,26 @@ function AuditTimeline({ systemId }: { systemId: string }) {
 
   return (
     <div className="space-y-3">
-      {entries.map((entry: any) => (
+      {entries.map((entry: AuditEntry) => (
         <Card key={entry.id}>
           <CardContent className="py-3 px-4">
             <div className="flex items-center gap-2 mb-1">
-              <Badge variant={entry.action === "create" ? "default" : entry.action === "delete" ? "destructive" : "secondary"}>
-                {entry.action === "create" ? "Skapad" : entry.action === "update" ? "Ändrad" : "Borttagen"}
+              <Badge variant={entry.action === "INSERT" ? "default" : entry.action === "DELETE" ? "destructive" : "secondary"}>
+                {entry.action === "INSERT" ? "Skapad" : entry.action === "UPDATE" ? "Ändrad" : "Borttagen"}
               </Badge>
               <span className="text-xs text-muted-foreground">
                 {new Date(entry.changed_at).toLocaleString("sv-SE")}
               </span>
               {entry.changed_by && <span className="text-xs">av {entry.changed_by}</span>}
             </div>
-            {entry.action === "update" && entry.old_values && entry.new_values && (
+            {entry.action === "UPDATE" && entry.old_values && entry.new_values && (
               <div className="text-xs space-y-1 mt-2">
-                {Object.keys(entry.new_values).map((key: string) => (
+                {Object.keys(entry.new_values!).map((key: string) => (
                   <div key={key} className="flex gap-2">
                     <span className="font-medium min-w-24">{key}:</span>
-                    <span className="text-red-600 line-through">{String(entry.old_values[key] ?? "—")}</span>
+                    <span className="text-red-600 line-through">{String(entry.old_values![key] ?? "—")}</span>
                     <span>-&gt;</span>
-                    <span className="text-green-600">{String(entry.new_values[key] ?? "—")}</span>
+                    <span className="text-green-600">{String(entry.new_values![key] ?? "—")}</span>
                   </div>
                 ))}
               </div>
@@ -1497,7 +1450,7 @@ export default function SystemDetailPage() {
   const queryClient = useQueryClient()
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const { data: system, isLoading, isError } = useSystemDetail(id ?? "")
+  const { data: system, isLoading, isError, refetch } = useSystemDetail(id ?? "")
 
   const { data: orgs } = useQuery({
     queryKey: ["organizations"],
@@ -1536,9 +1489,12 @@ export default function SystemDetailPage() {
           <ArrowLeftIcon className="mr-1 size-4" />
           Tillbaka
         </Button>
-        <p className="text-sm text-destructive">
-          Kunde inte hämta system.
-        </p>
+        <div className="flex items-center gap-3 text-sm text-destructive">
+          <p>Kunde inte hämta system.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Försök igen
+          </Button>
+        </div>
       </div>
     )
   }

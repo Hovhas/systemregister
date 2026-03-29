@@ -7,6 +7,7 @@ import axios from "axios"
 import { SystemCategory, LifecycleStatus, Criticality, NIS2Classification } from "@/types"
 import type { SystemCreate, SystemUpdate } from "@/types"
 import { createSystem, updateSystem, getSystem, getOrganizations } from "@/lib/api"
+import { categoryLabels, lifecycleLabels, criticalityLabels, nis2ClassificationLabels } from "@/lib/labels"
 import {
   Card,
   CardContent,
@@ -31,37 +32,6 @@ import {
 } from "@/components/ui/select"
 import { Breadcrumb } from "@/components/Breadcrumb"
 import { FormField } from "@/components/FormField"
-
-// --- Etiketter ---
-
-const nis2ClassificationLabels: Record<NIS2Classification, string> = {
-  [NIS2Classification.ESSENTIAL]: "Väsentlig",
-  [NIS2Classification.IMPORTANT]: "Viktig",
-  [NIS2Classification.NOT_APPLICABLE]: "Ej tillämplig",
-}
-
-const categoryLabels: Record<SystemCategory, string> = {
-  [SystemCategory.VERKSAMHETSSYSTEM]: "Verksamhetssystem",
-  [SystemCategory.STODSYSTEM]: "Stödsystem",
-  [SystemCategory.INFRASTRUKTUR]: "Infrastruktur",
-  [SystemCategory.PLATTFORM]: "Plattform",
-  [SystemCategory.IOT]: "IoT",
-}
-
-const lifecycleLabels: Record<LifecycleStatus, string> = {
-  [LifecycleStatus.PLANNED]: "Planerad",
-  [LifecycleStatus.IMPLEMENTING]: "Under införande",
-  [LifecycleStatus.ACTIVE]: "I drift",
-  [LifecycleStatus.DECOMMISSIONING]: "Under avveckling",
-  [LifecycleStatus.DECOMMISSIONED]: "Avvecklad",
-}
-
-const criticalityLabels: Record<Criticality, string> = {
-  [Criticality.LOW]: "Låg",
-  [Criticality.MEDIUM]: "Medel",
-  [Criticality.HIGH]: "Hög",
-  [Criticality.CRITICAL]: "Kritisk",
-}
 
 // --- Formulärtillstånd ---
 

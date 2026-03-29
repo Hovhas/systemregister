@@ -4,11 +4,12 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.models import AuditLog
+from app.schemas import AuditListResponse, AuditEntryResponse
 
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
 
-@router.get("/")
+@router.get("/", response_model=AuditListResponse)
 async def list_audit_entries(
     table_name: str | None = Query(None),
     record_id: UUID | None = Query(None),
@@ -57,7 +58,7 @@ async def list_audit_entries(
     }
 
 
-@router.get("/record/{record_id}")
+@router.get("/record/{record_id}", response_model=list[AuditEntryResponse])
 async def get_audit_for_record(
     record_id: UUID,
     db: AsyncSession = Depends(get_db),

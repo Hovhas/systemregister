@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -25,6 +26,8 @@ import {
 } from "@/components/ui/select"
 import { getExpiringContracts, getSystemStats, getOrganizations } from "@/lib/api"
 import type { ExpiringContract, SystemStats, Organization } from "@/types"
+import { Criticality } from "@/types"
+import { criticalityLabels, criticalityVariant, lifecycleLabels } from "@/lib/labels"
 
 // ---------------------------------------------------------------------------
 // Hjälpfunktioner
@@ -33,31 +36,6 @@ import type { ExpiringContract, SystemStats, Organization } from "@/types"
 function formatPercent(value: number, total: number): string {
   if (total === 0) return "0 %"
   return `${Math.round((value / total) * 100)} %`
-}
-
-const CRITICALITY_LABELS: Record<string, string> = {
-  kritisk: "Kritisk",
-  hög: "Hög",
-  medel: "Medel",
-  låg: "Låg",
-}
-
-const CRITICALITY_VARIANT: Record<
-  string,
-  "destructive" | "default" | "secondary" | "outline"
-> = {
-  kritisk: "destructive",
-  hög: "default",
-  medel: "secondary",
-  låg: "outline",
-}
-
-const LIFECYCLE_LABELS: Record<string, string> = {
-  planerad: "Planerad",
-  under_inforande: "Under införande",
-  i_drift: "I drift",
-  under_avveckling: "Under avveckling",
-  avvecklad: "Avvecklad",
 }
 
 // ---------------------------------------------------------------------------
@@ -104,6 +82,7 @@ export default function DashboardPage() {
     data: stats,
     isLoading,
     isError,
+    refetch,
   } = useQuery<SystemStats>({
     queryKey: ["system-stats", selectedOrg],
     queryFn: () =>
@@ -156,9 +135,12 @@ export default function DashboardPage() {
         <p className="text-muted-foreground text-sm">Laddar statistik…</p>
       )}
       {isError && (
-        <p className="text-destructive text-sm">
-          Kunde inte hämta statistik. Kontrollera att API:et är tillgängligt.
-        </p>
+        <div className="flex items-center gap-3 text-destructive text-sm">
+          <p>Kunde inte hämta statistik. Kontrollera att API:et är tillgängligt.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Försök igen
+          </Button>
+        </div>
       )}
 
       {/* Utgående avtal */}
@@ -284,7 +266,7 @@ export default function DashboardPage() {
                         ([status, count]) => (
                           <TableRow key={status}>
                             <TableCell>
-                              {LIFECYCLE_LABELS[status] ?? status}
+                              {lifecycleLabels[status as keyof typeof lifecycleLabels] ?? status}
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {count}
@@ -328,10 +310,10 @@ export default function DashboardPage() {
                             <TableCell>
                               <Badge
                                 variant={
-                                  CRITICALITY_VARIANT[level] ?? "outline"
+                                  criticalityVariant[level as Criticality] ?? "outline"
                                 }
                               >
-                                {CRITICALITY_LABELS[level] ?? level}
+                                {criticalityLabels[level as Criticality] ?? level}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right font-medium">

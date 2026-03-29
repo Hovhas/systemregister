@@ -17,6 +17,11 @@ from app.schemas import (
 router = APIRouter(prefix="/systems", tags=["System"])
 
 
+def _escape_like(s: str) -> str:
+    """Escapa LIKE-wildcards (% och _) i sokstrangar."""
+    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 @router.get("/", response_model=PaginatedResponse[SystemResponse])
 async def list_systems(
     q: str | None = Query(None, description="Fritextsökning i namn och beskrivning"),
@@ -41,7 +46,7 @@ async def list_systems(
         if not q_clean:
             # Söksträng bestod enbart av null bytes — returnera tomt resultat direkt
             return PaginatedResponse(items=[], total=0, limit=limit, offset=offset)
-        search = f"%{q_clean}%"
+        search = f"%{_escape_like(q_clean)}%"
         stmt = stmt.where(
             or_(
                 System.name.ilike(search),
@@ -67,7 +72,7 @@ async def list_systems(
     if extended_search:
         # Textsökning i JSONB — cast till text och sök med ILIKE
         stmt = stmt.where(
-            cast(System.extended_attributes, String).ilike(f"%{extended_search}%")
+            cast(System.extended_attributes, String).ilike(f"%{_escape_like(extended_search)}%")
         )
 
     # Count

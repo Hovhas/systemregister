@@ -25,6 +25,7 @@ import type {
   NotificationsResponse,
   ExpiringContract,
   AuditResponse,
+  AuditEntry,
 } from "@/types"
 
 const api = axios.create({
@@ -234,6 +235,11 @@ export async function getAuditLog(params?: {
   offset?: number
 }): Promise<AuditResponse> {
   const res = await api.get<AuditResponse>("/audit/", { params })
+  return res.data
+}
+
+export async function getAuditForRecord(recordId: string): Promise<AuditEntry[]> {
+  const res = await api.get<AuditEntry[]>(`/audit/record/${recordId}`)
   return res.data
 }
 

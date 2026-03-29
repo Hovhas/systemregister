@@ -33,7 +33,7 @@ def downgrade() -> None:
     # Återskapa den separata typen och konvertera tillbaka
     op.execute(
         "CREATE TYPE integration_criticality AS ENUM "
-        "('lag', 'medel', 'hog', 'kritisk')"
+        "('låg', 'medel', 'hög', 'kritisk')"
     )
     op.execute(
         "ALTER TABLE system_integrations "

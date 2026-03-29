@@ -326,9 +326,14 @@ async def import_owners(
             })
             continue
 
+        owner_name = (raw_row.get("name") or "").strip()
+        if not owner_name:
+            errors.append({"row": index, "error": "Saknar kolumn 'name' eller värdet är tomt."})
+            continue
+
         owner = SystemOwner(
             system_id=system.id,
-            name=raw_row.get("name") or None,
+            name=owner_name,
             email=raw_row.get("email") or None,
             phone=raw_row.get("phone") or None,
             role=role,

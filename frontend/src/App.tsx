@@ -19,6 +19,7 @@ import {
   ClipboardListIcon,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
+import { getNotifications } from "@/lib/api"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -45,11 +46,7 @@ import AuditPage from "@/pages/AuditPage"
 function NotificationBell() {
   const { data } = useQuery({
     queryKey: ["notifications"],
-    queryFn: async () => {
-      const res = await fetch("/api/v1/notifications")
-      if (!res.ok) return { total: 0 }
-      return res.json()
-    },
+    queryFn: () => getNotifications(),
     refetchInterval: 60000, // Uppdatera varje minut
   })
 

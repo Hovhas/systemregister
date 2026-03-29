@@ -18,58 +18,16 @@ import { cn } from "@/lib/utils"
 import { getIntegrations, getSystems, deleteIntegration } from "@/lib/api"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import IntegrationDialog from "@/components/IntegrationDialog"
-import type { Integration } from "@/types"
-
-// ---------- Typer ----------
-
-type Criticality = "låg" | "medel" | "hög" | "kritisk"
-type IntegrationType =
-  | "api"
-  | "filöverföring"
-  | "databasreplikering"
-  | "event"
-  | "manuell"
-
-interface SystemItem {
-  id: string
-  name: string
-  criticality: Criticality
-}
+import { Criticality, IntegrationType as IntegrationTypeEnum } from "@/types"
+import type { Integration, System } from "@/types"
+import {
+  criticalityLabels,
+  criticalityVariant,
+  criticalityColor,
+  integrationTypeLabels,
+} from "@/lib/labels"
 
 // ---------- Hjälpfunktioner ----------
-
-const criticalityLabel: Record<Criticality, string> = {
-  låg: "Låg",
-  medel: "Medium",
-  hög: "Hög",
-  kritisk: "Kritisk",
-}
-
-const criticalityVariant: Record<
-  Criticality,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  låg: "secondary",
-  medel: "outline",
-  hög: "default",
-  kritisk: "destructive",
-}
-
-const integrationTypeLabel: Record<string, string> = {
-  api: "API",
-  filöverföring: "Filöverföring",
-  databasreplikering: "Databasreplikering",
-  event: "Event",
-  manuell: "Manuell",
-}
-
-// Färg per kritikalitet — för SVG-noder
-const criticalityColor: Record<Criticality, string> = {
-  låg: "#86efac",
-  medel: "#fcd34d",
-  hög: "#fb923c",
-  kritisk: "#f87171",
-}
 
 const DEFAULT_NODE_COLOR = "#94a3b8"
 
@@ -86,13 +44,13 @@ interface GraphNode {
 interface GraphEdge {
   source: string
   target: string
-  type: IntegrationType
+  type: IntegrationTypeEnum
   criticality: Criticality | null
 }
 
 interface DependencyGraphProps {
   integrations: Integration[]
-  systems: Map<string, SystemItem>
+  systems: Map<string, System>
 }
 
 function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
@@ -125,7 +83,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
     return {
       id,
       label: sys?.name ?? id.slice(0, 8),
-      criticality: (sys?.criticality as Criticality) ?? null,
+      criticality: sys?.criticality ?? null,
       x: CX + RADIUS * Math.cos(angle),
       y: CY + RADIUS * Math.sin(angle),
     }
@@ -136,8 +94,8 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
   const edges: GraphEdge[] = integrations.map((i) => ({
     source: i.source_system_id,
     target: i.target_system_id,
-    type: i.integration_type as IntegrationType,
-    criticality: i.criticality as Criticality | null,
+    type: i.integration_type as IntegrationTypeEnum,
+    criticality: i.criticality,
   }))
 
   // Beräkna offset-vektor för pil (undvik överlapp med nod-cirkeln)
@@ -241,7 +199,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
                     setTooltip({
                       x: e.clientX - rect.left,
                       y: e.clientY - rect.top - 36,
-                      text: integrationTypeLabel[edge.type] ?? edge.type,
+                      text: integrationTypeLabels[edge.type] ?? edge.type,
                     })
                   }
                 }}
@@ -273,7 +231,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
                   className="font-medium select-none"
                   style={{ pointerEvents: "none" }}
                 >
-                  {integrationTypeLabel[edge.type] ?? edge.type}
+                  {integrationTypeLabels[edge.type] ?? edge.type}
                 </text>
               )}
             </g>
@@ -295,7 +253,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
                 if (rect) {
                   const sys = systems.get(node.id)
                   const crit = sys
-                    ? criticalityLabel[sys.criticality as Criticality]
+                    ? criticalityLabels[sys.criticality]
                     : "Okänd"
                   setTooltip({
                     x: e.clientX - rect.left,
@@ -353,7 +311,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
               className="inline-block h-3 w-3 rounded-full border"
               style={{ backgroundColor: criticalityColor[c] }}
             />
-            {criticalityLabel[c]}
+            {criticalityLabels[c]}
           </span>
         ))}
       </div>
@@ -365,7 +323,7 @@ function DependencyGraph({ integrations, systems }: DependencyGraphProps) {
 
 interface DependencyTableProps {
   integrations: Integration[]
-  systems: Map<string, SystemItem>
+  systems: Map<string, System>
   onDelete: (integration: Integration) => void
 }
 
@@ -396,20 +354,20 @@ function DependencyTable({ integrations, systems, onDelete }: DependencyTablePro
         {integrations.map((i) => {
           const srcName = systems.get(i.source_system_id)?.name ?? i.source_system_id.slice(0, 8)
           const tgtName = systems.get(i.target_system_id)?.name ?? i.target_system_id.slice(0, 8)
-          const crit = i.criticality as Criticality | null
+          const crit = i.criticality
           return (
             <TableRow key={i.id}>
               <TableCell className="font-medium">{srcName}</TableCell>
               <TableCell>{tgtName}</TableCell>
               <TableCell>
                 <Badge variant="outline">
-                  {integrationTypeLabel[i.integration_type] ?? i.integration_type}
+                  {integrationTypeLabels[i.integration_type] ?? i.integration_type}
                 </Badge>
               </TableCell>
               <TableCell>
                 {crit ? (
                   <Badge variant={criticalityVariant[crit]}>
-                    {criticalityLabel[crit]}
+                    {criticalityLabels[crit]}
                   </Badge>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -459,7 +417,7 @@ export default function DependenciesPage() {
   const [newDialogOpen, setNewDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Integration | null>(null)
 
-  const { data: integrationsData = [], isLoading: isLoadingIntegrations, error: integrationsError } = useQuery({
+  const { data: integrationsData = [], isLoading: isLoadingIntegrations, error: integrationsError, refetch: refetchIntegrations } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => getIntegrations(),
   })
@@ -484,14 +442,14 @@ export default function DependenciesPage() {
   const error = integrationsError ? "Kunde inte hämta data. Kontrollera att API:et är tillgängligt." : null
 
   const systemsList = systemsData?.items ?? []
-  const systems = new Map(systemsList.map((s) => [s.id, s as unknown as SystemItem]))
+  const systems = new Map(systemsList.map((s) => [s.id, s]))
 
   // Statistik
   const totalSystems = new Set(
     integrationsData.flatMap((i) => [i.source_system_id, i.target_system_id])
   ).size
   const criticalCount = integrationsData.filter(
-    (i) => i.criticality === "kritisk"
+    (i) => i.criticality === Criticality.CRITICAL
   ).length
   const externalCount = integrationsData.filter((i) => i.is_external).length
 
@@ -556,8 +514,11 @@ export default function DependenciesPage() {
 
       {/* Felmeddelande */}
       {error && (
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+        <div className="flex items-center gap-3 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <p>{error}</p>
+          <Button variant="outline" size="sm" onClick={() => refetchIntegrations()}>
+            Försök igen
+          </Button>
         </div>
       )}
 

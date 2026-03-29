@@ -4,6 +4,7 @@ import { createIntegration, getSystems } from "@/lib/api"
 import { toast } from "sonner"
 import { Criticality, IntegrationType } from "@/types"
 import type { IntegrationCreate } from "@/types"
+import { integrationTypeLabels, criticalityLabels } from "@/lib/labels"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,23 +22,6 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { FormField } from "@/components/FormField"
-
-// --- Etiketter ---
-
-const integrationTypeLabels: Record<string, string> = {
-  api: "API",
-  filöverföring: "Filöverföring",
-  databasreplikering: "Databasreplikering",
-  event: "Event",
-  manuell: "Manuell",
-}
-
-const criticalityLabels: Record<Criticality, string> = {
-  [Criticality.LOW]: "Låg",
-  [Criticality.MEDIUM]: "Medel",
-  [Criticality.HIGH]: "Hög",
-  [Criticality.CRITICAL]: "Kritisk",
-}
 
 // --- Props ---
 
@@ -200,7 +184,7 @@ export default function IntegrationDialog({
                   <SelectTrigger id={id} className="w-full">
                     <SelectValue placeholder="Välj typ...">
                       {form.integration_type
-                        ? (integrationTypeLabels[form.integration_type] ?? form.integration_type)
+                        ? (integrationTypeLabels[form.integration_type as IntegrationType] ?? form.integration_type)
                         : undefined}
                     </SelectValue>
                   </SelectTrigger>

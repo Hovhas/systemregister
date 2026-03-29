@@ -7,11 +7,12 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.core.rls import get_rls_db
 from app.models.models import System, SystemClassification, SystemOwner, Contract
+from app.schemas import NotificationListResponse
 
 router = APIRouter(prefix="/notifications", tags=["Notifieringar"])
 
 
-@router.get("/")
+@router.get("/", response_model=NotificationListResponse)
 async def get_notifications(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),

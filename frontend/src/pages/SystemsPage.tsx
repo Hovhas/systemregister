@@ -5,6 +5,7 @@ import { SearchIcon, PlusIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Ico
 
 import { getSystems, getOrganizations } from "@/lib/api"
 import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
+import { categoryLabels, lifecycleLabels, criticalityLabels, criticalityBadgeClass } from "@/lib/labels"
 import {
   Table,
   TableBody,
@@ -24,40 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-// --- Etiketter ---
-
-const categoryLabels: Record<SystemCategory, string> = {
-  [SystemCategory.VERKSAMHETSSYSTEM]: "Verksamhetssystem",
-  [SystemCategory.STODSYSTEM]: "Stödsystem",
-  [SystemCategory.INFRASTRUKTUR]: "Infrastruktur",
-  [SystemCategory.PLATTFORM]: "Plattform",
-  [SystemCategory.IOT]: "IoT",
-}
-
-const lifecycleLabels: Record<LifecycleStatus, string> = {
-  [LifecycleStatus.PLANNED]: "Planerad",
-  [LifecycleStatus.IMPLEMENTING]: "Under införande",
-  [LifecycleStatus.ACTIVE]: "I drift",
-  [LifecycleStatus.DECOMMISSIONING]: "Under avveckling",
-  [LifecycleStatus.DECOMMISSIONED]: "Avvecklad",
-}
-
-const criticalityLabels: Record<Criticality, string> = {
-  [Criticality.LOW]: "Låg",
-  [Criticality.MEDIUM]: "Medel",
-  [Criticality.HIGH]: "Hög",
-  [Criticality.CRITICAL]: "Kritisk",
-}
-
 // --- Hjälpkomponenter ---
 
 function CriticalityBadge({ value }: { value: Criticality }) {
-  const colorClass = {
-    [Criticality.CRITICAL]: "bg-red-100 text-red-800 border-red-200",
-    [Criticality.HIGH]: "bg-orange-100 text-orange-800 border-orange-200",
-    [Criticality.MEDIUM]: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    [Criticality.LOW]: "bg-green-100 text-green-800 border-green-200",
-  }[value]
+  const colorClass = criticalityBadgeClass[value]
 
   return (
     <span
@@ -131,7 +102,7 @@ export default function SystemsPage() {
     setOffset(0)
   }
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [
       "systems",
       debouncedSearch,
@@ -321,9 +292,12 @@ export default function SystemsPage() {
 
       {/* Tabell */}
       {isError ? (
-        <p className="text-sm text-destructive">
-          Kunde inte hämta system. Kontrollera att backend körs.
-        </p>
+        <div className="flex items-center gap-3 text-sm text-destructive">
+          <p>Kunde inte hämta system. Kontrollera att backend körs.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Försök igen
+          </Button>
+        </div>
       ) : (
         <div className="rounded-xl ring-1 ring-foreground/10">
           <Table>
