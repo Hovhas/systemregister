@@ -23,48 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getExpiringContracts } from "@/lib/api"
-import type { ExpiringContract } from "@/types"
-
-// ---------------------------------------------------------------------------
-// Typer
-// ---------------------------------------------------------------------------
-
-interface SystemStats {
-  total_systems: number
-  by_lifecycle_status: Record<string, number>
-  by_criticality: Record<string, number>
-  nis2_applicable_count: number
-  treats_personal_data_count: number
-}
-
-interface Organization {
-  id: string
-  name: string
-}
-
-// ---------------------------------------------------------------------------
-// API-funktioner (inline, ersätts med @/lib/api när den skapas)
-// ---------------------------------------------------------------------------
-
-const API_BASE = "/api/v1"
-
-async function getSystemStats(organizationId?: string): Promise<SystemStats> {
-  const params = new URLSearchParams()
-  if (organizationId && organizationId !== "alla") {
-    params.set("organization_id", organizationId)
-  }
-  const url = `${API_BASE}/systems/stats/overview${params.size ? "?" + params : ""}`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Fel vid hämtning av statistik: ${res.status}`)
-  return res.json()
-}
-
-async function getOrganizations(): Promise<Organization[]> {
-  const res = await fetch(`${API_BASE}/organizations`)
-  if (!res.ok) throw new Error(`Fel vid hämtning av organisationer: ${res.status}`)
-  return res.json()
-}
+import { getExpiringContracts, getSystemStats, getOrganizations } from "@/lib/api"
+import type { ExpiringContract, SystemStats, Organization } from "@/types"
 
 // ---------------------------------------------------------------------------
 // Hjälpfunktioner
@@ -77,9 +37,9 @@ function formatPercent(value: number, total: number): string {
 
 const CRITICALITY_LABELS: Record<string, string> = {
   kritisk: "Kritisk",
-  hog: "Hög",
-  medium: "Medium",
-  lag: "Låg",
+  hög: "Hög",
+  medel: "Medel",
+  låg: "Låg",
 }
 
 const CRITICALITY_VARIANT: Record<
@@ -87,15 +47,16 @@ const CRITICALITY_VARIANT: Record<
   "destructive" | "default" | "secondary" | "outline"
 > = {
   kritisk: "destructive",
-  hog: "default",
-  medium: "secondary",
-  lag: "outline",
+  hög: "default",
+  medel: "secondary",
+  låg: "outline",
 }
 
 const LIFECYCLE_LABELS: Record<string, string> = {
   planerad: "Planerad",
-  aktiv: "Aktiv",
-  avveckling: "Avveckling",
+  under_inforande: "Under införande",
+  i_drift: "I drift",
+  under_avveckling: "Under avveckling",
   avvecklad: "Avvecklad",
 }
 

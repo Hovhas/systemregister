@@ -98,7 +98,7 @@ class SystemCreate(SafeStringMixin):
     extended_attributes: dict | None = None
 
 
-class SystemUpdate(BaseModel):
+class SystemUpdate(SafeStringMixin):
     name: str | None = Field(None, min_length=1, max_length=255)
     aliases: str | None = None
     description: str | None = None
@@ -132,7 +132,7 @@ class SystemUpdate(BaseModel):
     last_reviewed_at: datetime | None = None
 
 
-class ClassificationCreate(BaseModel):
+class ClassificationCreate(SafeStringMixin):
     confidentiality: int = Field(ge=0, le=4)
     integrity: int = Field(ge=0, le=4)
     availability: int = Field(ge=0, le=4)
@@ -172,7 +172,7 @@ class OwnerCreate(SafeStringMixin):
         return v
 
 
-class OwnerUpdate(BaseModel):
+class OwnerUpdate(SafeStringMixin):
     role: OwnerRole | None = None
     name: str | None = Field(None, max_length=255)
     email: str | None = Field(None, max_length=255)
@@ -204,7 +204,7 @@ class IntegrationCreate(SafeStringMixin):
     external_party: str | None = Field(None, max_length=255)
 
 
-class IntegrationUpdate(BaseModel):
+class IntegrationUpdate(SafeStringMixin):
     integration_type: IntegrationType | None = None
     data_types: str | None = None
     frequency: str | None = Field(None, max_length=100)
@@ -312,7 +312,7 @@ class GDPRTreatmentCreate(SafeStringMixin):
     dpia_link: str | None = None
 
 
-class GDPRTreatmentUpdate(BaseModel):
+class GDPRTreatmentUpdate(SafeStringMixin):
     ropa_reference_id: str | None = Field(None, max_length=100)
     data_categories: list[str] | None = None
     categories_of_data_subjects: str | None = None
@@ -374,7 +374,7 @@ class ContractCreate(SafeStringMixin):
         return self
 
 
-class ContractUpdate(BaseModel):
+class ContractUpdate(SafeStringMixin):
     supplier_name: str | None = Field(None, max_length=255)
     supplier_org_number: str | None = Field(None, max_length=20)
     contract_id_external: str | None = Field(None, max_length=100)

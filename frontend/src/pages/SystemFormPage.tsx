@@ -288,10 +288,14 @@ export default function SystemFormPage() {
         setErrors(fieldErrors)
         toast.error("Kontrollera fälten och försök igen")
       } else {
-        toast.error(typeof detail === "string" ? detail : "Kunde inte spara")
+        const message = typeof detail === "string" ? detail : "Kunde inte spara systemet"
+        setApiError(message)
+        toast.error(message)
       }
     } else {
-      toast.error("Ett oväntat fel uppstod")
+      const message = "Ett oväntat fel uppstod. Försök igen."
+      setApiError(message)
+      toast.error(message)
     }
   }
 
@@ -373,6 +377,7 @@ export default function SystemFormPage() {
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
+    setApiError(null)
   }
 
   return (

@@ -106,6 +106,9 @@ async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
 
 
 @router.post("/", response_model=SystemResponse, status_code=status.HTTP_201_CREATED)
+# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# get_rls_db anropas men set_org_context() sätts inte — RLS blockerar eller
+# tillåter allt beroende på null-bypass-policyn. Se migration 0003 och conftest.py.
 async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_db)):
     system = System(**data.model_dump())
     db.add(system)
@@ -130,6 +133,7 @@ async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_d
 
 
 @router.patch("/{system_id}", response_model=SystemResponse)
+# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
 async def update_system(system_id: UUID, data: SystemUpdate, db: AsyncSession = Depends(get_rls_db)):
     system = await db.get(System, system_id)
     if not system:
@@ -142,6 +146,7 @@ async def update_system(system_id: UUID, data: SystemUpdate, db: AsyncSession = 
 
 
 @router.delete("/{system_id}", status_code=status.HTTP_204_NO_CONTENT)
+# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
 async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
     system = await db.get(System, system_id)
     if not system:

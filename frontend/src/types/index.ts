@@ -326,11 +326,11 @@ export interface PaginatedResponse<T> {
 }
 
 export interface SystemStats {
-  total: number
+  total_systems: number
   by_criticality: Record<string, number>
   by_lifecycle_status: Record<string, number>
-  by_system_category: Record<string, number>
-  nis2_count: number
+  nis2_applicable_count: number
+  treats_personal_data_count: number
 }
 
 // --- Sökparametrar ---

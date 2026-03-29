@@ -18,6 +18,7 @@ router = APIRouter(tags=["Contracts"])
     response_model=ContractResponse,
     status_code=status.HTTP_201_CREATED,
 )
+# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
 async def create_contract(
     system_id: UUID,
     data: ContractCreate,
@@ -57,6 +58,7 @@ async def list_contracts(
 
 
 @router.patch("/contracts/{contract_id}", response_model=ContractResponse)
+# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
 async def update_contract(
     contract_id: UUID,
     data: ContractUpdate,
@@ -76,6 +78,7 @@ async def update_contract(
 
 
 @router.delete("/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
+# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
 async def delete_contract(
     contract_id: UUID,
     db: AsyncSession = Depends(get_rls_db),

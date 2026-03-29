@@ -8,6 +8,7 @@ import {
   createOrganization,
   updateOrganization,
   deleteOrganization,
+  getSystems,
 } from "@/lib/api"
 import {
   OrganizationType,
@@ -325,6 +326,12 @@ export default function OrganizationsPage() {
     queryFn: getOrganizations,
   })
 
+  // Hämta alla system för att beräkna antal per organisation
+  const { data: allSystems } = useQuery({
+    queryKey: ["systems", { limit: 1000 }],
+    queryFn: () => getSystems({ limit: 1000 }),
+  })
+
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Organization | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Organization | null>(null)
@@ -342,14 +349,9 @@ export default function OrganizationsPage() {
     },
   })
 
-  // Beräkna antal system per organisation från query-cachen
-  const systemsByOrg = queryClient.getQueryData<{ items: Array<{ organization_id: string }> }>(
-    ["systems"]
-  )
-
   function getSystemCount(orgId: string): number {
-    if (!systemsByOrg?.items) return 0
-    return systemsByOrg.items.filter((s) => s.organization_id === orgId).length
+    if (!allSystems?.items) return 0
+    return allSystems.items.filter((s) => s.organization_id === orgId).length
   }
 
   function handleEdit(org: Organization) {
