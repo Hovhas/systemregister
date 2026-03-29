@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { PencilIcon, Trash2Icon, PlusIcon, BuildingIcon } from "lucide-react"
+import { toast } from "sonner"
 
 import {
   getOrganizations,
@@ -56,8 +57,6 @@ interface OrgFormDialogProps {
   onClose: () => void
   organizations: Organization[]
   editing: Organization | null
-  onSuccess: (msg: string) => void
-  onError: (msg: string) => void
 }
 
 function OrgFormDialog({
@@ -65,8 +64,6 @@ function OrgFormDialog({
   onClose,
   organizations,
   editing,
-  onSuccess,
-  onError,
 }: OrgFormDialogProps) {
   const queryClient = useQueryClient()
 
@@ -93,10 +90,10 @@ function OrgFormDialog({
     mutationFn: (data: OrganizationCreate) => createOrganization(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] })
-      onSuccess("Organisationen skapades.")
+      toast.success("Organisationen skapades.")
       onClose()
     },
-    onError: () => onError("Kunde inte skapa organisationen."),
+    onError: () => toast.error("Kunde inte skapa organisationen."),
   })
 
   const updateMutation = useMutation({
@@ -104,10 +101,10 @@ function OrgFormDialog({
       updateOrganization(editing!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] })
-      onSuccess("Organisationen uppdaterades.")
+      toast.success("Organisationen uppdaterades.")
       onClose()
     },
-    onError: () => onError("Kunde inte uppdatera organisationen."),
+    onError: () => toast.error("Kunde inte uppdatera organisationen."),
   })
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -318,36 +315,6 @@ function ConfirmDeleteDialog({
   )
 }
 
-// --- Notifieringsbanner ---
-
-interface BannerProps {
-  message: string
-  type: "success" | "error"
-  onDismiss: () => void
-}
-
-function Banner({ message, type, onDismiss }: BannerProps) {
-  return (
-    <div
-      className={[
-        "flex items-center justify-between rounded-md border px-4 py-2.5 text-sm",
-        type === "success"
-          ? "border-green-200 bg-green-50 text-green-800"
-          : "border-destructive/30 bg-destructive/10 text-destructive",
-      ].join(" ")}
-    >
-      <span>{message}</span>
-      <button
-        onClick={onDismiss}
-        className="ml-4 text-current opacity-60 hover:opacity-100"
-        aria-label="Stäng"
-      >
-        ✕
-      </button>
-    </div>
-  )
-}
-
 // --- Huvudsida ---
 
 export default function OrganizationsPage() {
@@ -361,20 +328,16 @@ export default function OrganizationsPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Organization | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Organization | null>(null)
-  const [banner, setBanner] = useState<{
-    message: string
-    type: "success" | "error"
-  } | null>(null)
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteOrganization(deleteTarget!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] })
-      setBanner({ message: "Organisationen togs bort.", type: "success" })
+      toast.success("Organisationen togs bort.")
       setDeleteTarget(null)
     },
     onError: () => {
-      setBanner({ message: "Kunde inte ta bort organisationen.", type: "error" })
+      toast.error("Kunde inte ta bort organisationen.")
       setDeleteTarget(null)
     },
   })
@@ -424,15 +387,6 @@ export default function OrganizationsPage() {
           Ny organisation
         </Button>
       </div>
-
-      {/* Banner */}
-      {banner && (
-        <Banner
-          message={banner.message}
-          type={banner.type}
-          onDismiss={() => setBanner(null)}
-        />
-      )}
 
       {/* Laddning / fel */}
       {isLoading && (
@@ -514,8 +468,6 @@ export default function OrganizationsPage() {
           onClose={handleFormClose}
           organizations={organizations}
           editing={editing}
-          onSuccess={(msg) => setBanner({ message: msg, type: "success" })}
-          onError={(msg) => setBanner({ message: msg, type: "error" })}
         />
       )}
 

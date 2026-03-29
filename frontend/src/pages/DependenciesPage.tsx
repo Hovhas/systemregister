@@ -1,6 +1,7 @@
 import { useRef, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { PlusIcon, TrashIcon } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -434,6 +435,7 @@ function DependencyTable({ integrations, systems, onDelete }: DependencyTablePro
                 <Button
                   variant="ghost"
                   size="sm"
+                  aria-label="Ta bort integration"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   onClick={() => onDelete(i)}
                 >
@@ -469,6 +471,7 @@ export default function DependenciesPage() {
     mutationFn: (id: string) => deleteIntegration(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integrations"] })
+      toast.success("Integration borttagen")
       setDeleteTarget(null)
     },
   })

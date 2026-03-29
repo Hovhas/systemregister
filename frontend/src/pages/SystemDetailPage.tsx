@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeftIcon, PencilIcon, TrashIcon, PlusIcon } from "lucide-react"
+import { toast } from "sonner"
 
 import {
   getSystem,
@@ -139,7 +140,7 @@ function InfoRow({
   )
 }
 
-function CiaBar({ label, value }: { label: string; value: number }) {
+function CiaBar({ label, title, value }: { label: string; title?: string; value: number }) {
   const pct = (value / 4) * 100
   const color =
     value >= 3
@@ -150,7 +151,7 @@ function CiaBar({ label, value }: { label: string; value: number }) {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="w-4 shrink-0 text-xs font-semibold text-muted-foreground">
+      <span className="w-4 shrink-0 text-xs font-semibold text-muted-foreground" title={title}>
         {label}
       </span>
       <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
@@ -309,6 +310,7 @@ function KlassningTab({
       createClassification(systemId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("Klassning skapad")
       setDialogOpen(false)
       setForm({
         confidentiality: "2",
@@ -373,11 +375,11 @@ function KlassningTab({
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="flex flex-col gap-2">
-              <CiaBar label="K" value={cls.confidentiality} />
-              <CiaBar label="R" value={cls.integrity} />
-              <CiaBar label="T" value={cls.availability} />
+              <CiaBar label="K" title="Konfidentialitet" value={cls.confidentiality} />
+              <CiaBar label="R" title="Riktighet (Integrity)" value={cls.integrity} />
+              <CiaBar label="T" title="Tillgänglighet (Availability)" value={cls.availability} />
               {cls.traceability !== null && cls.traceability !== undefined && (
-                <CiaBar label="S" value={cls.traceability} />
+                <CiaBar label="S" title="Spårbarhet (Traceability)" value={cls.traceability} />
               )}
             </div>
             <div className="text-xs text-muted-foreground">
@@ -513,6 +515,7 @@ function AgareTab({
     mutationFn: (data: OwnerCreate) => createOwner(systemId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("Ägare tillagd")
       setDialogOpen(false)
       setForm({ role: "", name: "", email: "", phone: "", organization_id: "" })
       setError("")
@@ -524,6 +527,7 @@ function AgareTab({
     mutationFn: (id: string) => deleteOwner(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("Ägare borttagen")
       setDeleteTarget(null)
     },
   })
@@ -587,6 +591,7 @@ function AgareTab({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={`Ta bort ägare ${owner.name}`}
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                       onClick={() => setDeleteTarget(owner)}
                     >
@@ -706,6 +711,7 @@ function IntegrationerTab({
     mutationFn: (id: string) => deleteIntegration(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("Integration borttagen")
       setDeleteTarget(null)
     },
   })
@@ -764,6 +770,7 @@ function IntegrationerTab({
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="Ta bort integration"
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleteTarget(intg)}
                       >
@@ -833,6 +840,7 @@ function GdprTab({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gdpr", systemId] })
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("GDPR-behandling skapad")
       setDialogOpen(false)
       setForm({
         data_categories: "",
@@ -852,6 +860,7 @@ function GdprTab({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gdpr", systemId] })
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("GDPR-behandling borttagen")
       setDeleteTarget(null)
     },
   })
@@ -918,6 +927,7 @@ function GdprTab({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="Ta bort GDPR-behandling"
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                       onClick={() => setDeleteTarget(t)}
                     >
@@ -1052,6 +1062,7 @@ function AvtalTab({ systemId }: { systemId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts", systemId] })
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("Avtal skapat")
       setDialogOpen(false)
       setForm({
         supplier_name: "",
@@ -1074,6 +1085,7 @@ function AvtalTab({ systemId }: { systemId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts", systemId] })
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
+      toast.success("Avtal borttaget")
       setDeleteTarget(null)
     },
   })
@@ -1156,6 +1168,7 @@ function AvtalTab({ systemId }: { systemId: string }) {
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={`Ta bort avtal ${c.supplier_name}`}
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                       onClick={() => setDeleteTarget(c)}
                     >
@@ -1392,6 +1405,7 @@ export default function SystemDetailPage() {
     mutationFn: () => deleteSystem(system!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["systems"] })
+      toast.success("System borttaget")
       navigate("/systems")
     },
   })

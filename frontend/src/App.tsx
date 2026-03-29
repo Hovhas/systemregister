@@ -26,6 +26,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Toaster } from "@/components/ui/sonner"
 import { Link } from "react-router-dom"
 
 import DashboardPage from "@/pages/DashboardPage"
@@ -174,6 +175,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <Toaster />
     </div>
   )
 }

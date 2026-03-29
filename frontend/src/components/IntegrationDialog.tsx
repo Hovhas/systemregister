@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createIntegration, getSystems } from "@/lib/api"
+import { toast } from "sonner"
 import { Criticality, IntegrationType } from "@/types"
 import type { IntegrationCreate } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -109,6 +110,7 @@ export default function IntegrationDialog({
       if (systemId) {
         queryClient.invalidateQueries({ queryKey: ["system", systemId] })
       }
+      toast.success("Integration skapad")
       onOpenChange(false)
       setForm(EMPTY_FORM(systemId))
       setError("")
@@ -170,11 +172,13 @@ export default function IntegrationDialog({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {allSystems.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
+                {allSystems
+                  .filter((s) => s.id !== form.target_system_id)
+                  .map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </FormField>
@@ -192,11 +196,13 @@ export default function IntegrationDialog({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {allSystems.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
+                {allSystems
+                  .filter((s) => s.id !== form.source_system_id)
+                  .map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </FormField>

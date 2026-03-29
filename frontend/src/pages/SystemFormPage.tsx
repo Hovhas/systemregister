@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 import { SystemCategory, LifecycleStatus, Criticality, NIS2Classification } from "@/types"
 import type { SystemCreate, SystemUpdate } from "@/types"
@@ -129,10 +130,14 @@ const defaultForm: FormState = {
 function FormField({
   label,
   required,
+  error,
+  helpText,
   children,
 }: {
   label: string
   required?: boolean
+  error?: string
+  helpText?: string
   children: React.ReactNode
 }) {
   return (
@@ -142,6 +147,12 @@ function FormField({
         {required && <span className="ml-0.5 text-destructive">*</span>}
       </label>
       {children}
+      {helpText && !error && (
+        <p className="text-xs text-muted-foreground">{helpText}</p>
+      )}
+      {error && (
+        <p className="text-xs text-destructive" role="alert">{error}</p>
+      )}
     </div>
   )
 }
@@ -155,6 +166,7 @@ export default function SystemFormPage() {
 
   const [form, setForm] = useState<FormState>(defaultForm)
   const [apiError, setApiError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
 
   // Hämta befintligt system vid redigering
   const { data: existingSystem } = useQuery({
@@ -208,13 +220,19 @@ export default function SystemFormPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: SystemCreate) => createSystem(data),
-    onSuccess: (system) => navigate(`/systems/${system.id}`),
+    onSuccess: (system) => {
+      toast.success("System skapat")
+      navigate(`/systems/${system.id}`)
+    },
     onError: () => setApiError("Kunde inte skapa system. Kontrollera fälten och försök igen."),
   })
 
   const updateMutation = useMutation({
     mutationFn: (data: SystemUpdate) => updateSystem(id!, data),
-    onSuccess: (system) => navigate(`/systems/${system.id}`),
+    onSuccess: (system) => {
+      toast.success("System uppdaterat")
+      navigate(`/systems/${system.id}`)
+    },
     onError: () => setApiError("Kunde inte uppdatera system. Kontrollera fälten och försök igen."),
   })
 
@@ -223,6 +241,17 @@ export default function SystemFormPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setApiError(null)
+
+    // Inline-validering
+    const newErrors: Partial<Record<keyof FormState, string>> = {}
+    if (!form.name.trim()) newErrors.name = "Namn är obligatoriskt"
+    if (!form.organization_id) newErrors.organization_id = "Organisation är obligatorisk"
+    if (!form.description.trim()) newErrors.description = "Beskrivning är obligatorisk"
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
 
     const payload = {
       name: form.name,
@@ -289,20 +318,18 @@ export default function SystemFormPage() {
             <CardTitle>Grundinformation</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <FormField label="Namn" required>
+            <FormField label="Namn" required error={errors.name}>
               <Input
                 value={form.name}
-                onChange={(e) => set("name", e.target.value)}
+                onChange={(e) => { set("name", e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: undefined })) }}
                 placeholder="Systemets namn"
-                required
               />
             </FormField>
 
-            <FormField label="Organisation" required>
+            <FormField label="Organisation" required error={errors.organization_id}>
               <Select
                 value={form.organization_id}
-                onValueChange={(val) => set("organization_id", val ?? "")}
-                required
+                onValueChange={(val) => { set("organization_id", val ?? ""); if (errors.organization_id) setErrors((p) => ({ ...p, organization_id: undefined })) }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Välj organisation">
@@ -320,13 +347,12 @@ export default function SystemFormPage() {
             </FormField>
 
             <div className="md:col-span-2">
-              <FormField label="Beskrivning" required>
+              <FormField label="Beskrivning" required error={errors.description}>
                 <textarea
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                   value={form.description}
-                  onChange={(e) => set("description", e.target.value)}
+                  onChange={(e) => { set("description", e.target.value); if (errors.description) setErrors((p) => ({ ...p, description: undefined })) }}
                   placeholder="Beskriv systemets syfte och funktion"
-                  required
                 />
               </FormField>
             </div>
@@ -513,7 +539,10 @@ export default function SystemFormPage() {
               />
             </FormField>
 
-            <FormField label="RPO (Recovery Point Objective)">
+            <FormField
+              label="RPO (Recovery Point Objective)"
+              helpText="Recovery Point Objective — hur mycket data som max får förloras"
+            >
               <Input
                 value={form.rpo}
                 onChange={(e) => set("rpo", e.target.value)}
@@ -521,7 +550,10 @@ export default function SystemFormPage() {
               />
             </FormField>
 
-            <FormField label="RTO (Recovery Time Objective)">
+            <FormField
+              label="RTO (Recovery Time Objective)"
+              helpText="Recovery Time Objective — max tillåten återställningstid"
+            >
               <Input
                 value={form.rto}
                 onChange={(e) => set("rto", e.target.value)}
@@ -539,6 +571,7 @@ export default function SystemFormPage() {
                 />
                 <span className="text-sm">DR-plan finns</span>
               </label>
+              <p className="text-xs text-muted-foreground mt-1 ml-6">Disaster Recovery — plan för återhämtning vid allvarligt avbrott</p>
             </div>
           </CardContent>
         </Card>
@@ -550,15 +583,18 @@ export default function SystemFormPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input accent-primary"
-                  checked={form.nis2_applicable}
-                  onChange={(e) => set("nis2_applicable", e.target.checked)}
-                />
-                <span className="text-sm">NIS2-tillämplig</span>
-              </label>
+              <div className="flex flex-col gap-0.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input accent-primary"
+                    checked={form.nis2_applicable}
+                    onChange={(e) => set("nis2_applicable", e.target.checked)}
+                  />
+                  <span className="text-sm">NIS2-tillämplig</span>
+                </label>
+                <p className="text-xs text-muted-foreground ml-6">EU-direktiv för cybersäkerhet — gäller samhällsviktiga verksamheter</p>
+              </div>
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -570,15 +606,18 @@ export default function SystemFormPage() {
                 <span className="text-sm">Behandlar personuppgifter</span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input accent-primary"
-                  checked={form.treats_sensitive_data}
-                  onChange={(e) => set("treats_sensitive_data", e.target.checked)}
-                />
-                <span className="text-sm">Behandlar känsliga personuppgifter (Art. 9)</span>
-              </label>
+              <div className="flex flex-col gap-0.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input accent-primary"
+                    checked={form.treats_sensitive_data}
+                    onChange={(e) => set("treats_sensitive_data", e.target.checked)}
+                  />
+                  <span className="text-sm">Behandlar känsliga personuppgifter (Art. 9)</span>
+                </label>
+                <p className="text-xs text-muted-foreground ml-6">Art. 9 GDPR — hälsa, etnicitet, politisk åskådning m.m.</p>
+              </div>
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -590,15 +629,18 @@ export default function SystemFormPage() {
                 <span className="text-sm">Tredjelandsöverföring</span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input accent-primary"
-                  checked={form.has_elevated_protection}
-                  onChange={(e) => set("has_elevated_protection", e.target.checked)}
-                />
-                <span className="text-sm">Förhöjt skyddsbehov (MSBFS 2020:7)</span>
-              </label>
+              <div className="flex flex-col gap-0.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input accent-primary"
+                    checked={form.has_elevated_protection}
+                    onChange={(e) => set("has_elevated_protection", e.target.checked)}
+                  />
+                  <span className="text-sm">Förhöjt skyddsbehov (MSBFS 2020:7)</span>
+                </label>
+                <p className="text-xs text-muted-foreground ml-6">MSB:s föreskrifter om informationssäkerhet</p>
+              </div>
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -612,7 +654,7 @@ export default function SystemFormPage() {
             </div>
 
             {form.nis2_applicable && (
-              <FormField label="NIS2-klassificering">
+              <FormField label="NIS2-klassificering" helpText="EU-direktiv för cybersäkerhet — gäller samhällsviktiga verksamheter">
                 <Select
                   value={form.nis2_classification || undefined}
                   onValueChange={(val) => set("nis2_classification", (val as NIS2Classification) || "")}
@@ -645,7 +687,10 @@ export default function SystemFormPage() {
                 />
               </FormField>
 
-              <FormField label="KLASSA-referens-ID">
+              <FormField
+                label="KLASSA-referens-ID"
+                helpText="MSB:s verktyg för att klassificera information"
+              >
                 <Input
                   value={form.klassa_reference_id}
                   onChange={(e) => set("klassa_reference_id", e.target.value)}
