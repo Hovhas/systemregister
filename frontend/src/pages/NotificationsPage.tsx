@@ -49,6 +49,15 @@ const SEVERITY_CONFIG = {
   },
 } as const
 
+const typeLabels: Record<string, string> = {
+  expiring_contract: "Utgående avtal",
+  missing_classification: "Saknar klassning",
+  missing_owner: "Saknar ägare",
+  missing_gdpr_treatment: "Saknar GDPR-behandling",
+  stale_classification: "Klassning behöver uppdateras",
+  missing_risk_assessment: "Saknar riskbedömning",
+}
+
 const PAGE_SIZE = 25
 
 // --- Statistik-kort ---
@@ -94,7 +103,9 @@ function NotificationCard({ notification }: { notification: Notification }) {
               <Badge variant="outline" className={`text-xs ${cfg.badgeClass}`}>
                 {cfg.label}
               </Badge>
-              <span className="text-xs text-muted-foreground font-mono">{notification.type}</span>
+              <span className="text-xs text-muted-foreground font-mono">
+                {typeLabels[notification.type] ?? notification.type}
+              </span>
             </div>
             <p className="font-medium text-sm">{notification.title}</p>
             <p className="text-sm text-muted-foreground mt-1">{notification.description}</p>

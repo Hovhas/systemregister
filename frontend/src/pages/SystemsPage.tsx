@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, PlusIcon, ChevronUpIcon, ChevronDownIcon, XIcon } from "lucide-react"
+import { SearchIcon, PlusIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
 
 import { getSystems, getOrganizations } from "@/lib/api"
 import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
@@ -118,6 +118,7 @@ export default function SystemsPage() {
     (orgs ?? []).map((o) => [o.id, o.name])
   )
 
+  const isSearching = searchInput !== debouncedSearch
   const hasFilters = !!(organization || category || lifecycle || criticality || debouncedSearch)
 
   function clearFilters() {
@@ -204,7 +205,11 @@ export default function SystemsPage() {
       {/* Filter-rad */}
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-48 flex-1">
-          <SearchIcon className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          {isSearching ? (
+            <Loader2Icon className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground animate-spin" />
+          ) : (
+            <SearchIcon className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          )}
           <Input
             placeholder="Sök system..."
             value={searchInput}

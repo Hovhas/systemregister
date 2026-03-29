@@ -56,10 +56,14 @@ function NotificationBell() {
   const count = data?.total ?? 0
 
   return (
-    <Link to="/notifications" className="relative" aria-label="Visa notifikationer">
+    <Link
+      to="/notifications"
+      className="relative flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent transition-colors"
+      aria-label="Visa notifikationer"
+    >
       <BellIcon className="size-5 text-muted-foreground hover:text-foreground transition-colors" />
       {count > 0 && (
-        <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+        <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
           {count > 99 ? "99+" : count}
         </span>
       )}

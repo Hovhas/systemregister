@@ -1165,6 +1165,7 @@ function AvtalTab({ systemId }: { systemId: string }) {
           Inga avtal registrerade
         </p>
       ) : (
+        <div className="overflow-x-auto">
         <div className="rounded-xl ring-1 ring-foreground/10 overflow-hidden">
           <Table>
             <TableHeader>
@@ -1213,6 +1214,7 @@ function AvtalTab({ systemId }: { systemId: string }) {
               ))}
             </TableBody>
           </Table>
+        </div>
         </div>
       )}
 

@@ -144,7 +144,9 @@ function ImportTabPanel({ type }: TabPanelProps) {
                     <span className="font-medium text-foreground">Rad {err.row}:</span>{" "}
                     {typeof err.error === "string"
                       ? err.error
-                      : JSON.stringify(err.error)}
+                      : (err.error as Record<string, string>)?.field
+                        ? `${(err.error as Record<string, string>).field}: ${(err.error as Record<string, string>).msg}`
+                        : JSON.stringify(err.error)}
                   </li>
                 ))}
               </ul>
