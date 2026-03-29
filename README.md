@@ -48,7 +48,7 @@ systemregister/
 ## Tech stack
 
 - **Backend:** Python 3.12 · FastAPI · SQLAlchemy 2.0 (async) · Alembic · PostgreSQL 16
-- **Frontend:** React 18 · TypeScript · Vite · Tailwind · shadcn/ui (fas 3)
+- **Frontend:** React 19 · TypeScript · Vite 8 · Tailwind CSS 4 · shadcn/ui · TanStack Query v5 · React Router v7
 - **Deploy:** k3s · Flux CD · Kustomize · Longhorn · Traefik · SOPS/age
 
 ## Regulatoriska drivkrafter

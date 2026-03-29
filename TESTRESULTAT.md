@@ -1,7 +1,9 @@
 # Testresultat & Åtgärdslista — Systemregister
 
 **Datum:** 2026-03-28 (uppdaterad efter fixar)
-**Totalt körda:** 2592 testfall (backend + frontend)
+**Uppdatering 2026-03-29:** Siffror nedan är snapshot från 2026-03-28. Aktuellt antal tester: 2003 backend + 427 frontend = 2430 totalt. Åtgärdslistan (A-001 till A-022) gäller fortfarande för kvarvarande failures.
+
+**Totalt körda (2026-03-28):** 2592 testfall (backend + frontend)
 **Totalt passerade:** 2592 (100%) — kör per fil
 **Totalt failed:** 0
 

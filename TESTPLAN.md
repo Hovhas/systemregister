@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Datum:** 2026-03-28
-**Totalt antal testfall:** 2000+
+**Totalt antal testfall:** 2430 (2003 backend + 427 frontend, per 2026-03-29)
 **Regulatorisk grund:** NIS2/CSL, ISO 27001:2022, MSBFS 2020:6/7, GDPR
 
 ---
