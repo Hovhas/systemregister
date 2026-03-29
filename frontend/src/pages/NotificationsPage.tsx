@@ -241,7 +241,7 @@ export default function NotificationsPage() {
   const info = items.filter((n) => n.severity === "info")
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Notifikationer</h1>
         <p className="text-sm text-muted-foreground mt-1">

@@ -5,29 +5,35 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Sundsvalls kommun design system
+ * Primary: #003366 (morkbla)
+ * Accent: teal-ish for contrast
+ */
+
 @theme inline {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222.2 84% 4.9%);
+  --color-background: hsl(210 20% 99%);
+  --color-foreground: hsl(210 50% 10%);
   --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222.2 84% 4.9%);
+  --color-card-foreground: hsl(210 50% 10%);
   --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222.2 84% 4.9%);
-  --color-primary: hsl(222.2 47.4% 11.2%);
+  --color-popover-foreground: hsl(210 50% 10%);
+  --color-primary: hsl(210 100% 20%);
   --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(210 40% 96.1%);
-  --color-secondary-foreground: hsl(222.2 47.4% 11.2%);
-  --color-muted: hsl(210 40% 96.1%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-  --color-accent: hsl(210 40% 96.1%);
-  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(222.2 84% 4.9%);
-  --radius: 0.5rem;
+  --color-secondary: hsl(210 25% 95%);
+  --color-secondary-foreground: hsl(210 50% 15%);
+  --color-muted: hsl(210 20% 96%);
+  --color-muted-foreground: hsl(210 12% 45%);
+  --color-accent: hsl(210 25% 93%);
+  --color-accent-foreground: hsl(210 50% 15%);
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-border: hsl(210 20% 90%);
+  --color-input: hsl(210 20% 90%);
+  --color-ring: hsl(210 100% 20%);
+  --radius: 0.625rem;
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -51,83 +57,111 @@
 }
 
 @layer base {
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-background text-foreground;
-    font-family: system-ui, -apple-system, sans-serif;
+    @apply bg-background text-foreground antialiased;
   }
   * {
     @apply border-border outline-ring/50;
   }
-  html {
-    @apply font-sans;
-  }
 }
 
+/* ---- Light mode (Sundsvall kommun palette) ---- */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.985 0.002 240);
+  --foreground: oklch(0.17 0.03 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.17 0.03 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.17 0.03 240);
+  /* Primary: #003366 */
+  --primary: oklch(0.30 0.08 250);
+  --primary-foreground: oklch(0.97 0.002 240);
+  --secondary: oklch(0.96 0.006 240);
+  --secondary-foreground: oklch(0.22 0.04 240);
+  --muted: oklch(0.96 0.004 240);
+  --muted-foreground: oklch(0.50 0.015 240);
+  --accent: oklch(0.94 0.008 240);
+  --accent-foreground: oklch(0.22 0.04 240);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --border: oklch(0.91 0.006 240);
+  --input: oklch(0.91 0.006 240);
+  --ring: oklch(0.30 0.08 250);
+  /* Charts: blue-based */
+  --chart-1: oklch(0.30 0.08 250);
+  --chart-2: oklch(0.55 0.12 200);
+  --chart-3: oklch(0.65 0.10 180);
+  --chart-4: oklch(0.75 0.08 160);
+  --chart-5: oklch(0.85 0.04 240);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Sidebar */
+  --sidebar: oklch(0.97 0.005 240);
+  --sidebar-foreground: oklch(0.22 0.04 240);
+  --sidebar-primary: oklch(0.30 0.08 250);
+  --sidebar-primary-foreground: oklch(0.97 0.002 240);
+  --sidebar-accent: oklch(0.93 0.01 240);
+  --sidebar-accent-foreground: oklch(0.20 0.05 250);
+  --sidebar-border: oklch(0.90 0.008 240);
+  --sidebar-ring: oklch(0.30 0.08 250);
 }
 
+/* ---- Dark mode ---- */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.14 0.015 250);
+  --foreground: oklch(0.96 0.004 240);
+  --card: oklch(0.19 0.02 250);
+  --card-foreground: oklch(0.96 0.004 240);
+  --popover: oklch(0.19 0.02 250);
+  --popover-foreground: oklch(0.96 0.004 240);
+  --primary: oklch(0.65 0.12 240);
+  --primary-foreground: oklch(0.14 0.015 250);
+  --secondary: oklch(0.24 0.025 250);
+  --secondary-foreground: oklch(0.96 0.004 240);
+  --muted: oklch(0.24 0.025 250);
+  --muted-foreground: oklch(0.65 0.015 240);
+  --accent: oklch(0.24 0.025 250);
+  --accent-foreground: oklch(0.96 0.004 240);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.65 0.12 240);
+  --chart-1: oklch(0.65 0.12 240);
+  --chart-2: oklch(0.55 0.10 200);
+  --chart-3: oklch(0.50 0.08 180);
+  --chart-4: oklch(0.40 0.06 160);
+  --chart-5: oklch(0.30 0.04 240);
+  --sidebar: oklch(0.17 0.02 250);
+  --sidebar-foreground: oklch(0.96 0.004 240);
+  --sidebar-primary: oklch(0.65 0.12 240);
+  --sidebar-primary-foreground: oklch(0.96 0.004 240);
+  --sidebar-accent: oklch(0.22 0.025 250);
+  --sidebar-accent-foreground: oklch(0.96 0.004 240);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.65 0.12 240);
+}
+
+/* ---- Utility classes ---- */
+
+/* Zebra-striped tables */
+.table-zebra tbody tr:nth-child(even) {
+  @apply bg-muted/40;
+}
+
+/* Skeleton loader animation */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+.skeleton {
+  @apply rounded-md bg-muted;
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+/* Smooth transitions */
+.transition-theme {
+  transition: background-color 200ms ease-out, color 200ms ease-out, border-color 200ms ease-out;
 }

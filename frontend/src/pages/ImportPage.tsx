@@ -91,7 +91,7 @@ function ImportTabPanel({ type }: TabPanelProps) {
       )}
 
       <div
-        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
+        className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200"
         role="button"
         tabIndex={0}
         aria-label="Välj fil att importera"
@@ -187,8 +187,11 @@ function ImportTabPanel({ type }: TabPanelProps) {
 
 export default function ImportPage() {
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-xl font-semibold">Import</h1>
+    <div className="max-w-2xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Import</h1>
+        <p className="text-sm text-muted-foreground mt-1">Importera system, klassningar och ägare från fil</p>
+      </div>
 
       <Tabs defaultValue="systems">
         <TabsList>

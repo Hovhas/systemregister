@@ -383,14 +383,19 @@ export default function OrganizationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Rubrik + knapp */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <BuildingIcon className="size-6 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Organisationer
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Organisationer
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Hantera kommuner, bolag och samverkansorgan
+            </p>
+          </div>
         </div>
         <Button onClick={handleNewClick}>
           <PlusIcon className="size-4 mr-1.5" />
@@ -410,7 +415,7 @@ export default function OrganizationsPage() {
 
       {/* Tabell */}
       {!isLoading && !isError && (
-        <div className="rounded-md border">
+        <div className="rounded-xl border bg-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

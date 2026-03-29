@@ -335,7 +335,7 @@ export default function SystemFormPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div className="flex flex-col gap-8 max-w-3xl">
       <Breadcrumb
         items={[
           { label: "System", href: "/systems" },
@@ -346,7 +346,7 @@ export default function SystemFormPage() {
 
 
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-2xl font-bold tracking-tight">
           {isEdit ? "Redigera system" : "Nytt system"}
         </h1>
         <Button
@@ -358,7 +358,7 @@ export default function SystemFormPage() {
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-8">
         {/* Grundinformation */}
         <Card>
           <CardHeader>

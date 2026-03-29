@@ -1471,8 +1471,22 @@ export default function SystemDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-        Laddar system...
+      <div className="flex flex-col gap-6">
+        <div className="skeleton h-6 w-48" />
+        <div className="flex gap-4">
+          <div className="skeleton h-10 w-32" />
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="skeleton h-8 w-64" />
+            <div className="flex gap-2">
+              <div className="skeleton h-6 w-24" />
+              <div className="skeleton h-6 w-20" />
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="skeleton h-48 rounded-xl" />
+          <div className="skeleton h-48 rounded-xl" />
+        </div>
       </div>
     )
   }
@@ -1500,7 +1514,7 @@ export default function SystemDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <Breadcrumb
         items={[
           { label: "System", href: "/systems" },
@@ -1509,18 +1523,18 @@ export default function SystemDetailPage() {
       />
 
       {/* Sidhuvud */}
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <Button
           variant="ghost"
           size="sm"
-          className="mt-0.5 shrink-0"
+          className="mt-0.5 shrink-0 w-fit"
           onClick={() => navigate("/systems")}
         >
           <ArrowLeftIcon className="mr-1 size-4" />
           Tillbaka
         </Button>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold">{system.name}</h1>
+        <div className="flex flex-col gap-2 flex-1">
+          <h1 className="text-2xl font-bold tracking-tight">{system.name}</h1>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{categoryLabels[system.system_category]}</Badge>
             <Badge variant="outline">{lifecycleLabels[system.lifecycle_status]}</Badge>
@@ -1528,8 +1542,11 @@ export default function SystemDetailPage() {
               <Badge variant="default">NIS2</Badge>
             )}
           </div>
+          {system.description && (
+            <p className="text-sm text-muted-foreground max-w-xl mt-1">{system.description}</p>
+          )}
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -1557,8 +1574,8 @@ export default function SystemDetailPage() {
       />
 
       {/* Flikar */}
-      <Tabs defaultValue="oversikt">
-        <TabsList>
+      <Tabs defaultValue="oversikt" className="mt-2">
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="oversikt">Översikt</TabsTrigger>
           <TabsTrigger value="klassning">
             Klassning
@@ -1583,35 +1600,35 @@ export default function SystemDetailPage() {
           <TabsTrigger value="andringslogg">Ändringslogg</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="oversikt" className="mt-4">
+        <TabsContent value="oversikt" className="mt-6">
           <OversiktTab system={system} />
         </TabsContent>
 
-        <TabsContent value="klassning" className="mt-4">
+        <TabsContent value="klassning" className="mt-6">
           <KlassningTab classifications={system.classifications} systemId={system.id} />
         </TabsContent>
 
-        <TabsContent value="agare" className="mt-4">
+        <TabsContent value="agare" className="mt-6">
           <AgareTab owners={system.owners} orgNameMap={orgNameMap} systemId={system.id} />
         </TabsContent>
 
-        <TabsContent value="integrationer" className="mt-4">
+        <TabsContent value="integrationer" className="mt-6">
           <IntegrationerTab integrations={system.integrations ?? []} systemId={system.id} />
         </TabsContent>
 
-        <TabsContent value="gdpr" className="mt-4">
+        <TabsContent value="gdpr" className="mt-6">
           <GdprTab systemId={system.id} />
         </TabsContent>
 
-        <TabsContent value="avtal" className="mt-4">
+        <TabsContent value="avtal" className="mt-6">
           <AvtalTab systemId={system.id} />
         </TabsContent>
 
-        <TabsContent value="ovrigt" className="mt-4">
+        <TabsContent value="ovrigt" className="mt-6">
           <ExtendedAttributesTab attributes={system.extended_attributes} />
         </TabsContent>
 
-        <TabsContent value="andringslogg" className="mt-4">
+        <TabsContent value="andringslogg" className="mt-6">
           <AuditTimeline systemId={system.id} />
         </TabsContent>
       </Tabs>

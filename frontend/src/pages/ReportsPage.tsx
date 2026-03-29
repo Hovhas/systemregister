@@ -89,8 +89,11 @@ export default function ReportsPage() {
   const orgId = selectedOrg || undefined
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-xl font-semibold">Rapporter</h1>
+    <div className="max-w-2xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Rapporter</h1>
+        <p className="text-sm text-muted-foreground mt-1">Ladda ner rapporter och exportera data</p>
+      </div>
 
       {/* Organisations-filter */}
       {orgs && orgs.length > 0 && (

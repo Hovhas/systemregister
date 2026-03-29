@@ -25,6 +25,20 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+// --- Skeleton ---
+
+function TableRowSkeleton() {
+  return (
+    <TableRow>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <TableCell key={i}>
+          <div className="skeleton h-4 w-full max-w-[120px]" />
+        </TableCell>
+      ))}
+    </TableRow>
+  )
+}
+
 // --- Hjälpkomponenter ---
 
 function CriticalityBadge({ value }: { value: Criticality }) {
@@ -32,7 +46,7 @@ function CriticalityBadge({ value }: { value: Criticality }) {
 
   return (
     <span
-      className={`inline-flex h-5 items-center rounded-full border px-2 py-0.5 text-xs font-medium ${colorClass}`}
+      className={`inline-flex h-6 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${colorClass}`}
     >
       {criticalityLabels[value]}
     </span>
@@ -160,16 +174,17 @@ export default function SystemsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">System</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">System</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {total > 0 ? `${total} system totalt` : "Inga system hittade"}
           </p>
         </div>
-        <Button onClick={() => navigate("/systems/new")} size="sm">
-          <PlusIcon className="mr-1 size-4" /> Nytt system
+        <Button onClick={() => navigate("/systems/new")}>
+          <PlusIcon className="mr-1.5 size-4" /> Nytt system
         </Button>
       </div>
 
@@ -177,15 +192,15 @@ export default function SystemsPage() {
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-48 flex-1">
           {isSearching ? (
-            <Loader2Icon className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground animate-spin" />
+            <Loader2Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground animate-spin" />
           ) : (
-            <SearchIcon className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           )}
           <Input
             placeholder="Sök system..."
             value={searchInput}
             onChange={handleSearchChange}
-            className="pl-8"
+            className="pl-9"
           />
         </div>
 
@@ -292,17 +307,17 @@ export default function SystemsPage() {
 
       {/* Tabell */}
       {isError ? (
-        <div className="flex items-center gap-3 text-sm text-destructive">
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           <p>Kunde inte hämta system. Kontrollera att backend körs.</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             Försök igen
           </Button>
         </div>
       ) : (
-        <div className="rounded-xl ring-1 ring-foreground/10">
+        <div className="rounded-xl border bg-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <SortHeader field="name" label="Namn" />
                 <SortHeader field="organization_id" label="Organisation" />
                 <SortHeader field="system_category" label="Kategori" />
@@ -313,22 +328,20 @@ export default function SystemsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Laddar...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRowSkeleton key={i} />
+                ))
               ) : data?.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     Inga system matchar sökningen
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.items.map((system) => (
+                data?.items.map((system, idx) => (
                   <TableRow
                     key={system.id}
-                    className="cursor-pointer"
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
                     tabIndex={0}
                     onClick={() => navigate(`/systems/${system.id}`)}
                     onKeyDown={(e) => { if (e.key === "Enter") navigate(`/systems/${system.id}`) }}
@@ -359,7 +372,7 @@ export default function SystemsPage() {
 
       {/* Paginering */}
       {total > PAGE_SIZE && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-muted-foreground">
             Sida {currentPage} av {totalPages}
           </p>

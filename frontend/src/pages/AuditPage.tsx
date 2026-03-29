@@ -243,15 +243,17 @@ export default function AuditPage() {
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-6">
       {/* Rubrik */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <ClipboardListIcon className="size-5 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">Ändringslogg</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Ändringslogg</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Alla skapade, ändrade och borttagna poster i systemregistret
+          </p>
+        </div>
       </div>
-      <p className="text-muted-foreground text-sm">
-        Alla skapade, ändrade och borttagna poster i systemregistret
-      </p>
 
       {/* Filter */}
       <div className="flex flex-wrap gap-3">

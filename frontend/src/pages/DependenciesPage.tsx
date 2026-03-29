@@ -454,10 +454,10 @@ export default function DependenciesPage() {
   const externalCount = integrationsData.filter((i) => i.is_external).length
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-start justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Beroendekarta</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Beroendekarta</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Visualisering av systemintegrationer och beroenden
           </p>
@@ -470,37 +470,39 @@ export default function DependenciesPage() {
 
       {/* KPI-kort */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow duration-200">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Integrationer
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">
-              {loading ? "—" : integrationsData.length}
+            <p className="text-3xl font-bold tracking-tight">
+              {loading ? <span className="skeleton inline-block h-8 w-12" /> : integrationsData.length}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-shadow duration-200">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Berörda system
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{loading ? "—" : totalSystems}</p>
+            <p className="text-3xl font-bold tracking-tight">
+              {loading ? <span className="skeleton inline-block h-8 w-12" /> : totalSystems}
+            </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="hover:shadow-md transition-shadow duration-200">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Kritiska / Externa
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">
-              {loading ? "—" : (
+            <p className="text-3xl font-bold tracking-tight">
+              {loading ? <span className="skeleton inline-block h-8 w-12" /> : (
                 <span>
                   <span className="text-destructive">{criticalCount}</span>
                   <span className="mx-1 text-muted-foreground">/</span>

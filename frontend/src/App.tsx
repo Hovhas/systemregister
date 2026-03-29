@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   createBrowserRouter,
   RouterProvider,
@@ -6,6 +6,7 @@ import {
   NavLink,
   Navigate,
   Link,
+  useLocation,
 } from "react-router-dom"
 import {
   LayoutDashboardIcon,
@@ -17,6 +18,8 @@ import {
   BellIcon,
   BuildingIcon,
   ClipboardListIcon,
+  SunIcon,
+  MoonIcon,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { getNotifications } from "@/lib/api"
@@ -41,13 +44,68 @@ import NotificationsPage from "@/pages/NotificationsPage"
 import OrganizationsPage from "@/pages/OrganizationsPage"
 import AuditPage from "@/pages/AuditPage"
 
+// --- Dark mode ---
+
+function useDarkMode() {
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false
+    const stored = localStorage.getItem("theme")
+    if (stored === "dark") return true
+    if (stored === "light") return false
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+  })
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (dark) {
+      root.classList.add("dark")
+      localStorage.setItem("theme", "dark")
+    } else {
+      root.classList.remove("dark")
+      localStorage.setItem("theme", "light")
+    }
+  }, [dark])
+
+  return [dark, setDark] as const
+}
+
+// --- Dynamic page title ---
+
+const ROUTE_TITLES: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/systems": "System",
+  "/systems/new": "Nytt system",
+  "/organizations": "Organisationer",
+  "/dependencies": "Beroendekarta",
+  "/notifications": "Notifikationer",
+  "/import": "Import",
+  "/reports": "Rapporter",
+  "/audit": "Ändringslogg",
+}
+
+function usePageTitle() {
+  const location = useLocation()
+  useEffect(() => {
+    const path = location.pathname
+    // Check exact match first, then prefix
+    const title =
+      ROUTE_TITLES[path] ??
+      (path.startsWith("/systems/") && path.endsWith("/edit")
+        ? "Redigera system"
+        : path.startsWith("/systems/")
+          ? "Systemdetalj"
+          : "Systemregister")
+    document.title = `${title} | Systemregister`
+  }, [location.pathname])
+}
+
 // --- Notifikationsklocka ---
 
 function NotificationBell() {
   const { data } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => getNotifications(),
-    refetchInterval: 60000, // Uppdatera varje minut
+    refetchInterval: 60000,
   })
 
   const count = data?.total ?? 0
@@ -55,12 +113,12 @@ function NotificationBell() {
   return (
     <Link
       to="/notifications"
-      className="relative flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent transition-colors"
+      className="relative flex h-9 w-9 items-center justify-center rounded-lg hover:bg-accent transition-colors duration-150"
       aria-label="Visa notifikationer"
     >
-      <BellIcon className="size-5 text-muted-foreground hover:text-foreground transition-colors" />
+      <BellIcon className="size-[18px] text-muted-foreground" />
       {count > 0 && (
-        <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+        <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
           {count > 99 ? "99+" : count}
         </span>
       )}
@@ -83,50 +141,85 @@ const navItems = [
 
 // --- Sidofält (desktop) ---
 
-function Sidebar() {
+function Sidebar({ dark, onToggleDark }: { dark: boolean; onToggleDark: () => void }) {
   return (
-    <aside className="hidden md:flex flex-col w-56 shrink-0 border-r bg-sidebar min-h-screen">
-      <div className="px-4 py-4 border-b flex items-center justify-between">
-        <span className="font-semibold text-sm tracking-tight">
-          Systemregister
-        </span>
+    <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-sidebar-border bg-sidebar min-h-screen">
+      {/* Header */}
+      <div className="px-5 py-5 border-b border-sidebar-border flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
+            S
+          </div>
+          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">
+            Systemregister
+          </span>
+        </div>
         <NotificationBell />
       </div>
-      <nav className="flex flex-col gap-1 p-2 flex-1">
+
+      {/* Navigation */}
+      <nav className="flex flex-col gap-0.5 px-3 py-3 flex-1">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
               [
-                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150",
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
               ].join(" ")
             }
           >
-            <Icon className="size-4 shrink-0" />
+            <Icon className="size-[18px] shrink-0" />
             {label}
           </NavLink>
         ))}
       </nav>
+
+      {/* Footer with dark mode toggle */}
+      <div className="px-3 py-3 border-t border-sidebar-border">
+        <button
+          onClick={onToggleDark}
+          className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-all duration-150"
+          aria-label={dark ? "Byt till ljust tema" : "Byt till morkt tema"}
+        >
+          {dark ? <SunIcon className="size-[18px]" /> : <MoonIcon className="size-[18px]" />}
+          {dark ? "Ljust tema" : "Morkt tema"}
+        </button>
+      </div>
     </aside>
   )
 }
 
 // --- Mobil-meny ---
 
-function MobileNav({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+function MobileNav({
+  open,
+  onOpenChange,
+  dark,
+  onToggleDark,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  dark: boolean
+  onToggleDark: () => void
+}) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-56 p-0">
-        <SheetHeader className="px-4 py-4 border-b">
-          <SheetTitle className="text-sm font-semibold tracking-tight">
-            Systemregister
+      <SheetContent side="left" className="w-60 p-0">
+        <SheetHeader className="px-5 py-5 border-b">
+          <SheetTitle className="flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
+              S
+            </div>
+            <span className="text-sm font-semibold tracking-tight">
+              Systemregister
+            </span>
           </SheetTitle>
         </SheetHeader>
-        <nav className="flex flex-col gap-1 p-2">
+        <nav className="flex flex-col gap-0.5 px-3 py-3 flex-1">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -134,18 +227,27 @@ function MobileNav({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
               onClick={() => onOpenChange(false)}
               className={({ isActive }) =>
                 [
-                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150",
                   isActive
                     ? "bg-accent text-accent-foreground font-medium"
-                    : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                    : "text-foreground/70 hover:bg-accent hover:text-accent-foreground",
                 ].join(" ")
               }
             >
-              <Icon className="size-4 shrink-0" />
+              <Icon className="size-[18px] shrink-0" />
               {label}
             </NavLink>
           ))}
         </nav>
+        <div className="px-3 py-3 border-t mt-auto">
+          <button
+            onClick={onToggleDark}
+            className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm text-foreground/70 hover:bg-accent hover:text-accent-foreground transition-all duration-150"
+          >
+            {dark ? <SunIcon className="size-[18px]" /> : <MoonIcon className="size-[18px]" />}
+            {dark ? "Ljust tema" : "Morkt tema"}
+          </button>
+        </div>
       </SheetContent>
     </Sheet>
   )
@@ -155,24 +257,37 @@ function MobileNav({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
 
 function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [dark, setDark] = useDarkMode()
+
+  usePageTitle()
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen} />
+    <div className="flex min-h-screen bg-background transition-theme">
+      <Sidebar dark={dark} onToggleDark={() => setDark((d) => !d)} />
+      <MobileNav
+        open={mobileOpen}
+        onOpenChange={setMobileOpen}
+        dark={dark}
+        onToggleDark={() => setDark((d) => !d)}
+      />
 
       <div className="flex flex-col flex-1 min-w-0">
         {/* Mobil-header */}
-        <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b">
+        <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-40">
           <Button variant="ghost" size="icon-sm" onClick={() => setMobileOpen(true)}>
             <MenuIcon className="size-5" />
             <span className="sr-only">Öppna meny</span>
           </Button>
-          <span className="font-semibold text-sm">Systemregister</span>
+          <div className="flex items-center gap-2 flex-1">
+            <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-xs">
+              S
+            </div>
+            <span className="font-semibold text-sm">Systemregister</span>
+          </div>
           <NotificationBell />
         </header>
 
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-8 overflow-auto">
           <Outlet />
         </main>
       </div>
@@ -181,7 +296,7 @@ function Layout() {
   )
 }
 
-// --- Router (data router krävs för useBlocker) ---
+// --- Router ---
 
 const router = createBrowserRouter([
   {
