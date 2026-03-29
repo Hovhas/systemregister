@@ -1,10 +1,11 @@
 import { useState } from "react"
 import {
-  BrowserRouter,
-  Routes,
-  Route,
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
   NavLink,
   Navigate,
+  Link,
 } from "react-router-dom"
 import {
   LayoutDashboardIcon,
@@ -27,7 +28,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Toaster } from "@/components/ui/sonner"
-import { Link } from "react-router-dom"
 
 import DashboardPage from "@/pages/DashboardPage"
 import SystemsPage from "@/pages/SystemsPage"
@@ -40,7 +40,7 @@ import NotificationsPage from "@/pages/NotificationsPage"
 import OrganizationsPage from "@/pages/OrganizationsPage"
 import AuditPage from "@/pages/AuditPage"
 
-// --- Notifikationsklockla ---
+// --- Notifikationsklocka ---
 
 function NotificationBell() {
   const { data } = useQuery({
@@ -156,7 +156,7 @@ function MobileNav({ open, onOpenChange }: { open: boolean; onOpenChange: (v: bo
 
 // --- Layout ---
 
-function Layout({ children }: { children: React.ReactNode }) {
+function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -176,7 +176,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 p-4 md:p-6 overflow-auto">
-          {children}
+          <Outlet />
         </main>
       </div>
       <Toaster />
@@ -184,27 +184,30 @@ function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
+// --- Router (data router krävs för useBlocker) ---
+
+const router = createBrowserRouter([
+  {
+    element: <Layout />,
+    children: [
+      { path: "/", element: <Navigate to="/dashboard" replace /> },
+      { path: "/dashboard", element: <DashboardPage /> },
+      { path: "/systems", element: <SystemsPage /> },
+      { path: "/systems/new", element: <SystemFormPage /> },
+      { path: "/systems/:id", element: <SystemDetailPage /> },
+      { path: "/systems/:id/edit", element: <SystemFormPage /> },
+      { path: "/organizations", element: <OrganizationsPage /> },
+      { path: "/dependencies", element: <DependenciesPage /> },
+      { path: "/notifications", element: <NotificationsPage /> },
+      { path: "/import", element: <ImportPage /> },
+      { path: "/reports", element: <ReportsPage /> },
+      { path: "/audit", element: <AuditPage /> },
+    ],
+  },
+])
+
 // --- App ---
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/systems" element={<SystemsPage />} />
-          <Route path="/systems/new" element={<SystemFormPage />} />
-          <Route path="/systems/:id" element={<SystemDetailPage />} />
-          <Route path="/systems/:id/edit" element={<SystemFormPage />} />
-          <Route path="/organizations" element={<OrganizationsPage />} />
-          <Route path="/dependencies" element={<DependenciesPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/import" element={<ImportPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/audit" element={<AuditPage />} />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
-  )
+  return <RouterProvider router={router} />
 }
