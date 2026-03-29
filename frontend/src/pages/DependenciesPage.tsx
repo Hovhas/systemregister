@@ -422,11 +422,11 @@ export default function DependenciesPage() {
     queryFn: () => getIntegrations(),
   })
 
-  // TODO: limit: 500 är en hårdkodad gräns — behöver backend-stöd för paginering
+  // TODO: limit: 200 är en hårdkodad gräns — behöver backend-stöd för paginering
   // eller ett dedikerat endpoint för att hämta alla system-namn/id.
   const { data: systemsData, isLoading: isLoadingSystems } = useQuery({
-    queryKey: ["systems", { limit: 500 }],
-    queryFn: () => getSystems({ limit: 500 }),
+    queryKey: ["systems", { limit: 200 }],
+    queryFn: () => getSystems({ limit: 200 }),
   })
 
   const deleteMutation = useMutation({

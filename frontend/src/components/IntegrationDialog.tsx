@@ -58,8 +58,8 @@ export default function IntegrationDialog({
   const [error, setError] = useState("")
 
   const { data: allSystemsData } = useQuery({
-    queryKey: ["systems", { limit: 500 }],
-    queryFn: () => getSystems({ limit: 500 }),
+    queryKey: ["systems", { limit: 200 }],
+    queryFn: () => getSystems({ limit: 200 }),
     enabled: open,
   })
   const allSystems = allSystemsData?.items ?? []

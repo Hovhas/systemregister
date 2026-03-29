@@ -690,8 +690,8 @@ function IntegrationerTab({
   const [deleteTarget, setDeleteTarget] = useState<Integration | null>(null)
 
   const { data: allSystemsData } = useQuery({
-    queryKey: ["systems", { limit: 500 }],
-    queryFn: () => getSystems({ limit: 500 }),
+    queryKey: ["systems", { limit: 200 }],
+    queryFn: () => getSystems({ limit: 200 }),
   })
   const allSystems = allSystemsData?.items ?? []
 

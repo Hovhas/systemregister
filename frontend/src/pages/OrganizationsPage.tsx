@@ -336,8 +336,8 @@ export default function OrganizationsPage() {
 
   // Hämta alla system för att beräkna antal per organisation
   const { data: allSystems } = useQuery({
-    queryKey: ["systems", { limit: 1000 }],
-    queryFn: () => getSystems({ limit: 1000 }),
+    queryKey: ["systems", { limit: 200 }],
+    queryFn: () => getSystems({ limit: 200 }),
   })
 
   const [formOpen, setFormOpen] = useState(false)
