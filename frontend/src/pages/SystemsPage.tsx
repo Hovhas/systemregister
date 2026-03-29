@@ -82,6 +82,7 @@ export default function SystemsPage() {
   const navigate = useNavigate()
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [organization, setOrganization] = useState("")
   const [category, setCategory] = useState<SystemCategory | "">("")
   const [lifecycle, setLifecycle] = useState<LifecycleStatus | "">("")
   const [criticality, setCriticality] = useState<Criticality | "">("")
@@ -119,6 +120,7 @@ export default function SystemsPage() {
     queryKey: [
       "systems",
       debouncedSearch,
+      organization,
       category,
       lifecycle,
       criticality,
@@ -127,6 +129,7 @@ export default function SystemsPage() {
     queryFn: () =>
       getSystems({
         q: debouncedSearch || undefined,
+        organization_id: organization || undefined,
         system_category: category || undefined,
         lifecycle_status: lifecycle || undefined,
         criticality: criticality || undefined,
@@ -164,6 +167,28 @@ export default function SystemsPage() {
             className="pl-8"
           />
         </div>
+
+        <Select
+          value={organization || undefined}
+          onValueChange={(val) => {
+            setOrganization(val ?? "")
+            setOffset(0)
+          }}
+        >
+          <SelectTrigger className="w-52">
+            <SelectValue placeholder="Organisation">
+              {organization ? orgNameMap[organization] : undefined}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Alla organisationer</SelectItem>
+            {(orgs ?? []).map((org) => (
+              <SelectItem key={org.id} value={org.id}>
+                {org.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <Select
           value={category as string}
