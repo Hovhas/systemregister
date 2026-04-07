@@ -1,4 +1,5 @@
 import { Criticality } from "@/types"
+import type { SystemDetail } from "@/types"
 import { categoryLabels, lifecycleLabels, criticalityLabels } from "@/lib/labels"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/card"
 import { InfoRow } from "./helpers"
 
-export function OversiktTab({ system }: { system: NonNullable<any> }) {
+export function OversiktTab({ system }: { system: SystemDetail }) {
   if (!system) return null
   return (
     <div className="grid gap-4 md:grid-cols-2">
