@@ -159,19 +159,35 @@ async def create_contract(client: AsyncClient, system_id: str, **overrides) -> d
 
 async def create_full_system(client: AsyncClient, org_id: str, **overrides) -> dict:
     """Create a system with classification, owner, GDPR treatment and contract."""
+    _SYSTEM_FIELDS = {
+        "name", "description", "system_category", "criticality",
+        "lifecycle_status", "nis2_applicable", "nis2_classification",
+        "treats_personal_data", "treats_sensitive_data",
+        "hosting_model", "cloud_provider", "data_location_country",
+        "backup_frequency", "rpo", "rto", "dr_plan_exists",
+        "extended_attributes", "third_country_transfer",
+        "product_name", "product_version", "deployment_date",
+        "planned_decommission_date", "end_of_support_date",
+        "last_risk_assessment_date", "klassa_reference_id",
+        "has_elevated_protection", "security_protection",
+        "business_area", "aliases",
+        # Kategori 1–12 utökat
+        "business_processes", "encryption_at_rest", "encryption_in_transit",
+        "access_control_model", "retention_rules", "architecture_type",
+        "environments", "last_major_upgrade", "next_planned_review",
+        "backup_storage_location", "last_restore_test",
+        "cost_center", "total_cost_of_ownership", "documentation_links",
+        "linked_risks", "incident_history",
+        # Kategori 13: AI-förordningen
+        "uses_ai", "ai_risk_class", "ai_usage_description",
+        "fria_status", "fria_date", "fria_link",
+        "ai_human_oversight", "ai_supplier", "ai_transparency_fulfilled",
+        "ai_model_version", "ai_last_review_date",
+        # Entitetshierarki
+        "objekt_id",
+    }
     sys = await create_system(client, org_id, **{
-        k: v for k, v in overrides.items()
-        if k in ("name", "description", "system_category", "criticality",
-                 "lifecycle_status", "nis2_applicable", "nis2_classification",
-                 "treats_personal_data", "treats_sensitive_data",
-                 "hosting_model", "cloud_provider", "data_location_country",
-                 "backup_frequency", "rpo", "rto", "dr_plan_exists",
-                 "extended_attributes", "third_country_transfer",
-                 "product_name", "product_version", "deployment_date",
-                 "planned_decommission_date", "end_of_support_date",
-                 "last_risk_assessment_date", "klassa_reference_id",
-                 "has_elevated_protection", "security_protection",
-                 "business_area", "aliases")
+        k: v for k, v in overrides.items() if k in _SYSTEM_FIELDS
     })
     sid = sys["id"]
     await create_classification(client, sid)
@@ -180,6 +196,93 @@ async def create_full_system(client: AsyncClient, org_id: str, **overrides) -> d
         await create_gdpr_treatment(client, sid)
     await create_contract(client, sid)
     return sys
+
+
+async def create_objekt(client: AsyncClient, org_id: str, **overrides) -> dict:
+    """Create an objekt (förvaltningsobjekt) and return the response dict."""
+    data = {
+        "organization_id": str(org_id),
+        "name": overrides.pop("name", "Testobjekt"),
+        "description": overrides.pop("description", "Ett testobjekt"),
+        "object_owner": overrides.pop("object_owner", None),
+        "object_leader": overrides.pop("object_leader", None),
+    }
+    data = {k: v for k, v in data.items() if v is not None}
+    resp = await client.post("/api/v1/objekt/", json=data)
+    assert resp.status_code == 201, f"create_objekt failed: {resp.status_code} {resp.text}"
+    return resp.json()
+
+
+async def create_component(client: AsyncClient, system_id: str, org_id: str, **overrides) -> dict:
+    """Create a component and return the response dict."""
+    data = {
+        "system_id": str(system_id),
+        "organization_id": str(org_id),
+        "name": overrides.pop("name", "Testkomponent"),
+        "description": overrides.pop("description", None),
+        "component_type": overrides.pop("component_type", None),
+        "url": overrides.pop("url", None),
+        "business_area": overrides.pop("business_area", None),
+    }
+    data = {k: v for k, v in data.items() if v is not None}
+    resp = await client.post("/api/v1/components/", json=data)
+    assert resp.status_code == 201, f"create_component failed: {resp.status_code} {resp.text}"
+    return resp.json()
+
+
+async def create_module(client: AsyncClient, org_id: str, **overrides) -> dict:
+    """Create a module and return the response dict."""
+    data = {
+        "organization_id": str(org_id),
+        "name": overrides.pop("name", "Testmodul"),
+        "description": overrides.pop("description", None),
+        "lifecycle_status": overrides.pop("lifecycle_status", None),
+        "uses_ai": overrides.pop("uses_ai", False),
+        "ai_risk_class": overrides.pop("ai_risk_class", None),
+    }
+    data = {k: v for k, v in data.items() if v is not None}
+    resp = await client.post("/api/v1/modules/", json=data)
+    assert resp.status_code == 201, f"create_module failed: {resp.status_code} {resp.text}"
+    return resp.json()
+
+
+async def create_information_asset(client: AsyncClient, org_id: str, **overrides) -> dict:
+    """Create an information asset and return the response dict."""
+    data = {
+        "organization_id": str(org_id),
+        "name": overrides.pop("name", "Testinformationsmängd"),
+        "description": overrides.pop("description", None),
+        "information_owner": overrides.pop("information_owner", None),
+        "confidentiality": overrides.pop("confidentiality", None),
+        "integrity": overrides.pop("integrity", None),
+        "availability": overrides.pop("availability", None),
+        "contains_personal_data": overrides.pop("contains_personal_data", False),
+        "contains_public_records": overrides.pop("contains_public_records", False),
+    }
+    data = {k: v for k, v in data.items() if v is not None}
+    resp = await client.post("/api/v1/information-assets/", json=data)
+    assert resp.status_code == 201, f"create_information_asset failed: {resp.status_code} {resp.text}"
+    return resp.json()
+
+
+async def create_approval(client: AsyncClient, org_id: str, **overrides) -> dict:
+    """Create an approval request and return the response dict."""
+    data = {
+        "organization_id": str(org_id),
+        "approval_type": overrides.pop("approval_type", "systemregistrering"),
+        "title": overrides.pop("title", "Testärende"),
+        "description": overrides.pop("description", None),
+        "target_table": overrides.pop("target_table", None),
+        "target_record_id": overrides.pop("target_record_id", None),
+        "proposed_changes": overrides.pop("proposed_changes", None),
+        "requested_by": overrides.pop("requested_by", None),
+    }
+    if data.get("target_record_id"):
+        data["target_record_id"] = str(data["target_record_id"])
+    data = {k: v for k, v in data.items() if v is not None}
+    resp = await client.post("/api/v1/approvals/", json=data)
+    assert resp.status_code == 201, f"create_approval failed: {resp.status_code} {resp.text}"
+    return resp.json()
 
 
 async def create_two_orgs_with_systems(client: AsyncClient) -> dict:

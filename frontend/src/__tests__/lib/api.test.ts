@@ -29,6 +29,18 @@ import {
   createContract,
   deleteContract,
   importFile,
+  getObjekt,
+  createObjekt,
+  getComponents,
+  createComponent,
+  getModules,
+  createModule,
+  getInformationAssets,
+  createInformationAsset,
+  getApprovals,
+  createApproval,
+  reviewApproval,
+  getPendingApprovalCount,
 } from "@/lib/api"
 import {
   Criticality,
@@ -36,6 +48,8 @@ import {
   LifecycleStatus,
   OwnerRole,
   IntegrationType,
+  ApprovalStatus,
+  ApprovalType,
 } from "@/types"
 
 // --- Testdata ---
@@ -83,6 +97,36 @@ const mockSystem = {
   last_risk_assessment_date: null,
   klassa_reference_id: null,
   extended_attributes: null,
+  // Kategori 1-12 utökat
+  business_processes: null,
+  encryption_at_rest: null,
+  encryption_in_transit: null,
+  access_control_model: null,
+  retention_rules: null,
+  architecture_type: null,
+  environments: null,
+  last_major_upgrade: null,
+  next_planned_review: null,
+  backup_storage_location: null,
+  last_restore_test: null,
+  cost_center: null,
+  total_cost_of_ownership: null,
+  documentation_links: null,
+  linked_risks: null,
+  incident_history: null,
+  objekt_id: null,
+  // AI (kategori 13)
+  uses_ai: false,
+  ai_risk_class: null,
+  ai_usage_description: null,
+  fria_status: null,
+  fria_date: null,
+  fria_link: null,
+  ai_human_oversight: null,
+  ai_supplier: null,
+  ai_transparency_fulfilled: false,
+  ai_model_version: null,
+  ai_last_review_date: null,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
   last_reviewed_at: null,
@@ -142,6 +186,89 @@ const mockIntegration = {
   is_external: false,
   external_party: null,
   created_at: "2024-01-01T00:00:00Z",
+}
+
+const mockObjekt = {
+  id: "obj-1",
+  organization_id: "org-1",
+  name: "Testobjekt",
+  description: null,
+  object_owner: null,
+  object_leader: null,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
+}
+
+const mockComponent = {
+  id: "comp-1",
+  system_id: "sys-1",
+  organization_id: "org-1",
+  name: "Testkomponent",
+  description: null,
+  component_type: null,
+  url: null,
+  business_area: null,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
+}
+
+const mockModule = {
+  id: "mod-1",
+  organization_id: "org-1",
+  name: "Testmodul",
+  description: null,
+  lifecycle_status: null,
+  hosting_model: null,
+  product_name: null,
+  product_version: null,
+  uses_ai: false,
+  ai_risk_class: null,
+  ai_usage_description: null,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
+}
+
+const mockInformationAsset = {
+  id: "ia-1",
+  organization_id: "org-1",
+  name: "Testinformationsmängd",
+  description: null,
+  information_owner: null,
+  confidentiality: null,
+  integrity: null,
+  availability: null,
+  traceability: null,
+  contains_personal_data: false,
+  personal_data_type: null,
+  contains_public_records: false,
+  ropa_reference_id: null,
+  ihp_reference: null,
+  preservation_class: null,
+  retention_period: null,
+  archive_responsible: null,
+  e_archive_delivery: null,
+  long_term_format: null,
+  last_ihp_review: null,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
+}
+
+const mockApproval = {
+  id: "appr-1",
+  organization_id: "org-1",
+  approval_type: ApprovalType.SYSTEM_REGISTRATION,
+  status: ApprovalStatus.PENDING,
+  title: "Registrera nytt system",
+  description: null,
+  target_table: null,
+  target_record_id: null,
+  proposed_changes: null,
+  requested_by: "admin",
+  reviewed_by: null,
+  review_comment: null,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
+  reviewed_at: null,
 }
 
 // --- MSW-server ---
@@ -258,7 +385,65 @@ const server = setupServer(
   // Import
   http.post("/api/v1/import/:type", () =>
     HttpResponse.json({ imported: 3, errors: [] })
-  )
+  ),
+
+  // Objekt
+  http.get("/api/v1/objekt", () =>
+    HttpResponse.json({ items: [mockObjekt], total: 1, limit: 25, offset: 0 })
+  ),
+  http.post("/api/v1/objekt", async ({ request }) => {
+    const body = await request.json() as object
+    return HttpResponse.json({ ...mockObjekt, ...body }, { status: 201 })
+  }),
+
+  // Komponenter
+  http.get("/api/v1/components", () =>
+    HttpResponse.json({ items: [mockComponent], total: 1, limit: 25, offset: 0 })
+  ),
+  http.post("/api/v1/components", async ({ request }) => {
+    const body = await request.json() as object
+    return HttpResponse.json({ ...mockComponent, ...body }, { status: 201 })
+  }),
+
+  // Moduler
+  http.get("/api/v1/modules", () =>
+    HttpResponse.json({ items: [mockModule], total: 1, limit: 25, offset: 0 })
+  ),
+  http.post("/api/v1/modules", async ({ request }) => {
+    const body = await request.json() as object
+    return HttpResponse.json({ ...mockModule, ...body }, { status: 201 })
+  }),
+  http.post("/api/v1/modules/:id/systems", () =>
+    new HttpResponse(null, { status: 204 })
+  ),
+
+  // Informationsmängder
+  http.get("/api/v1/information-assets", () =>
+    HttpResponse.json({ items: [mockInformationAsset], total: 1, limit: 25, offset: 0 })
+  ),
+  http.post("/api/v1/information-assets", async ({ request }) => {
+    const body = await request.json() as object
+    return HttpResponse.json({ ...mockInformationAsset, ...body }, { status: 201 })
+  }),
+  http.post("/api/v1/information-assets/:id/systems", () =>
+    new HttpResponse(null, { status: 204 })
+  ),
+
+  // Godkännanden
+  http.get("/api/v1/approvals", () =>
+    HttpResponse.json({ items: [mockApproval], total: 1, limit: 25, offset: 0 })
+  ),
+  http.get("/api/v1/approvals/pending/count", () =>
+    HttpResponse.json({ pending: 3 })
+  ),
+  http.post("/api/v1/approvals", async ({ request }) => {
+    const body = await request.json() as object
+    return HttpResponse.json({ ...mockApproval, ...body }, { status: 201 })
+  }),
+  http.post("/api/v1/approvals/:id/review", async ({ request }) => {
+    const body = await request.json() as object
+    return HttpResponse.json({ ...mockApproval, ...body, status: ApprovalStatus.APPROVED })
+  })
 )
 
 beforeAll(() => server.listen({ onUnhandledRequest: "warn" }))
@@ -912,6 +1097,218 @@ describe("API-klient", () => {
       const file = new File(["data"], "test.csv", { type: "text/csv" })
       await importFile("classifications", file)
       expect(queryOrgId).toBeNull()
+    })
+  })
+
+  // --- Nya entitets-API:er ---
+
+  describe("getObjekt", () => {
+    it("returnerar paginerat svar med objekt", async () => {
+      const result = await getObjekt()
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0].id).toBe("obj-1")
+      expect(result.items[0].name).toBe("Testobjekt")
+    })
+
+    it("skickar query-parametrar korrekt", async () => {
+      let capturedParams: URLSearchParams | null = null
+      server.use(
+        http.get("/api/v1/objekt", ({ request }) => {
+          capturedParams = new URL(request.url).searchParams
+          return HttpResponse.json({ items: [mockObjekt], total: 1, limit: 10, offset: 0 })
+        })
+      )
+      await getObjekt({ organization_id: "org-1", q: "test", limit: 10 })
+      expect(capturedParams?.get("organization_id")).toBe("org-1")
+      expect(capturedParams?.get("q")).toBe("test")
+      expect(capturedParams?.get("limit")).toBe("10")
+    })
+  })
+
+  describe("createObjekt", () => {
+    it("POST till /objekt med korrekt body", async () => {
+      let capturedBody: unknown = null
+      server.use(
+        http.post("/api/v1/objekt", async ({ request }) => {
+          capturedBody = await request.json()
+          return HttpResponse.json({ ...mockObjekt, name: "Nytt objekt" }, { status: 201 })
+        })
+      )
+      const payload = { organization_id: "org-1", name: "Nytt objekt" }
+      await createObjekt(payload)
+      expect(capturedBody).toMatchObject(payload)
+    })
+
+    it("returnerar skapat objekt", async () => {
+      const result = await createObjekt({ organization_id: "org-1", name: "Nytt" })
+      expect(result.id).toBe("obj-1")
+    })
+  })
+
+  describe("getComponents", () => {
+    it("returnerar paginerat svar med komponenter", async () => {
+      const result = await getComponents()
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0].id).toBe("comp-1")
+      expect(result.items[0].name).toBe("Testkomponent")
+    })
+
+    it("skickar system_id som query-param", async () => {
+      let capturedParams: URLSearchParams | null = null
+      server.use(
+        http.get("/api/v1/components", ({ request }) => {
+          capturedParams = new URL(request.url).searchParams
+          return HttpResponse.json({ items: [mockComponent], total: 1, limit: 25, offset: 0 })
+        })
+      )
+      await getComponents({ system_id: "sys-1" })
+      expect(capturedParams?.get("system_id")).toBe("sys-1")
+    })
+  })
+
+  describe("createComponent", () => {
+    it("POST till /components med korrekt body", async () => {
+      let capturedBody: unknown = null
+      server.use(
+        http.post("/api/v1/components", async ({ request }) => {
+          capturedBody = await request.json()
+          return HttpResponse.json(mockComponent, { status: 201 })
+        })
+      )
+      const payload = { system_id: "sys-1", organization_id: "org-1", name: "Ny komponent" }
+      await createComponent(payload)
+      expect(capturedBody).toMatchObject(payload)
+    })
+  })
+
+  describe("getModules", () => {
+    it("returnerar paginerat svar med moduler", async () => {
+      const result = await getModules()
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0].id).toBe("mod-1")
+      expect(result.items[0].name).toBe("Testmodul")
+    })
+  })
+
+  describe("createModule", () => {
+    it("POST till /modules med korrekt body", async () => {
+      let capturedBody: unknown = null
+      server.use(
+        http.post("/api/v1/modules", async ({ request }) => {
+          capturedBody = await request.json()
+          return HttpResponse.json(mockModule, { status: 201 })
+        })
+      )
+      const payload = { organization_id: "org-1", name: "Ny modul" }
+      await createModule(payload)
+      expect(capturedBody).toMatchObject(payload)
+    })
+  })
+
+  describe("getInformationAssets", () => {
+    it("returnerar paginerat svar med informationsmängder", async () => {
+      const result = await getInformationAssets()
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0].id).toBe("ia-1")
+      expect(result.items[0].name).toBe("Testinformationsmängd")
+    })
+  })
+
+  describe("createInformationAsset", () => {
+    it("POST till /information-assets med korrekt body", async () => {
+      let capturedBody: unknown = null
+      server.use(
+        http.post("/api/v1/information-assets", async ({ request }) => {
+          capturedBody = await request.json()
+          return HttpResponse.json(mockInformationAsset, { status: 201 })
+        })
+      )
+      const payload = { organization_id: "org-1", name: "Ny informationsmängd" }
+      await createInformationAsset(payload)
+      expect(capturedBody).toMatchObject(payload)
+    })
+  })
+
+  describe("getApprovals", () => {
+    it("returnerar paginerat svar med godkännanden", async () => {
+      const result = await getApprovals()
+      expect(result.items).toHaveLength(1)
+      expect(result.items[0].id).toBe("appr-1")
+      expect(result.items[0].title).toBe("Registrera nytt system")
+    })
+
+    it("skickar status som query-param", async () => {
+      let capturedParams: URLSearchParams | null = null
+      server.use(
+        http.get("/api/v1/approvals", ({ request }) => {
+          capturedParams = new URL(request.url).searchParams
+          return HttpResponse.json({ items: [mockApproval], total: 1, limit: 25, offset: 0 })
+        })
+      )
+      await getApprovals({ status: ApprovalStatus.PENDING })
+      expect(capturedParams?.get("status")).toBe("väntande")
+    })
+  })
+
+  describe("createApproval", () => {
+    it("POST till /approvals med korrekt body", async () => {
+      let capturedBody: unknown = null
+      server.use(
+        http.post("/api/v1/approvals", async ({ request }) => {
+          capturedBody = await request.json()
+          return HttpResponse.json(mockApproval, { status: 201 })
+        })
+      )
+      const payload = {
+        organization_id: "org-1",
+        approval_type: ApprovalType.SYSTEM_REGISTRATION,
+        title: "Nytt godkännande",
+      }
+      await createApproval(payload)
+      expect(capturedBody).toMatchObject(payload)
+    })
+  })
+
+  describe("reviewApproval", () => {
+    it("POST till /approvals/:id/review med korrekt body", async () => {
+      let capturedBody: unknown = null
+      let capturedUrl: string | null = null
+      server.use(
+        http.post("/api/v1/approvals/:id/review", async ({ request }) => {
+          capturedBody = await request.json()
+          capturedUrl = new URL(request.url).pathname
+          return HttpResponse.json({ ...mockApproval, status: ApprovalStatus.APPROVED })
+        })
+      )
+      await reviewApproval("appr-1", {
+        status: ApprovalStatus.APPROVED,
+        reviewed_by: "admin",
+        review_comment: "Godkänt",
+      })
+      expect(capturedUrl).toBe("/api/v1/approvals/appr-1/review")
+      expect(capturedBody).toMatchObject({
+        status: "godkänd",
+        reviewed_by: "admin",
+      })
+    })
+  })
+
+  describe("getPendingApprovalCount", () => {
+    it("returnerar antal väntande godkännanden", async () => {
+      const result = await getPendingApprovalCount()
+      expect(result).toBe(3)
+    })
+
+    it("skickar organization_id som query-param", async () => {
+      let capturedParams: URLSearchParams | null = null
+      server.use(
+        http.get("/api/v1/approvals/pending/count", ({ request }) => {
+          capturedParams = new URL(request.url).searchParams
+          return HttpResponse.json({ pending: 5 })
+        })
+      )
+      await getPendingApprovalCount("org-1")
+      expect(capturedParams?.get("organization_id")).toBe("org-1")
     })
   })
 })
