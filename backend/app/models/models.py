@@ -13,7 +13,8 @@ from app.core.database import Base
 from app.models.enums import (
     OrganizationType, SystemCategory, LifecycleStatus, Criticality,
     OwnerRole, IntegrationType, ProcessorAgreementStatus,
-    NIS2Classification, AuditAction,
+    NIS2Classification, AuditAction, AIRiskClass, FRIAStatus,
+    ApprovalStatus, ApprovalType,
 )
 
 
@@ -51,6 +52,7 @@ class System(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     system_category: Mapped[SystemCategory] = mapped_column(_enum(SystemCategory), nullable=False)
     business_area: Mapped[str | None] = mapped_column(String(255))  # Verksamhetsområde
+    business_processes: Mapped[str | None] = mapped_column(Text)  # 1.6 Verksamhetsprocesser (kommasep.)
 
     # --- Kategori 3: Klassning & säkerhet (senaste aktiva) ---
     criticality: Mapped[Criticality] = mapped_column(_enum(Criticality), default=Criticality.MEDIUM)
@@ -58,11 +60,17 @@ class System(Base):
     security_protection: Mapped[bool] = mapped_column(Boolean, default=False)  # Säkerhetsskyddslagen
     nis2_applicable: Mapped[bool] = mapped_column(Boolean, default=False)
     nis2_classification: Mapped[NIS2Classification | None] = mapped_column(_enum(NIS2Classification))
+    encryption_at_rest: Mapped[str | None] = mapped_column(String(255))  # 3.10 Kryptering at rest
+    encryption_in_transit: Mapped[str | None] = mapped_column(String(255))  # 3.10 Kryptering in transit
+    access_control_model: Mapped[str | None] = mapped_column(String(255))  # 3.11 AD/RBAC/SSO, MFA ja/nej
 
     # --- Kategori 4: GDPR grundflaggor ---
     treats_personal_data: Mapped[bool] = mapped_column(Boolean, default=False)
     treats_sensitive_data: Mapped[bool] = mapped_column(Boolean, default=False)  # Art. 9
     third_country_transfer: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # --- Kategori 4b: GDPR utökat ---
+    retention_rules: Mapped[str | None] = mapped_column(Text)  # 4.10 Gallringsregler/bevarandetider
 
     # --- Kategori 5: Driftmiljö ---
     hosting_model: Mapped[str | None] = mapped_column(String(50))  # on-premise / cloud / hybrid
@@ -70,6 +78,8 @@ class System(Base):
     data_location_country: Mapped[str | None] = mapped_column(String(100), default="Sverige")
     product_name: Mapped[str | None] = mapped_column(String(255))
     product_version: Mapped[str | None] = mapped_column(String(100))
+    architecture_type: Mapped[str | None] = mapped_column(String(100))  # 5.6 Monolitisk/Microservices/Serverless
+    environments: Mapped[str | None] = mapped_column(String(255))  # 5.7 Produktion/Test/Utveckling/Staging
 
     # --- Kategori 6: Livscykel ---
     lifecycle_status: Mapped[LifecycleStatus] = mapped_column(
@@ -78,16 +88,45 @@ class System(Base):
     deployment_date: Mapped[date | None] = mapped_column(Date)
     planned_decommission_date: Mapped[date | None] = mapped_column(Date)
     end_of_support_date: Mapped[date | None] = mapped_column(Date)
+    last_major_upgrade: Mapped[str | None] = mapped_column(String(255))  # 6.5 Datum + version
+    next_planned_review: Mapped[date | None] = mapped_column(Date)  # 6.6 Nästa planerade review
 
     # --- Kategori 9: Backup/DR ---
     backup_frequency: Mapped[str | None] = mapped_column(String(100))
     rpo: Mapped[str | None] = mapped_column(String(100))
     rto: Mapped[str | None] = mapped_column(String(100))
     dr_plan_exists: Mapped[bool] = mapped_column(Boolean, default=False)
+    backup_storage_location: Mapped[str | None] = mapped_column(String(255))  # 9.5 Var lagras backup
+    last_restore_test: Mapped[str | None] = mapped_column(String(255))  # 9.6 Datum + resultat
+
+    # --- Kategori 10: Kostnader utökat ---
+    cost_center: Mapped[str | None] = mapped_column(String(255))  # 10.3 Kostnadsbärare
+    total_cost_of_ownership: Mapped[int | None] = mapped_column(Integer)  # 10.4 TCO i SEK
+
+    # --- Kategori 11: Dokumentation utökat ---
+    documentation_links: Mapped[list | None] = mapped_column(JSONB)  # 11.1 Lista av URL:er
 
     # --- Kategori 12: Compliance ---
     last_risk_assessment_date: Mapped[date | None] = mapped_column(Date)
     klassa_reference_id: Mapped[str | None] = mapped_column(String(100))
+    linked_risks: Mapped[str | None] = mapped_column(Text)  # 12.4 Koppling till riskregister
+    incident_history: Mapped[str | None] = mapped_column(Text)  # 12.5 Incidenthistorik
+
+    # --- Kategori 13: AI-förordningen (EU 2024/1689) ---
+    uses_ai: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_risk_class: Mapped[AIRiskClass | None] = mapped_column(_enum(AIRiskClass))
+    ai_usage_description: Mapped[str | None] = mapped_column(Text)
+    fria_status: Mapped[FRIAStatus | None] = mapped_column(_enum(FRIAStatus))
+    fria_date: Mapped[date | None] = mapped_column(Date)
+    fria_link: Mapped[str | None] = mapped_column(Text)
+    ai_human_oversight: Mapped[str | None] = mapped_column(String(255))
+    ai_supplier: Mapped[str | None] = mapped_column(String(255))
+    ai_transparency_fulfilled: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_model_version: Mapped[str | None] = mapped_column(String(255))
+    ai_last_review_date: Mapped[date | None] = mapped_column(Date)
+
+    # --- Entitetshierarki ---
+    objekt_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("objekt.id", ondelete="SET NULL"))
 
     # --- Flexibla attribut ---
     extended_attributes: Mapped[dict | None] = mapped_column(JSONB, default=dict)
@@ -100,6 +139,7 @@ class System(Base):
 
     # Relationships
     organization: Mapped["Organization"] = relationship(back_populates="systems")
+    objekt: Mapped["Objekt | None"] = relationship(back_populates="systems")
     classifications: Mapped[list["SystemClassification"]] = relationship(
         back_populates="system", order_by="desc(SystemClassification.classified_at)",
         passive_deletes=True,
@@ -115,6 +155,11 @@ class System(Base):
     )
     gdpr_treatments: Mapped[list["GDPRTreatment"]] = relationship(back_populates="system", passive_deletes=True)
     contracts: Mapped[list["Contract"]] = relationship(back_populates="system", passive_deletes=True)
+    components: Mapped[list["Component"]] = relationship(back_populates="system", passive_deletes=True)
+    modules_used: Mapped[list["Module"]] = relationship(secondary="module_system_link", back_populates="systems")
+    information_assets: Mapped[list["InformationAsset"]] = relationship(
+        secondary="information_asset_system_link", back_populates="systems"
+    )
 
     __table_args__ = (
         Index("ix_systems_org_name", "organization_id", "name"),
@@ -252,3 +297,157 @@ class AuditLog(Base):
         Index("ix_audit_log_table_record", "table_name", "record_id"),
         Index("ix_audit_log_changed_at", "changed_at"),
     )
+
+
+# ============================================================
+# Entitetshierarki (Kravspec avsnitt 3)
+# ============================================================
+
+
+class Objekt(Base):
+    """Förvaltningsobjekt — aggregerar system, moduler och komponenter."""
+    __tablename__ = "objekt"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    object_owner: Mapped[str | None] = mapped_column(String(255))
+    object_leader: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship()
+    systems: Mapped[list["System"]] = relationship(back_populates="objekt")
+
+
+class Component(Base):
+    """Komponent — del av ett system. Ärver systemets grundattribut men kan ha egna."""
+    __tablename__ = "components"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    system_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("systems.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    component_type: Mapped[str | None] = mapped_column(String(100))  # webbsida, kartvy, instans, etc.
+    url: Mapped[str | None] = mapped_column(Text)
+    business_area: Mapped[str | None] = mapped_column(String(255))  # Eget verksamhetsområde (override)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    system: Mapped["System"] = relationship(back_populates="components")
+    organization: Mapped["Organization"] = relationship()
+
+
+class Module(Base):
+    """Modul — återanvändbar mikrotjänst/funktion. N:M-relation till system."""
+    __tablename__ = "modules"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    lifecycle_status: Mapped[LifecycleStatus | None] = mapped_column(_enum(LifecycleStatus))
+    hosting_model: Mapped[str | None] = mapped_column(String(50))
+    product_name: Mapped[str | None] = mapped_column(String(255))
+    product_version: Mapped[str | None] = mapped_column(String(100))
+    # AI-förordningen — moduler kan ha AI-komponenter
+    uses_ai: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_risk_class: Mapped[AIRiskClass | None] = mapped_column(_enum(AIRiskClass))
+    ai_usage_description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship()
+    systems: Mapped[list["System"]] = relationship(secondary="module_system_link", back_populates="modules_used")
+
+
+class Approval(Base):
+    """Godkännandeärende — arbetsflöde för ändringar som kräver granskning (FK-15)."""
+    __tablename__ = "approvals"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    approval_type: Mapped[ApprovalType] = mapped_column(_enum(ApprovalType), nullable=False)
+    status: Mapped[ApprovalStatus] = mapped_column(_enum(ApprovalStatus), default=ApprovalStatus.PENDING)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    # Vad ärendet gäller
+    target_table: Mapped[str | None] = mapped_column(String(100))  # systems, gdpr_treatments, etc.
+    target_record_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    proposed_changes: Mapped[dict | None] = mapped_column(JSONB)  # JSON med föreslagna ändringar
+    # Vem
+    requested_by: Mapped[str | None] = mapped_column(String(255))
+    reviewed_by: Mapped[str | None] = mapped_column(String(255))
+    review_comment: Mapped[str | None] = mapped_column(Text)
+    # När
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    organization: Mapped["Organization"] = relationship()
+
+    __table_args__ = (
+        Index("ix_approvals_status", "status"),
+        Index("ix_approvals_target", "target_table", "target_record_id"),
+    )
+
+
+# Junction table for Module ↔ System (N:M)
+from sqlalchemy import Table, Column  # noqa: E402
+module_system_link = Table(
+    "module_system_link",
+    Base.metadata,
+    Column("module_id", UUID(as_uuid=True), ForeignKey("modules.id", ondelete="CASCADE"), primary_key=True),
+    Column("system_id", UUID(as_uuid=True), ForeignKey("systems.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class InformationAsset(Base):
+    """Informationsmängd — sammanhållen uppsättning data med gemensamt syfte."""
+    __tablename__ = "information_assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    information_owner: Mapped[str | None] = mapped_column(String(255))
+    # K/R/T-klassning (egen, inte ärvd)
+    confidentiality: Mapped[int | None] = mapped_column(Integer)  # 0-4
+    integrity: Mapped[int | None] = mapped_column(Integer)  # 0-4
+    availability: Mapped[int | None] = mapped_column(Integer)  # 0-4
+    traceability: Mapped[int | None] = mapped_column(Integer)  # 0-4
+    # Personuppgifter
+    contains_personal_data: Mapped[bool] = mapped_column(Boolean, default=False)
+    personal_data_type: Mapped[str | None] = mapped_column(String(100))  # vanliga/känsliga/brottsdata
+    contains_public_records: Mapped[bool] = mapped_column(Boolean, default=False)  # Allmänna handlingar
+    ropa_reference_id: Mapped[str | None] = mapped_column(String(100))
+    # Informationshantering & arkiv (kategori 15)
+    ihp_reference: Mapped[str | None] = mapped_column(Text)  # Koppling till IHP
+    preservation_class: Mapped[str | None] = mapped_column(String(100))  # bevara/gallra/ej_klassificerad
+    retention_period: Mapped[str | None] = mapped_column(String(255))  # Gallringsfrist
+    archive_responsible: Mapped[str | None] = mapped_column(String(255))
+    e_archive_delivery: Mapped[str | None] = mapped_column(String(100))  # ja/nej/planerad
+    long_term_format: Mapped[str | None] = mapped_column(String(255))  # PDF/A, TIFF, XML
+    last_ihp_review: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship()
+    systems: Mapped[list["System"]] = relationship(
+        secondary="information_asset_system_link", back_populates="information_assets"
+    )
+
+
+# Junction table for InformationAsset ↔ System (N:M)
+information_asset_system_link = Table(
+    "information_asset_system_link",
+    Base.metadata,
+    Column("information_asset_id", UUID(as_uuid=True), ForeignKey("information_assets.id", ondelete="CASCADE"), primary_key=True),
+    Column("system_id", UUID(as_uuid=True), ForeignKey("systems.id", ondelete="CASCADE"), primary_key=True),
+)

@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { getNotifications } from "@/lib/api"
+import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -260,6 +261,7 @@ function Layout() {
   const [dark, setDark] = useDarkMode()
 
   usePageTitle()
+  useKeyboardShortcuts()
 
   return (
     <div className="flex min-h-screen bg-background transition-theme">

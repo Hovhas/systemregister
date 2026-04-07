@@ -27,7 +27,8 @@ _EXCLUDE_COLS: frozenset[str] = frozenset({"created_at", "updated_at"})
 # Model table names that should be audited
 _AUDITED_TABLES: frozenset[str] = frozenset(
     {"organizations", "systems", "system_classifications", "system_owners",
-     "gdpr_treatments", "contracts", "system_integrations"}
+     "gdpr_treatments", "contracts", "system_integrations",
+     "objekt", "components", "modules", "information_assets", "approvals"}
 )
 
 

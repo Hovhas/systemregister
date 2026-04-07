@@ -2,10 +2,11 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import get_settings
 from app.core.audit import register_audit_listeners
@@ -21,6 +22,11 @@ from app.api.contracts import router as contracts_router
 from app.api.reports import router as reports_router
 from app.api.audit import router as audit_router
 from app.api.notifications import router as notifications_router
+from app.api.objekt import router as objekt_router
+from app.api.components import router as components_router
+from app.api.modules import router as modules_router
+from app.api.information_assets import router as information_assets_router
+from app.api.approvals import router as approvals_router
 
 settings = get_settings()
 
@@ -40,6 +46,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# --- OWASP Security Headers Middleware (ASVS V14) ---
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if settings.environment != "development":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "font-src 'self'; "
+                "connect-src 'self'; "
+                "frame-ancestors 'none'"
+            )
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 # Trusted proxy headers (Traefik sätter X-Forwarded-Proto)
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=settings.trusted_proxy_hosts)
@@ -49,8 +79,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Organization-Id"],
 )
 
 # Routers
@@ -67,6 +97,25 @@ app.include_router(contracts_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
+app.include_router(objekt_router, prefix="/api/v1")
+app.include_router(components_router, prefix="/api/v1")
+app.include_router(modules_router, prefix="/api/v1")
+app.include_router(information_assets_router, prefix="/api/v1")
+app.include_router(approvals_router, prefix="/api/v1")
+
+
+# --- OWASP A05: Suppress stack traces in production (ASVS V7) ---
+if settings.environment != "development":
+    from fastapi.responses import JSONResponse
+    from fastapi.exceptions import RequestValidationError
+
+    @app.exception_handler(500)
+    async def suppress_internal_errors(request: Request, exc: Exception):
+        return JSONResponse(status_code=500, content={"detail": "Internt serverfel"})
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(request: Request, exc: RequestValidationError):
+        return JSONResponse(status_code=422, content={"detail": "Valideringsfel i indata"})
 
 
 @app.get("/health")
@@ -90,6 +139,10 @@ async def api_root():
             "export_csv": "/api/v1/export/systems.csv",
             "export_json": "/api/v1/export/systems.json",
             "import_systems": "/api/v1/import/systems",
+            "objekt": "/api/v1/objekt",
+            "components": "/api/v1/components",
+            "modules": "/api/v1/modules",
+            "information_assets": "/api/v1/information-assets",
             "docs": "/docs",
         },
     }

@@ -111,10 +111,37 @@ async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
 
 
 @router.post("/", response_model=SystemResponse, status_code=status.HTTP_201_CREATED)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
-# get_rls_db anropas men set_org_context() sätts inte — RLS blockerar eller
-# tillåter allt beroende på null-bypass-policyn. Se migration 0003 och conftest.py.
 async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_db)):
+    # FK-14: Dubbletthantering — varna vid liknande systemnamn
+    similar_stmt = select(System.id, System.name).where(
+        System.organization_id == data.organization_id,
+        or_(
+            System.name.ilike(data.name),
+            func.similarity(System.name, data.name) > 0.4,
+        ) if hasattr(func, 'similarity') else System.name.ilike(data.name),
+    ).limit(5)
+    try:
+        similar_result = await db.execute(similar_stmt)
+        duplicates = [{"id": str(row.id), "name": row.name} for row in similar_result.all()]
+    except ProgrammingError:
+        # pg_trgm inte installerad — fallback till exakt match
+        await db.rollback()
+        exact_stmt = select(System.id, System.name).where(
+            System.organization_id == data.organization_id,
+            System.name.ilike(data.name),
+        ).limit(5)
+        similar_result = await db.execute(exact_stmt)
+        duplicates = [{"id": str(row.id), "name": row.name} for row in similar_result.all()]
+
+    if duplicates:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": f"System med liknande namn finns redan ({len(duplicates)} träffar)",
+                "duplicates": duplicates,
+            },
+        )
+
     system = System(**data.model_dump())
     db.add(system)
     try:

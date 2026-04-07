@@ -65,3 +65,49 @@ class AuditAction(str, enum.Enum):
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
+
+
+# --- Entitetshierarki (Kravspec avsnitt 3) ---
+
+class EntityType(str, enum.Enum):
+    """Typ av entitet i hierarkin."""
+    OBJEKT = "objekt"
+    SYSTEM = "system"
+    KOMPONENT = "komponent"
+    MODUL = "modul"
+    INFORMATIONSMANGD = "informationsmängd"
+
+
+# --- AI-förordningen (Kravspec kategori 13) ---
+
+class AIRiskClass(str, enum.Enum):
+    """EU AI Act (2024/1689) riskklass."""
+    FORBIDDEN = "förbjuden"
+    HIGH_RISK = "hög_risk"
+    LIMITED_RISK = "begränsad_risk"
+    MINIMAL_RISK = "minimal_risk"
+    NOT_APPLICABLE = "ej_tillämplig"
+
+
+class FRIAStatus(str, enum.Enum):
+    """Fundamental Rights Impact Assessment status."""
+    YES = "ja"
+    NO = "nej"
+    NOT_APPLICABLE = "ej_tillämplig"
+
+
+# --- Arbetsflöden (FK-15) ---
+
+class ApprovalStatus(str, enum.Enum):
+    PENDING = "väntande"
+    APPROVED = "godkänd"
+    REJECTED = "avvisad"
+    CANCELLED = "avbruten"
+
+
+class ApprovalType(str, enum.Enum):
+    SYSTEM_REGISTRATION = "systemregistrering"
+    SYSTEM_DECOMMISSION = "avveckling"
+    CLASSIFICATION_CHANGE = "klassningsändring"
+    GDPR_TREATMENT = "gdpr_behandling"
+    DATA_CHANGE = "dataändring"

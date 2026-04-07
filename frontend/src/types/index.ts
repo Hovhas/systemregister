@@ -53,6 +53,21 @@ export enum NIS2Classification {
   NOT_APPLICABLE = "ej_tillämplig",
 }
 
+// AI-förordningen (EU 2024/1689)
+export enum AIRiskClass {
+  FORBIDDEN = "förbjuden",
+  HIGH_RISK = "hög_risk",
+  LIMITED_RISK = "begränsad_risk",
+  MINIMAL_RISK = "minimal_risk",
+  NOT_APPLICABLE = "ej_tillämplig",
+}
+
+export enum FRIAStatus {
+  YES = "ja",
+  NO = "nej",
+  NOT_APPLICABLE = "ej_tillämplig",
+}
+
 // --- Modeller ---
 
 export interface Organization {
@@ -74,35 +89,69 @@ export interface System {
   description: string
   system_category: SystemCategory
   business_area: string | null
+  business_processes: string | null
 
   criticality: Criticality
   has_elevated_protection: boolean
   security_protection: boolean
   nis2_applicable: boolean
   nis2_classification: NIS2Classification | null
+  encryption_at_rest: string | null
+  encryption_in_transit: string | null
+  access_control_model: string | null
 
   treats_personal_data: boolean
   treats_sensitive_data: boolean
   third_country_transfer: boolean
+  retention_rules: string | null
 
   hosting_model: string | null
   cloud_provider: string | null
   data_location_country: string | null
   product_name: string | null
   product_version: string | null
+  architecture_type: string | null
+  environments: string | null
 
   lifecycle_status: LifecycleStatus
   deployment_date: string | null
   planned_decommission_date: string | null
   end_of_support_date: string | null
+  last_major_upgrade: string | null
+  next_planned_review: string | null
 
   backup_frequency: string | null
   rpo: string | null
   rto: string | null
   dr_plan_exists: boolean
+  backup_storage_location: string | null
+  last_restore_test: string | null
+
+  cost_center: string | null
+  total_cost_of_ownership: number | null
+
+  documentation_links: string[] | null
 
   last_risk_assessment_date: string | null
   klassa_reference_id: string | null
+  linked_risks: string | null
+  incident_history: string | null
+
+  // Kategori 13: AI-förordningen
+  uses_ai: boolean
+  ai_risk_class: AIRiskClass | null
+  ai_usage_description: string | null
+  fria_status: FRIAStatus | null
+  fria_date: string | null
+  fria_link: string | null
+  ai_human_oversight: string | null
+  ai_supplier: string | null
+  ai_transparency_fulfilled: boolean
+  ai_model_version: string | null
+  ai_last_review_date: string | null
+
+  // Entitetshierarki
+  objekt_id: string | null
 
   extended_attributes: Record<string, unknown> | null
 
@@ -254,6 +303,20 @@ export interface SystemCreate {
   security_protection?: boolean
   last_risk_assessment_date?: string
   klassa_reference_id?: string
+  // AI-förordningen
+  uses_ai?: boolean
+  ai_risk_class?: AIRiskClass
+  ai_usage_description?: string
+  fria_status?: FRIAStatus
+  fria_date?: string
+  fria_link?: string
+  ai_human_oversight?: string
+  ai_supplier?: string
+  ai_transparency_fulfilled?: boolean
+  ai_model_version?: string
+  ai_last_review_date?: string
+  // Entitetshierarki
+  objekt_id?: string
 }
 
 export interface SystemUpdate {
@@ -290,6 +353,20 @@ export interface SystemUpdate {
   security_protection?: boolean
   last_risk_assessment_date?: string
   klassa_reference_id?: string
+  // AI-förordningen
+  uses_ai?: boolean
+  ai_risk_class?: AIRiskClass
+  ai_usage_description?: string
+  fria_status?: FRIAStatus
+  fria_date?: string
+  fria_link?: string
+  ai_human_oversight?: string
+  ai_supplier?: string
+  ai_transparency_fulfilled?: boolean
+  ai_model_version?: string
+  ai_last_review_date?: string
+  // Entitetshierarki
+  objekt_id?: string | null
 }
 
 // --- Integration Create ---
@@ -438,4 +515,184 @@ export interface OwnerCreate {
   name: string
   email?: string
   phone?: string
+}
+
+// ============================================================
+// Entitetshierarki
+// ============================================================
+
+// --- Objekt ---
+export interface Objekt {
+  id: string
+  organization_id: string
+  name: string
+  description: string | null
+  object_owner: string | null
+  object_leader: string | null
+  created_at: string
+  updated_at: string
+}
+export interface ObjektCreate {
+  organization_id: string
+  name: string
+  description?: string
+  object_owner?: string
+  object_leader?: string
+}
+export interface ObjektUpdate {
+  name?: string
+  description?: string
+  object_owner?: string
+  object_leader?: string
+}
+
+// --- Komponent ---
+export interface Component {
+  id: string
+  system_id: string
+  organization_id: string
+  name: string
+  description: string | null
+  component_type: string | null
+  url: string | null
+  business_area: string | null
+  created_at: string
+  updated_at: string
+}
+export interface ComponentCreate {
+  system_id: string
+  organization_id: string
+  name: string
+  description?: string
+  component_type?: string
+  url?: string
+  business_area?: string
+}
+
+// --- Modul ---
+export interface Module {
+  id: string
+  organization_id: string
+  name: string
+  description: string | null
+  lifecycle_status: LifecycleStatus | null
+  hosting_model: string | null
+  product_name: string | null
+  product_version: string | null
+  uses_ai: boolean
+  ai_risk_class: AIRiskClass | null
+  ai_usage_description: string | null
+  created_at: string
+  updated_at: string
+}
+export interface ModuleCreate {
+  organization_id: string
+  name: string
+  description?: string
+  lifecycle_status?: LifecycleStatus
+  hosting_model?: string
+  product_name?: string
+  product_version?: string
+  uses_ai?: boolean
+  ai_risk_class?: AIRiskClass
+  ai_usage_description?: string
+}
+
+// --- Informationsmängd ---
+export interface InformationAsset {
+  id: string
+  organization_id: string
+  name: string
+  description: string | null
+  information_owner: string | null
+  confidentiality: number | null
+  integrity: number | null
+  availability: number | null
+  traceability: number | null
+  contains_personal_data: boolean
+  personal_data_type: string | null
+  contains_public_records: boolean
+  ropa_reference_id: string | null
+  ihp_reference: string | null
+  preservation_class: string | null
+  retention_period: string | null
+  archive_responsible: string | null
+  e_archive_delivery: string | null
+  long_term_format: string | null
+  last_ihp_review: string | null
+  created_at: string
+  updated_at: string
+}
+// --- Godkännanden (FK-15) ---
+
+export enum ApprovalStatus {
+  PENDING = "väntande",
+  APPROVED = "godkänd",
+  REJECTED = "avvisad",
+  CANCELLED = "avbruten",
+}
+
+export enum ApprovalType {
+  SYSTEM_REGISTRATION = "systemregistrering",
+  SYSTEM_DECOMMISSION = "avveckling",
+  CLASSIFICATION_CHANGE = "klassningsändring",
+  GDPR_TREATMENT = "gdpr_behandling",
+  DATA_CHANGE = "dataändring",
+}
+
+export interface Approval {
+  id: string
+  organization_id: string
+  approval_type: ApprovalType
+  status: ApprovalStatus
+  title: string
+  description: string | null
+  target_table: string | null
+  target_record_id: string | null
+  proposed_changes: Record<string, unknown> | null
+  requested_by: string | null
+  reviewed_by: string | null
+  review_comment: string | null
+  created_at: string
+  updated_at: string
+  reviewed_at: string | null
+}
+
+export interface ApprovalCreate {
+  organization_id: string
+  approval_type: ApprovalType
+  title: string
+  description?: string
+  target_table?: string
+  target_record_id?: string
+  proposed_changes?: Record<string, unknown>
+  requested_by?: string
+}
+
+export interface ApprovalReview {
+  status: ApprovalStatus
+  reviewed_by: string
+  review_comment?: string
+}
+
+export interface InformationAssetCreate {
+  organization_id: string
+  name: string
+  description?: string
+  information_owner?: string
+  confidentiality?: number
+  integrity?: number
+  availability?: number
+  traceability?: number
+  contains_personal_data?: boolean
+  personal_data_type?: string
+  contains_public_records?: boolean
+  ropa_reference_id?: string
+  ihp_reference?: string
+  preservation_class?: string
+  retention_period?: string
+  archive_responsible?: string
+  e_archive_delivery?: string
+  long_term_format?: string
+  last_ihp_review?: string
 }

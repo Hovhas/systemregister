@@ -5,6 +5,10 @@ import {
   IntegrationType,
   OwnerRole,
   NIS2Classification,
+  AIRiskClass,
+  FRIAStatus,
+  ApprovalStatus,
+  ApprovalType,
 } from "@/types"
 
 // --- Centrala etiketter för enums ---
@@ -73,6 +77,52 @@ export const criticalityVariant: Record<
   [Criticality.MEDIUM]: "outline",
   [Criticality.HIGH]: "default",
   [Criticality.CRITICAL]: "destructive",
+}
+
+// AI-förordningen
+export const aiRiskClassLabels: Record<AIRiskClass, string> = {
+  [AIRiskClass.FORBIDDEN]: "Förbjuden",
+  [AIRiskClass.HIGH_RISK]: "Hög risk",
+  [AIRiskClass.LIMITED_RISK]: "Begränsad risk",
+  [AIRiskClass.MINIMAL_RISK]: "Minimal risk",
+  [AIRiskClass.NOT_APPLICABLE]: "Ej tillämplig",
+}
+
+export const friaStatusLabels: Record<FRIAStatus, string> = {
+  [FRIAStatus.YES]: "Ja",
+  [FRIAStatus.NO]: "Nej",
+  [FRIAStatus.NOT_APPLICABLE]: "Ej tillämplig",
+}
+
+export const aiRiskBadgeClass: Record<AIRiskClass, string> = {
+  [AIRiskClass.FORBIDDEN]: "bg-red-100 text-red-800 border-red-200",
+  [AIRiskClass.HIGH_RISK]: "bg-orange-100 text-orange-800 border-orange-200",
+  [AIRiskClass.LIMITED_RISK]: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  [AIRiskClass.MINIMAL_RISK]: "bg-green-100 text-green-800 border-green-200",
+  [AIRiskClass.NOT_APPLICABLE]: "bg-gray-100 text-gray-800 border-gray-200",
+}
+
+// Godkännanden (FK-15)
+export const approvalStatusLabels: Record<ApprovalStatus, string> = {
+  [ApprovalStatus.PENDING]: "Väntande",
+  [ApprovalStatus.APPROVED]: "Godkänd",
+  [ApprovalStatus.REJECTED]: "Avvisad",
+  [ApprovalStatus.CANCELLED]: "Avbruten",
+}
+
+export const approvalTypeLabels: Record<ApprovalType, string> = {
+  [ApprovalType.SYSTEM_REGISTRATION]: "Systemregistrering",
+  [ApprovalType.SYSTEM_DECOMMISSION]: "Avveckling",
+  [ApprovalType.CLASSIFICATION_CHANGE]: "Klassningsändring",
+  [ApprovalType.GDPR_TREATMENT]: "GDPR-behandling",
+  [ApprovalType.DATA_CHANGE]: "Dataändring",
+}
+
+export const approvalStatusBadgeClass: Record<ApprovalStatus, string> = {
+  [ApprovalStatus.PENDING]: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  [ApprovalStatus.APPROVED]: "bg-green-100 text-green-800 border-green-200",
+  [ApprovalStatus.REJECTED]: "bg-red-100 text-red-800 border-red-200",
+  [ApprovalStatus.CANCELLED]: "bg-gray-100 text-gray-800 border-gray-200",
 }
 
 // SVG-färger för kritikalitet (beroendevisualisering)

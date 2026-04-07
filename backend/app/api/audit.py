@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.database import get_db
+from app.core.rls import get_rls_db
 from app.models.models import AuditLog
 from app.schemas import AuditListResponse, AuditEntryResponse
 
@@ -16,7 +16,7 @@ async def list_audit_entries(
     action: str | None = Query(None),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """Global ändringslogg med paginering och filter."""
     stmt = select(AuditLog)
@@ -61,7 +61,7 @@ async def list_audit_entries(
 @router.get("/record/{record_id}", response_model=list[AuditEntryResponse])
 async def get_audit_for_record(
     record_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
     """Ändringslogg för en specifik post (t.ex. ett system)."""
     stmt = (

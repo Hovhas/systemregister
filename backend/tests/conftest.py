@@ -43,11 +43,17 @@ TEST_DATABASE_URL = os.getenv(
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
-    """Create async engine for the test database (session-scoped)."""
+    """Create async engine for the test database (session-scoped).
+
+    Uses NullPool to prevent connection state (RLS context, SET LOCAL)
+    from leaking between tests via pooled connections. Each test gets
+    a fresh connection, eliminating the session-isolation failures that
+    occur when running `pytest tests/` (all files).
+    """
+    from sqlalchemy.pool import NullPool
     engine = create_async_engine(
         TEST_DATABASE_URL, echo=False,
-        pool_size=20, max_overflow=10,
-        pool_pre_ping=True, pool_recycle=300, pool_timeout=30,
+        poolclass=NullPool,
     )
 
     async with engine.begin() as conn:
@@ -215,6 +221,14 @@ async def db_session(test_engine):
         yield session
     finally:
         await session.close()
+        # Reset RLS context to prevent leaks between tests
+        try:
+            await connection.execute(text("RESET ROLE"))
+            await connection.execute(
+                text("SELECT set_config('app.current_org_id', '', true)")
+            )
+        except Exception:
+            pass
         await transaction.rollback()
         await connection.close()
 

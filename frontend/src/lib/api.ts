@@ -26,6 +26,19 @@ import type {
   ExpiringContract,
   AuditResponse,
   AuditEntry,
+  Objekt,
+  ObjektCreate,
+  ObjektUpdate,
+  Component,
+  ComponentCreate,
+  Module,
+  ModuleCreate,
+  InformationAsset,
+  InformationAssetCreate,
+  Approval,
+  ApprovalCreate,
+  ApprovalReview,
+  ApprovalStatus,
 } from "@/types"
 
 const api = axios.create({
@@ -34,6 +47,43 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 })
+
+// Global error interceptor — visar toast vid API-fel
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status
+      const detail = error.response?.data?.detail
+
+      // Extrahera felmeddelande
+      const message =
+        typeof detail === "string"
+          ? detail
+          : typeof detail === "object" && detail?.message
+          ? detail.message
+          : status === 401
+          ? "Ej autentiserad"
+          : status === 403
+          ? "Åtkomst nekad"
+          : status === 404
+          ? "Resursen hittades inte"
+          : status === 409
+          ? "Konflikt — resursen finns redan"
+          : status === 422
+          ? "Valideringsfel — kontrollera indata"
+          : status && status >= 500
+          ? "Serverfel — försök igen senare"
+          : "Nätverksfel — kontrollera din anslutning"
+
+      // Importera toast dynamiskt för att undvika cirkulär dep
+      import("sonner").then(({ toast }) => {
+        toast.error(message)
+      })
+    }
+    return Promise.reject(error)
+  }
+)
 
 // --- Organisationer ---
 
@@ -251,6 +301,124 @@ export async function getNotifications(params?: {
 }): Promise<NotificationsResponse> {
   const res = await api.get<NotificationsResponse>("/notifications", { params })
   return res.data
+}
+
+// --- Objekt ---
+
+export async function getObjekt(params?: { organization_id?: string; q?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<Objekt>> {
+  const res = await api.get<PaginatedResponse<Objekt>>("/objekt", { params })
+  return res.data
+}
+
+export async function getObjektById(id: string): Promise<Objekt> {
+  const res = await api.get<Objekt>(`/objekt/${id}`)
+  return res.data
+}
+
+export async function createObjekt(data: ObjektCreate): Promise<Objekt> {
+  const res = await api.post<Objekt>("/objekt", data)
+  return res.data
+}
+
+export async function updateObjekt(id: string, data: ObjektUpdate): Promise<Objekt> {
+  const res = await api.patch<Objekt>(`/objekt/${id}`, data)
+  return res.data
+}
+
+export async function deleteObjekt(id: string): Promise<void> {
+  await api.delete(`/objekt/${id}`)
+}
+
+// --- Komponenter ---
+
+export async function getComponents(params?: { system_id?: string; organization_id?: string; q?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<Component>> {
+  const res = await api.get<PaginatedResponse<Component>>("/components", { params })
+  return res.data
+}
+
+export async function createComponent(data: ComponentCreate): Promise<Component> {
+  const res = await api.post<Component>("/components", data)
+  return res.data
+}
+
+export async function deleteComponent(id: string): Promise<void> {
+  await api.delete(`/components/${id}`)
+}
+
+// --- Moduler ---
+
+export async function getModules(params?: { organization_id?: string; q?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<Module>> {
+  const res = await api.get<PaginatedResponse<Module>>("/modules", { params })
+  return res.data
+}
+
+export async function createModule(data: ModuleCreate): Promise<Module> {
+  const res = await api.post<Module>("/modules", data)
+  return res.data
+}
+
+export async function deleteModule(id: string): Promise<void> {
+  await api.delete(`/modules/${id}`)
+}
+
+export async function linkModuleToSystem(moduleId: string, systemId: string): Promise<void> {
+  await api.post(`/modules/${moduleId}/systems`, { system_id: systemId })
+}
+
+export async function unlinkModuleFromSystem(moduleId: string, systemId: string): Promise<void> {
+  await api.delete(`/modules/${moduleId}/systems/${systemId}`)
+}
+
+// --- Informationsmängder ---
+
+export async function getInformationAssets(params?: { organization_id?: string; contains_personal_data?: boolean; q?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<InformationAsset>> {
+  const res = await api.get<PaginatedResponse<InformationAsset>>("/information-assets", { params })
+  return res.data
+}
+
+export async function createInformationAsset(data: InformationAssetCreate): Promise<InformationAsset> {
+  const res = await api.post<InformationAsset>("/information-assets", data)
+  return res.data
+}
+
+export async function deleteInformationAsset(id: string): Promise<void> {
+  await api.delete(`/information-assets/${id}`)
+}
+
+export async function linkAssetToSystem(assetId: string, systemId: string): Promise<void> {
+  await api.post(`/information-assets/${assetId}/systems`, { system_id: systemId })
+}
+
+export async function unlinkAssetFromSystem(assetId: string, systemId: string): Promise<void> {
+  await api.delete(`/information-assets/${assetId}/systems/${systemId}`)
+}
+
+// --- Godkännanden ---
+
+export async function getApprovals(params?: { organization_id?: string; status?: ApprovalStatus; limit?: number; offset?: number }): Promise<PaginatedResponse<Approval>> {
+  const res = await api.get<PaginatedResponse<Approval>>("/approvals", { params })
+  return res.data
+}
+
+export async function getPendingApprovalCount(organizationId?: string): Promise<number> {
+  const res = await api.get<{ pending: number }>("/approvals/pending/count", {
+    params: organizationId ? { organization_id: organizationId } : undefined,
+  })
+  return res.data.pending
+}
+
+export async function createApproval(data: ApprovalCreate): Promise<Approval> {
+  const res = await api.post<Approval>("/approvals", data)
+  return res.data
+}
+
+export async function reviewApproval(id: string, data: ApprovalReview): Promise<Approval> {
+  const res = await api.post<Approval>(`/approvals/${id}/review`, data)
+  return res.data
+}
+
+export async function deleteApproval(id: string): Promise<void> {
+  await api.delete(`/approvals/${id}`)
 }
 
 export default api
