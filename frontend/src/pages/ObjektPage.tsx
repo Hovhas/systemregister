@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon, PlusIcon } from "lucide-react"
 
-import { getObjekt, getOrganizations } from "@/lib/api"
+import { getObjekt, getOrganizations, createObjekt } from "@/lib/api"
+import type { ObjektCreate } from "@/types"
 import {
   Table,
   TableBody,
@@ -20,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 // --- Skeleton ---
 
@@ -37,7 +46,30 @@ function TableRowSkeleton() {
 
 const PAGE_SIZE = 50
 
+const emptyObjektForm: ObjektCreate = {
+  name: "",
+  organization_id: "",
+  description: "",
+  object_owner: "",
+  object_leader: "",
+}
+
 export default function ObjektPage() {
+  const queryClient = useQueryClient()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newObjekt, setNewObjekt] = useState<ObjektCreate>({ ...emptyObjektForm })
+
+  const createMut = useMutation({
+    mutationFn: (data: ObjektCreate) => createObjekt(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["objekt"] })
+      setCreateOpen(false)
+      setNewObjekt({ ...emptyObjektForm })
+      toast.success("Objekt skapat")
+    },
+    onError: () => toast.error("Kunde inte skapa objekt"),
+  })
+
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [organization, setOrganization] = useState("")
@@ -135,6 +167,10 @@ export default function ObjektPage() {
             {total > 0 ? `${total} objekt totalt` : "Inga objekt hittade"}
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <PlusIcon className="mr-1 size-4" />
+          Nytt objekt
+        </Button>
       </div>
 
       {/* Filter-rad */}
@@ -268,6 +304,82 @@ export default function ObjektPage() {
           </div>
         </div>
       )}
+
+      {/* Skapa-dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setCreateOpen(false); setNewObjekt({ ...emptyObjektForm }) } else { setCreateOpen(true) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nytt objekt</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createMut.mutate(newObjekt)
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Namn *</label>
+              <Input
+                required
+                placeholder="Objektnamn"
+                value={newObjekt.name}
+                onChange={(e) => setNewObjekt({ ...newObjekt, name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Organisation *</label>
+              <Select
+                value={newObjekt.organization_id || undefined}
+                onValueChange={(val) => setNewObjekt({ ...newObjekt, organization_id: val ?? "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj organisation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(orgs ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Beskrivning</label>
+              <Input
+                placeholder="Beskrivning"
+                value={newObjekt.description ?? ""}
+                onChange={(e) => setNewObjekt({ ...newObjekt, description: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Objektägare</label>
+              <Input
+                placeholder="Objektägare"
+                value={newObjekt.object_owner ?? ""}
+                onChange={(e) => setNewObjekt({ ...newObjekt, object_owner: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Objektledare</label>
+              <Input
+                placeholder="Objektledare"
+                value={newObjekt.object_leader ?? ""}
+                onChange={(e) => setNewObjekt({ ...newObjekt, object_leader: e.target.value })}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); setNewObjekt({ ...emptyObjektForm }) }}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMut.isPending || !newObjekt.name || !newObjekt.organization_id}>
+                {createMut.isPending ? "Skapar..." : "Skapa"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

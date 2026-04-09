@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon, ExternalLinkIcon } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon, ExternalLinkIcon, PlusIcon } from "lucide-react"
 
-import { getComponents, getOrganizations, getSystems } from "@/lib/api"
+import { getComponents, getOrganizations, getSystems, createComponent } from "@/lib/api"
+import type { ComponentCreate } from "@/types"
 import {
   Table,
   TableBody,
@@ -20,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 // --- Skeleton ---
 
@@ -37,7 +46,32 @@ function TableRowSkeleton() {
 
 const PAGE_SIZE = 50
 
+const emptyComponentForm: ComponentCreate = {
+  name: "",
+  system_id: "",
+  organization_id: "",
+  description: "",
+  component_type: "",
+  url: "",
+  business_area: "",
+}
+
 export default function ComponentsPage() {
+  const queryClient = useQueryClient()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newComponent, setNewComponent] = useState<ComponentCreate>({ ...emptyComponentForm })
+
+  const createMut = useMutation({
+    mutationFn: (data: ComponentCreate) => createComponent(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["components"] })
+      setCreateOpen(false)
+      setNewComponent({ ...emptyComponentForm })
+      toast.success("Komponent skapad")
+    },
+    onError: () => toast.error("Kunde inte skapa komponent"),
+  })
+
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [organization, setOrganization] = useState("")
@@ -146,6 +180,10 @@ export default function ComponentsPage() {
             {total > 0 ? `${total} komponenter totalt` : "Inga komponenter hittade"}
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <PlusIcon className="mr-1 size-4" />
+          Ny komponent
+        </Button>
       </div>
 
       {/* Filter-rad */}
@@ -314,6 +352,108 @@ export default function ComponentsPage() {
           </div>
         </div>
       )}
+
+      {/* Skapa-dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setCreateOpen(false); setNewComponent({ ...emptyComponentForm }) } else { setCreateOpen(true) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ny komponent</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createMut.mutate(newComponent)
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Namn *</label>
+              <Input
+                required
+                placeholder="Komponentnamn"
+                value={newComponent.name}
+                onChange={(e) => setNewComponent({ ...newComponent, name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">System *</label>
+              <Select
+                value={newComponent.system_id || undefined}
+                onValueChange={(val) => setNewComponent({ ...newComponent, system_id: val ?? "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj system" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(systemsData?.items ?? []).map((sys) => (
+                    <SelectItem key={sys.id} value={sys.id}>
+                      {sys.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Organisation *</label>
+              <Select
+                value={newComponent.organization_id || undefined}
+                onValueChange={(val) => setNewComponent({ ...newComponent, organization_id: val ?? "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj organisation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(orgs ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Beskrivning</label>
+              <Input
+                placeholder="Beskrivning"
+                value={newComponent.description ?? ""}
+                onChange={(e) => setNewComponent({ ...newComponent, description: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Typ</label>
+              <Input
+                placeholder="Komponenttyp"
+                value={newComponent.component_type ?? ""}
+                onChange={(e) => setNewComponent({ ...newComponent, component_type: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">URL</label>
+              <Input
+                placeholder="https://..."
+                value={newComponent.url ?? ""}
+                onChange={(e) => setNewComponent({ ...newComponent, url: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Verksamhetsområde</label>
+              <Input
+                placeholder="Verksamhetsområde"
+                value={newComponent.business_area ?? ""}
+                onChange={(e) => setNewComponent({ ...newComponent, business_area: e.target.value })}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); setNewComponent({ ...emptyComponentForm }) }}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMut.isPending || !newComponent.name || !newComponent.system_id || !newComponent.organization_id}>
+                {createMut.isPending ? "Skapar..." : "Skapa"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

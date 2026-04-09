@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon, PlusIcon } from "lucide-react"
 
-import { getInformationAssets, getOrganizations } from "@/lib/api"
+import { getInformationAssets, getOrganizations, createInformationAsset } from "@/lib/api"
+import type { InformationAssetCreate } from "@/types"
 import {
   Table,
   TableBody,
@@ -21,6 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 // --- Skeleton ---
 
@@ -38,7 +47,34 @@ function TableRowSkeleton() {
 
 const PAGE_SIZE = 50
 
+const emptyAssetForm: InformationAssetCreate = {
+  name: "",
+  organization_id: "",
+  description: "",
+  information_owner: "",
+  confidentiality: undefined,
+  integrity: undefined,
+  availability: undefined,
+  contains_personal_data: false,
+  contains_public_records: false,
+}
+
 export default function InformationAssetsPage() {
+  const queryClient = useQueryClient()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newAsset, setNewAsset] = useState<InformationAssetCreate>({ ...emptyAssetForm })
+
+  const createMut = useMutation({
+    mutationFn: (data: InformationAssetCreate) => createInformationAsset(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["information-assets"] })
+      setCreateOpen(false)
+      setNewAsset({ ...emptyAssetForm })
+      toast.success("Informationsmängd skapad")
+    },
+    onError: () => toast.error("Kunde inte skapa informationsmängd"),
+  })
+
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [organization, setOrganization] = useState("")
@@ -139,6 +175,10 @@ export default function InformationAssetsPage() {
             {total > 0 ? `${total} informationsmängder totalt` : "Inga informationsmängder hittade"}
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <PlusIcon className="mr-1 size-4" />
+          Ny informationsmängd
+        </Button>
       </div>
 
       {/* Filter-rad */}
@@ -299,6 +339,149 @@ export default function InformationAssetsPage() {
           </div>
         </div>
       )}
+
+      {/* Skapa-dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setCreateOpen(false); setNewAsset({ ...emptyAssetForm }) } else { setCreateOpen(true) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ny informationsmängd</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createMut.mutate(newAsset)
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Namn *</label>
+              <Input
+                required
+                placeholder="Namn"
+                value={newAsset.name}
+                onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Organisation *</label>
+              <Select
+                value={newAsset.organization_id || undefined}
+                onValueChange={(val) => setNewAsset({ ...newAsset, organization_id: val ?? "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj organisation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(orgs ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Beskrivning</label>
+              <Input
+                placeholder="Beskrivning"
+                value={newAsset.description ?? ""}
+                onChange={(e) => setNewAsset({ ...newAsset, description: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Informationsägare</label>
+              <Input
+                placeholder="Informationsägare"
+                value={newAsset.information_owner ?? ""}
+                onChange={(e) => setNewAsset({ ...newAsset, information_owner: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">Konfidentialitet</label>
+                <Select
+                  value={newAsset.confidentiality != null ? String(newAsset.confidentiality) : ""}
+                  onValueChange={(val) => setNewAsset({ ...newAsset, confidentiality: val ? Number(val) : undefined })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="K" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Ingen</SelectItem>
+                    {[0, 1, 2, 3, 4].map((v) => (
+                      <SelectItem key={v} value={String(v)}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">Riktighet</label>
+                <Select
+                  value={newAsset.integrity != null ? String(newAsset.integrity) : ""}
+                  onValueChange={(val) => setNewAsset({ ...newAsset, integrity: val ? Number(val) : undefined })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="R" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Ingen</SelectItem>
+                    {[0, 1, 2, 3, 4].map((v) => (
+                      <SelectItem key={v} value={String(v)}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">Tillgänglighet</label>
+                <Select
+                  value={newAsset.availability != null ? String(newAsset.availability) : ""}
+                  onValueChange={(val) => setNewAsset({ ...newAsset, availability: val ? Number(val) : undefined })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="T" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Ingen</SelectItem>
+                    {[0, 1, 2, 3, 4].map((v) => (
+                      <SelectItem key={v} value={String(v)}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="create-personal-data"
+                  checked={newAsset.contains_personal_data ?? false}
+                  onChange={(e) => setNewAsset({ ...newAsset, contains_personal_data: e.target.checked })}
+                  className="size-4 rounded border"
+                />
+                <label htmlFor="create-personal-data" className="text-sm font-medium">Innehåller personuppgifter</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="create-public-records"
+                  checked={newAsset.contains_public_records ?? false}
+                  onChange={(e) => setNewAsset({ ...newAsset, contains_public_records: e.target.checked })}
+                  className="size-4 rounded border"
+                />
+                <label htmlFor="create-public-records" className="text-sm font-medium">Allmän handling</label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); setNewAsset({ ...emptyAssetForm }) }}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMut.isPending || !newAsset.name || !newAsset.organization_id}>
+                {createMut.isPending ? "Skapar..." : "Skapa"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

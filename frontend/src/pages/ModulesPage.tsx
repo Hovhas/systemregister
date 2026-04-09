@@ -1,9 +1,11 @@
 import { useState, useCallback } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon, PlusIcon } from "lucide-react"
 
-import { getModules, getOrganizations } from "@/lib/api"
+import { getModules, getOrganizations, createModule } from "@/lib/api"
 import { LifecycleStatus, AIRiskClass } from "@/types"
+import type { ModuleCreate } from "@/types"
 import { lifecycleLabels, aiRiskClassLabels, aiRiskBadgeClass } from "@/lib/labels"
 import {
   Table,
@@ -23,6 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 // --- Skeleton ---
 
@@ -53,7 +62,31 @@ function AIRiskBadge({ value }: { value: AIRiskClass }) {
 
 const PAGE_SIZE = 50
 
+const emptyModuleForm: ModuleCreate = {
+  name: "",
+  organization_id: "",
+  description: "",
+  lifecycle_status: undefined,
+  uses_ai: false,
+  ai_risk_class: undefined,
+}
+
 export default function ModulesPage() {
+  const queryClient = useQueryClient()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newModule, setNewModule] = useState<ModuleCreate>({ ...emptyModuleForm })
+
+  const createMut = useMutation({
+    mutationFn: (data: ModuleCreate) => createModule(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["modules"] })
+      setCreateOpen(false)
+      setNewModule({ ...emptyModuleForm })
+      toast.success("Modul skapad")
+    },
+    onError: () => toast.error("Kunde inte skapa modul"),
+  })
+
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [organization, setOrganization] = useState("")
@@ -151,6 +184,10 @@ export default function ModulesPage() {
             {total > 0 ? `${total} moduler totalt` : "Inga moduler hittade"}
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <PlusIcon className="mr-1 size-4" />
+          Ny modul
+        </Button>
       </div>
 
       {/* Filter-rad */}
@@ -300,6 +337,116 @@ export default function ModulesPage() {
           </div>
         </div>
       )}
+
+      {/* Skapa-dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setCreateOpen(false); setNewModule({ ...emptyModuleForm }) } else { setCreateOpen(true) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ny modul</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createMut.mutate(newModule)
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Namn *</label>
+              <Input
+                required
+                placeholder="Modulnamn"
+                value={newModule.name}
+                onChange={(e) => setNewModule({ ...newModule, name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Organisation *</label>
+              <Select
+                value={newModule.organization_id || undefined}
+                onValueChange={(val) => setNewModule({ ...newModule, organization_id: val ?? "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj organisation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(orgs ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Beskrivning</label>
+              <Input
+                placeholder="Beskrivning"
+                value={newModule.description ?? ""}
+                onChange={(e) => setNewModule({ ...newModule, description: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Livscykelstatus</label>
+              <Select
+                value={newModule.lifecycle_status ?? ""}
+                onValueChange={(val) => setNewModule({ ...newModule, lifecycle_status: val ? (val as LifecycleStatus) : undefined })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Ingen</SelectItem>
+                  {Object.values(LifecycleStatus).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {lifecycleLabels[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="create-uses-ai"
+                checked={newModule.uses_ai ?? false}
+                onChange={(e) => setNewModule({ ...newModule, uses_ai: e.target.checked, ai_risk_class: e.target.checked ? newModule.ai_risk_class : undefined })}
+                className="size-4 rounded border"
+              />
+              <label htmlFor="create-uses-ai" className="text-sm font-medium">Använder AI</label>
+            </div>
+            {newModule.uses_ai && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">AI-riskklass</label>
+                <Select
+                  value={newModule.ai_risk_class ?? ""}
+                  onValueChange={(val) => setNewModule({ ...newModule, ai_risk_class: val ? (val as AIRiskClass) : undefined })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Välj riskklass" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Ingen</SelectItem>
+                    {Object.values(AIRiskClass).map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {aiRiskClassLabels[r]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); setNewModule({ ...emptyModuleForm }) }}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMut.isPending || !newModule.name || !newModule.organization_id}>
+                {createMut.isPending ? "Skapar..." : "Skapa"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

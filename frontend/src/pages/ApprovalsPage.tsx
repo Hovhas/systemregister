@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { XIcon, CheckIcon, XCircleIcon } from "lucide-react"
+import { XIcon, CheckIcon, XCircleIcon, PlusIcon } from "lucide-react"
 
-import { getApprovals, getOrganizations, reviewApproval } from "@/lib/api"
+import { getApprovals, getOrganizations, reviewApproval, createApproval } from "@/lib/api"
 import { ApprovalStatus, ApprovalType } from "@/types"
+import type { ApprovalCreate } from "@/types"
 import { approvalStatusLabels, approvalTypeLabels, approvalStatusBadgeClass } from "@/lib/labels"
 import {
   Table,
@@ -61,8 +62,30 @@ function ApprovalStatusBadge({ value }: { value: ApprovalStatus }) {
 
 const PAGE_SIZE = 50
 
+const emptyApprovalForm: ApprovalCreate = {
+  title: "",
+  organization_id: "",
+  approval_type: ApprovalType.SYSTEM_REGISTRATION,
+  description: "",
+  requested_by: "",
+}
+
 export default function ApprovalsPage() {
   const queryClient = useQueryClient()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newApproval, setNewApproval] = useState<ApprovalCreate>({ ...emptyApprovalForm })
+
+  const createMut = useMutation({
+    mutationFn: (data: ApprovalCreate) => createApproval(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["approvals"] })
+      setCreateOpen(false)
+      setNewApproval({ ...emptyApprovalForm })
+      toast.success("Ärende skapat")
+    },
+    onError: () => toast.error("Kunde inte skapa ärende"),
+  })
+
   const [organization, setOrganization] = useState("")
   const [statusFilter, setStatusFilter] = useState<ApprovalStatus | "">("")
   const [offset, setOffset] = useState(0)
@@ -156,6 +179,10 @@ export default function ApprovalsPage() {
             {total > 0 ? `${total} godkännanden totalt` : "Inga godkännanden hittade"}
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <PlusIcon className="mr-1 size-4" />
+          Nytt ärende
+        </Button>
       </div>
 
       {/* Filter-rad */}
@@ -324,6 +351,92 @@ export default function ApprovalsPage() {
           </div>
         </div>
       )}
+
+      {/* Skapa-dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setCreateOpen(false); setNewApproval({ ...emptyApprovalForm }) } else { setCreateOpen(true) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nytt ärende</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createMut.mutate(newApproval)
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Titel *</label>
+              <Input
+                required
+                placeholder="Ärendetitel"
+                value={newApproval.title}
+                onChange={(e) => setNewApproval({ ...newApproval, title: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Organisation *</label>
+              <Select
+                value={newApproval.organization_id || undefined}
+                onValueChange={(val) => setNewApproval({ ...newApproval, organization_id: val ?? "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj organisation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(orgs ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Typ *</label>
+              <Select
+                value={newApproval.approval_type}
+                onValueChange={(val) => setNewApproval({ ...newApproval, approval_type: val as ApprovalType })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj typ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(ApprovalType).map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {approvalTypeLabels[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Beskrivning</label>
+              <Input
+                placeholder="Beskrivning"
+                value={newApproval.description ?? ""}
+                onChange={(e) => setNewApproval({ ...newApproval, description: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Begärd av</label>
+              <Input
+                placeholder="Namn"
+                value={newApproval.requested_by ?? ""}
+                onChange={(e) => setNewApproval({ ...newApproval, requested_by: e.target.value })}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateOpen(false); setNewApproval({ ...emptyApprovalForm }) }}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={createMut.isPending || !newApproval.title || !newApproval.organization_id || !newApproval.approval_type}>
+                {createMut.isPending ? "Skapar..." : "Skapa"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Granskningsdialog */}
       <Dialog open={reviewDialog.open} onOpenChange={(open) => { if (!open) closeReviewDialog() }}>
