@@ -16,17 +16,28 @@ depends_on = None
 
 def upgrade() -> None:
     # --- AI risk class & FRIA status enums ---
+    # Create enums only if they don't already exist (idempotent)
+    conn = op.get_bind()
+    conn.execute(sa.text(
+        "DO $$ BEGIN "
+        "CREATE TYPE airiskclass AS ENUM ('förbjuden','hög_risk','begränsad_risk','minimal_risk','ej_tillämplig'); "
+        "EXCEPTION WHEN duplicate_object THEN NULL; END $$"
+    ))
+    conn.execute(sa.text(
+        "DO $$ BEGIN "
+        "CREATE TYPE friastatus AS ENUM ('ja','nej','ej_tillämplig'); "
+        "EXCEPTION WHEN duplicate_object THEN NULL; END $$"
+    ))
+
+    # Reference existing enums without trying to re-create them
     ai_risk_class = postgresql.ENUM(
         "förbjuden", "hög_risk", "begränsad_risk", "minimal_risk", "ej_tillämplig",
-        name="airiskclass", create_type=True,
+        name="airiskclass", create_type=False,
     )
-    ai_risk_class.create(op.get_bind(), checkfirst=True)
-
     fria_status = postgresql.ENUM(
         "ja", "nej", "ej_tillämplig",
-        name="friastatus", create_type=True,
+        name="friastatus", create_type=False,
     )
-    fria_status.create(op.get_bind(), checkfirst=True)
 
     # --- AI fields on systems ---
     op.add_column("systems", sa.Column("uses_ai", sa.Boolean(), server_default="false", nullable=False))
