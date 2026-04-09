@@ -76,7 +76,7 @@ export default function ComponentsPage() {
 
   const { data: systemsData } = useQuery({
     queryKey: ["systems", "all"],
-    queryFn: () => getSystems({ limit: 1000 }),
+    queryFn: () => getSystems({ limit: 200 }),
   })
   const systemNameMap = Object.fromEntries(
     (systemsData?.items ?? []).map((s) => [s.id, s.name])
