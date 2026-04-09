@@ -15,17 +15,26 @@ depends_on = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    conn.execute(sa.text(
+        "DO $$ BEGIN "
+        "CREATE TYPE approvalstatus AS ENUM ('väntande','godkänd','avvisad','avbruten'); "
+        "EXCEPTION WHEN duplicate_object THEN NULL; END $$"
+    ))
+    conn.execute(sa.text(
+        "DO $$ BEGIN "
+        "CREATE TYPE approvaltype AS ENUM ('systemregistrering','avveckling','klassningsändring','gdpr_behandling','dataändring'); "
+        "EXCEPTION WHEN duplicate_object THEN NULL; END $$"
+    ))
+
     approval_status = postgresql.ENUM(
         "väntande", "godkänd", "avvisad", "avbruten",
-        name="approvalstatus", create_type=True,
+        name="approvalstatus", create_type=False,
     )
-    approval_status.create(op.get_bind(), checkfirst=True)
-
     approval_type = postgresql.ENUM(
         "systemregistrering", "avveckling", "klassningsändring", "gdpr_behandling", "dataändring",
-        name="approvaltype", create_type=True,
+        name="approvaltype", create_type=False,
     )
-    approval_type.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "approvals",
