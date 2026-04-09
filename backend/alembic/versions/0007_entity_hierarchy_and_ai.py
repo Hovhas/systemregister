@@ -83,7 +83,7 @@ def upgrade() -> None:
         sa.Column("organization_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("lifecycle_status", sa.Enum(
+        sa.Column("lifecycle_status", postgresql.ENUM(
             "planerad", "under_inforande", "i_drift", "under_avveckling", "avvecklad",
             name="lifecyclestatus", create_type=False,
         ), nullable=True),
