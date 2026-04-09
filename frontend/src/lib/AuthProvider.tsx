@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
 interface AuthUser {
   sub: string
@@ -32,7 +32,7 @@ const OIDC_ENABLED = import.meta.env.VITE_OIDC_ENABLED === "true"
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(OIDC_ENABLED)
-  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [accessToken, _setAccessToken] = useState<string | null>(null)
 
   useEffect(() => {
     if (!OIDC_ENABLED) {
