@@ -128,6 +128,15 @@ class System(Base):
     # --- Entitetshierarki ---
     objekt_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("objekt.id", ondelete="SET NULL"))
 
+    # --- SBOM ---
+    license_id: Mapped[str | None] = mapped_column(String(100))
+    cpe: Mapped[str | None] = mapped_column(String(500))
+    purl: Mapped[str | None] = mapped_column(String(500))
+
+    # --- Metakatalog ---
+    metakatalog_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    metakatalog_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # --- Flexibla attribut ---
     extended_attributes: Mapped[dict | None] = mapped_column(JSONB, default=dict)
 
@@ -358,6 +367,11 @@ class Module(Base):
     uses_ai: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_risk_class: Mapped[AIRiskClass | None] = mapped_column(_enum(AIRiskClass))
     ai_usage_description: Mapped[str | None] = mapped_column(Text)
+    # SBOM
+    license_id: Mapped[str | None] = mapped_column(String(100))
+    cpe: Mapped[str | None] = mapped_column(String(500))
+    purl: Mapped[str | None] = mapped_column(String(500))
+    supplier: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

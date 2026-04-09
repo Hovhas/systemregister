@@ -89,6 +89,11 @@ class ModuleCreate(SafeStringMixin):
     uses_ai: bool = False
     ai_risk_class: AIRiskClass | None = None
     ai_usage_description: str | None = None
+    # SBOM
+    license_id: str | None = Field(None, max_length=100)
+    cpe: str | None = Field(None, max_length=500)
+    purl: str | None = Field(None, max_length=500)
+    supplier: str | None = Field(None, max_length=255)
 
 
 class ModuleUpdate(SafeStringMixin):
@@ -101,6 +106,11 @@ class ModuleUpdate(SafeStringMixin):
     uses_ai: bool | None = None
     ai_risk_class: AIRiskClass | None = None
     ai_usage_description: str | None = None
+    # SBOM
+    license_id: str | None = Field(None, max_length=100)
+    cpe: str | None = Field(None, max_length=500)
+    purl: str | None = Field(None, max_length=500)
+    supplier: str | None = Field(None, max_length=255)
 
 
 class ModuleResponse(BaseModel):
@@ -117,6 +127,11 @@ class ModuleResponse(BaseModel):
     uses_ai: bool
     ai_risk_class: AIRiskClass | None
     ai_usage_description: str | None
+    # SBOM
+    license_id: str | None
+    cpe: str | None
+    purl: str | None
+    supplier: str | None
     created_at: datetime
     updated_at: datetime
 

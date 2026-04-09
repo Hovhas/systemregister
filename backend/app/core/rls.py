@@ -18,12 +18,13 @@ Testkörning utan RLS:
 import uuid
 import logging
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.core.database import get_db
 from app.core.config import get_settings
+from app.core.auth import get_current_user, get_current_user_optional
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -56,14 +57,15 @@ async def clear_rls_context(db: AsyncSession) -> None:
 
 
 async def get_rls_db(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     x_organization_id: str | None = Header(default=None),
 ) -> AsyncSession:
     """
     FastAPI Dependency: hämtar db-session med RLS-context satt.
 
-    Placeholder tills JWT-auth är på plats: läser org_id ur
-    X-Organization-Id-headern.
+    Auth-medveten: om OIDC är aktiverat hämtas org_id från JWT-claims.
+    Annars faller det tillbaka på X-Organization-Id-headern (dev-mode).
 
     Returnerar sessionen med aktiv RLS-context.
 
@@ -71,15 +73,25 @@ async def get_rls_db(
         @router.get("/systems")
         async def list_systems(db: AsyncSession = Depends(get_rls_db)):
             ...
-
-    TODO: Byt till JWT-claims när auth är implementerat.
-          Se issue #XX — auth-modul.
     """
-    # Utan header = bypass-mode (superadmin-vy, ser allt)
-    # Med header = filtrerat per organisation via RLS
-    # TODO: Kräv header när JWT-auth är implementerat
+    settings_obj = get_settings()
+    user = await get_current_user_optional(request)
 
-    if x_organization_id is not None:
+    # Bestäm org_id: JWT-claim tar precedens, sedan header
+    org_id: uuid.UUID | None = None
+
+    if settings_obj.oidc_enabled and user:
+        # Auth-läge: använd org_id från JWT
+        if user.org_id:
+            org_id = user.org_id
+        elif user.is_superadmin:
+            # Superadmin utan org_id → bypass RLS (ser allt)
+            pass
+        # Sätt audit-info på sessionen
+        db.info["current_user"] = user.email or user.sub
+        db.info["client_ip"] = request.client.host if request.client else None
+    elif x_organization_id is not None:
+        # Dev-mode / header-fallback
         try:
             org_id = uuid.UUID(x_organization_id)
         except ValueError:
@@ -88,12 +100,14 @@ async def get_rls_db(
                 detail=f"Ogiltigt UUID i X-Organization-Id: {x_organization_id!r}",
             )
 
+    if org_id is not None:
         await set_rls_context(db, org_id)
 
     return db
 
 
 async def get_superadmin_db(
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> AsyncSession:
     """
@@ -102,7 +116,16 @@ async def get_superadmin_db(
     Avsedd för endpoints som DigIT-personal (systemregister_admin-rollen)
     använder för att se data över alla organisationer.
 
-    OBS: Skydda dessa endpoints med auth-middleware som verifierar
-         att användaren faktiskt har admin-behörighet.
+    När OIDC är aktiverat verifieras att användaren har admin-behörighet.
     """
+    settings_obj = get_settings()
+    if settings_obj.oidc_enabled:
+        user = await get_current_user(request)
+        if not user.is_superadmin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Administratörsbehörighet krävs",
+            )
+        db.info["current_user"] = user.email or user.sub
+        db.info["client_ip"] = request.client.host if request.client else None
     return db

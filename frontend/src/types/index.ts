@@ -155,6 +155,15 @@ export interface System {
 
   extended_attributes: Record<string, unknown> | null
 
+  // SBOM
+  license_id: string | null
+  cpe: string | null
+  purl: string | null
+
+  // Metakatalog
+  metakatalog_id: string | null
+  metakatalog_synced_at: string | null
+
   created_at: string
   updated_at: string
   last_reviewed_at: string | null
@@ -317,6 +326,10 @@ export interface SystemCreate {
   ai_last_review_date?: string
   // Entitetshierarki
   objekt_id?: string
+  // SBOM
+  license_id?: string
+  cpe?: string
+  purl?: string
 }
 
 export interface SystemUpdate {
@@ -367,6 +380,10 @@ export interface SystemUpdate {
   ai_last_review_date?: string
   // Entitetshierarki
   objekt_id?: string | null
+  // SBOM
+  license_id?: string
+  cpe?: string
+  purl?: string
 }
 
 // --- Integration Create ---
@@ -593,6 +610,11 @@ export interface Module {
   uses_ai: boolean
   ai_risk_class: AIRiskClass | null
   ai_usage_description: string | null
+  // SBOM
+  license_id: string | null
+  cpe: string | null
+  purl: string | null
+  supplier: string | null
   created_at: string
   updated_at: string
 }
@@ -607,6 +629,11 @@ export interface ModuleCreate {
   uses_ai?: boolean
   ai_risk_class?: AIRiskClass
   ai_usage_description?: string
+  // SBOM
+  license_id?: string
+  cpe?: string
+  purl?: string
+  supplier?: string
 }
 
 // --- Informationsmängd ---

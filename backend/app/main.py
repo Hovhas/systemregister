@@ -6,10 +6,15 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import get_settings
 from app.core.audit import register_audit_listeners
+from app.core.events import register_listener
+from app.services.metakatalog_service import sync_to_metakatalog
 from app.api.organizations import router as org_router
 from app.api.systems import router as sys_router
 from app.api.classifications import router as classification_router
@@ -27,6 +32,9 @@ from app.api.components import router as components_router
 from app.api.modules import router as modules_router
 from app.api.information_assets import router as information_assets_router
 from app.api.approvals import router as approvals_router
+from app.api.sbom import router as sbom_router
+from app.api.me import router as me_router
+from app.api.webhooks import router as webhooks_router
 
 settings = get_settings()
 
@@ -35,6 +43,7 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     # Startup
     register_audit_listeners()
+    register_listener(sync_to_metakatalog)
     yield
     # Shutdown
 
@@ -45,6 +54,11 @@ app = FastAPI(
     version=settings.app_version,
     lifespan=lifespan,
 )
+
+# --- Rate Limiting (ASVS V13) ---
+limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit_default])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # --- OWASP Security Headers Middleware (ASVS V14) ---
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -102,6 +116,9 @@ app.include_router(components_router, prefix="/api/v1")
 app.include_router(modules_router, prefix="/api/v1")
 app.include_router(information_assets_router, prefix="/api/v1")
 app.include_router(approvals_router, prefix="/api/v1")
+app.include_router(sbom_router, prefix="/api/v1")
+app.include_router(me_router, prefix="/api/v1")
+app.include_router(webhooks_router, prefix="/api/v1")
 
 
 # --- OWASP A05: Suppress stack traces in production (ASVS V7) ---

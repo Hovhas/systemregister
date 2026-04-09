@@ -48,6 +48,19 @@ const api = axios.create({
   },
 })
 
+// Auth token injection (used when OIDC is enabled)
+let _accessToken: string | null = null
+export function setAuthToken(token: string | null) {
+  _accessToken = token
+}
+
+api.interceptors.request.use((config) => {
+  if (_accessToken) {
+    config.headers.Authorization = `Bearer ${_accessToken}`
+  }
+  return config
+})
+
 // Global error interceptor — visar toast vid API-fel
 api.interceptors.response.use(
   (response) => response,

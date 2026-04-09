@@ -88,6 +88,15 @@ class SystemCreate(SafeStringMixin):
 
     extended_attributes: dict | None = None
 
+    # SBOM
+    license_id: str | None = Field(None, max_length=100)
+    cpe: str | None = Field(None, max_length=500)
+    purl: str | None = Field(None, max_length=500)
+
+    # Metakatalog
+    metakatalog_id: str | None = None
+    metakatalog_synced_at: datetime | None = None
+
 
 class SystemUpdate(SafeStringMixin):
     name: str | None = Field(None, min_length=1, max_length=255)
@@ -151,6 +160,14 @@ class SystemUpdate(SafeStringMixin):
     extended_attributes: dict | None = None
     last_reviewed_by: str | None = None
     last_reviewed_at: datetime | None = None
+    # SBOM
+    license_id: str | None = Field(None, max_length=100)
+    cpe: str | None = Field(None, max_length=500)
+    purl: str | None = Field(None, max_length=500)
+
+    # Metakatalog
+    metakatalog_id: str | None = None
+    metakatalog_synced_at: datetime | None = None
 
 
 class SystemResponse(BaseModel):
@@ -228,6 +245,15 @@ class SystemResponse(BaseModel):
     objekt_id: UUID | None
 
     extended_attributes: dict | None
+
+    # SBOM
+    license_id: str | None
+    cpe: str | None
+    purl: str | None
+
+    # Metakatalog
+    metakatalog_id: str | None
+    metakatalog_synced_at: datetime | None
 
     created_at: datetime
     updated_at: datetime

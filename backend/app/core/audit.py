@@ -20,6 +20,7 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 
 from app.models.enums import AuditAction
+from app.core.events import emit_event, SystemEvent, EventType
 
 # Columns to exclude from serialisation — large / internal / already captured
 _EXCLUDE_COLS: frozenset[str] = frozenset({"created_at", "updated_at"})
@@ -93,13 +94,17 @@ def _get_changed_fields(
 
 
 def _make_audit_entry(
+    session: Session,
     action: AuditAction,
     table_name: str,
     record_id: uuid.UUID,
     old_values: dict[str, Any] | None,
     new_values: dict[str, Any] | None,
 ) -> Any:
-    """Construct an AuditLog instance (imported lazily to avoid circular imports)."""
+    """Construct an AuditLog instance (imported lazily to avoid circular imports).
+
+    Reads current_user and client_ip from session.info (set by RLS/auth layer).
+    """
     # Late import to avoid circular dependency at module load time
     from app.models.models import AuditLog  # noqa: PLC0415
 
@@ -108,11 +113,11 @@ def _make_audit_entry(
         table_name=table_name,
         record_id=record_id,
         action=action,
-        changed_by=None,  # Placeholder until auth is implemented
+        changed_by=session.info.get("current_user") if session.info else None,
         changed_at=datetime.now(timezone.utc),
         old_values=old_values or None,
         new_values=new_values or None,
-        ip_address=None,
+        ip_address=session.info.get("client_ip") if session.info else None,
     )
 
 
@@ -134,6 +139,7 @@ def _handle_after_flush(session: Session, flush_context: Any) -> None:
             continue
         new_values = _serialize_instance(obj)
         entry = _make_audit_entry(
+            session,
             action=AuditAction.CREATE,
             table_name=table_name,
             record_id=obj.id,
@@ -141,6 +147,14 @@ def _handle_after_flush(session: Session, flush_context: Any) -> None:
             new_values=new_values,
         )
         audit_entries.append(entry)
+        if table_name == "systems":
+            emit_event(SystemEvent(
+                event_type=EventType.SYSTEM_CREATED,
+                record_id=str(obj.id),
+                table_name=table_name,
+                new_values=new_values,
+                changed_by=session.info.get("current_user") if session.info else None,
+            ))
 
     # --- UPDATE ---
     for obj in list(session.dirty):
@@ -154,6 +168,7 @@ def _handle_after_flush(session: Session, flush_context: Any) -> None:
             # No tracked column actually changed
             continue
         entry = _make_audit_entry(
+            session,
             action=AuditAction.UPDATE,
             table_name=table_name,
             record_id=obj.id,
@@ -161,6 +176,15 @@ def _handle_after_flush(session: Session, flush_context: Any) -> None:
             new_values=new_values,
         )
         audit_entries.append(entry)
+        if table_name == "systems":
+            emit_event(SystemEvent(
+                event_type=EventType.SYSTEM_UPDATED,
+                record_id=str(obj.id),
+                table_name=table_name,
+                old_values=old_values,
+                new_values=new_values,
+                changed_by=session.info.get("current_user") if session.info else None,
+            ))
 
     # --- DELETE ---
     for obj in list(session.deleted):
@@ -169,6 +193,7 @@ def _handle_after_flush(session: Session, flush_context: Any) -> None:
             continue
         old_values = _serialize_instance(obj)
         entry = _make_audit_entry(
+            session,
             action=AuditAction.DELETE,
             table_name=table_name,
             record_id=obj.id,
@@ -176,6 +201,14 @@ def _handle_after_flush(session: Session, flush_context: Any) -> None:
             new_values=None,
         )
         audit_entries.append(entry)
+        if table_name == "systems":
+            emit_event(SystemEvent(
+                event_type=EventType.SYSTEM_DELETED,
+                record_id=str(obj.id),
+                table_name=table_name,
+                old_values=old_values,
+                changed_by=session.info.get("current_user") if session.info else None,
+            ))
 
     # Add all entries — SQLAlchemy will flush them in the next sub-flush
     for entry in audit_entries:
