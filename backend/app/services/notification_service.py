@@ -6,7 +6,8 @@ from sqlalchemy import select, func, and_, or_ as sa_or
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.models import System, SystemClassification, Contract
+from app.models.models import Approval, System, SystemClassification, Contract
+from app.models.enums import ApprovalStatus
 
 
 class NotificationService:
@@ -23,6 +24,9 @@ class NotificationService:
         await NotificationService._missing_gdpr_treatments(db, notifications)
         await NotificationService._stale_classifications(db, notifications, today)
         await NotificationService._missing_risk_assessments(db, notifications)
+        await NotificationService._check_ai_compliance(db, notifications)
+        await NotificationService._check_end_of_support(db, notifications, today)
+        await NotificationService._check_pending_approvals(db, notifications)
 
         return notifications
 
@@ -141,4 +145,69 @@ class NotificationService:
                 "title": f"{s.name} saknar riskbedömning",
                 "description": "NIS2-tillämpligt system utan registrerad riskbedömning",
                 "system_id": str(s.id),
+            })
+
+    @staticmethod
+    async def _check_ai_compliance(db: AsyncSession, out: list[dict]) -> None:
+        stmt = (
+            select(System)
+            .where(System.uses_ai == True)  # noqa: E712
+        )
+        for s in (await db.execute(stmt)).scalars().all():
+            # Missing FRIA for high-risk AI
+            if (
+                s.ai_risk_class is not None
+                and s.ai_risk_class.value == "hög_risk"
+                and (s.fria_status is None or s.fria_status.value != "ja")
+            ):
+                out.append({
+                    "type": "missing_fria",
+                    "severity": "critical",
+                    "title": f"{s.name} saknar FRIA",
+                    "description": "Högrisk-AI-system utan genomförd konsekvensbedömning för grundläggande rättigheter (FRIA)",
+                    "system_id": str(s.id),
+                })
+            # Missing transparency
+            if not s.ai_transparency_fulfilled:
+                out.append({
+                    "type": "missing_ai_transparency",
+                    "severity": "warning",
+                    "title": f"{s.name} saknar AI-transparens",
+                    "description": "AI-system utan uppfylld transparenskrav enligt AI-förordningen",
+                    "system_id": str(s.id),
+                })
+
+    @staticmethod
+    async def _check_end_of_support(db: AsyncSession, out: list[dict], today: date) -> None:
+        cutoff = today + timedelta(days=180)
+        stmt = (
+            select(System)
+            .where(System.end_of_support_date.is_not(None))
+            .where(System.end_of_support_date >= today)
+            .where(System.end_of_support_date <= cutoff)
+            .order_by(System.end_of_support_date)
+        )
+        for s in (await db.execute(stmt)).scalars().all():
+            days_left = (s.end_of_support_date - today).days
+            out.append({
+                "type": "end_of_support",
+                "severity": "warning" if days_left > 90 else "critical",
+                "title": f"{s.name} når end-of-support",
+                "description": f"Support upphör {s.end_of_support_date.isoformat()} ({days_left} dagar kvar)",
+                "system_id": str(s.id),
+            })
+
+    @staticmethod
+    async def _check_pending_approvals(db: AsyncSession, out: list[dict]) -> None:
+        stmt = (
+            select(Approval)
+            .where(Approval.status == ApprovalStatus.PENDING)
+        )
+        for a in (await db.execute(stmt)).scalars().all():
+            out.append({
+                "type": "pending_approval",
+                "severity": "info",
+                "title": f"Väntande godkännande: {a.title}",
+                "description": f"Typ: {a.approval_type.value}, begärd av {a.requested_by or 'okänd'}",
+                "record_id": str(a.id),
             })

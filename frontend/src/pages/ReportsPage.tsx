@@ -156,6 +156,58 @@ export default function ReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
+            <FileTextIcon className="size-4" />
+            GDPR-rapport
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/gdpr`, orgId)} label="JSON" loadingKey="gdpr-json" currentLoading={loading} setLoading={setLoading} />
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/gdpr.xlsx`, orgId)} label="Excel" loadingKey="gdpr-xlsx" currentLoading={loading} setLoading={setLoading} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileTextIcon className="size-4" />
+            AI-förordningsrapport
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/ai`, orgId)} label="JSON" loadingKey="ai-json" currentLoading={loading} setLoading={setLoading} />
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/ai.xlsx`, orgId)} label="Excel" loadingKey="ai-xlsx" currentLoading={loading} setLoading={setLoading} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileTextIcon className="size-4" />
+            Klassningsstatusrapport
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/classification-status`, orgId)} label="JSON" loadingKey="cls-json" currentLoading={loading} setLoading={setLoading} />
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/classification-status.xlsx`, orgId)} label="Excel" loadingKey="cls-xlsx" currentLoading={loading} setLoading={setLoading} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileTextIcon className="size-4" />
+            Livscykelrapport
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/lifecycle`, orgId)} label="JSON" loadingKey="lc-json" currentLoading={loading} setLoading={setLoading} />
+          <DownloadButton url={buildUrl(`${API_BASE}/reports/lifecycle.xlsx`, orgId)} label="Excel" loadingKey="lc-xlsx" currentLoading={loading} setLoading={setLoading} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
             <DownloadIcon className="size-4" />
             Export
           </CardTitle>

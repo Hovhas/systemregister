@@ -408,6 +408,17 @@ export interface SystemStats {
   by_lifecycle_status: Record<string, number>
   nis2_applicable_count: number
   treats_personal_data_count: number
+  uses_ai_count: number
+  ai_by_risk_class: Record<string, number>
+  classification_stats: {
+    with_classification: number
+    without_classification: number
+    expired: number
+  }
+  gdpr_stats: {
+    pub_agreement_count: number
+    dpia_count: number
+  }
 }
 
 // --- Sökparametrar ---

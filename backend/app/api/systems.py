@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.rls import get_rls_db
-from app.models import System, SystemClassification, SystemOwner
-from app.models.enums import SystemCategory, LifecycleStatus, Criticality
+from app.models import System, SystemClassification, SystemOwner, GDPRTreatment
+from app.models.enums import SystemCategory, LifecycleStatus, Criticality, AIRiskClass
 from app.schemas import (
     SystemCreate, SystemUpdate, SystemResponse, SystemDetailResponse,
     PaginatedResponse,
@@ -239,10 +239,87 @@ async def system_stats(
         )
     ) or 0
 
+    # AI-användning
+    uses_ai_count = await db.scalar(
+        select(func.count()).select_from(System).where(
+            System.uses_ai == True,
+            *([System.organization_id == organization_id] if organization_id else [])
+        )
+    ) or 0
+
+    ai_risk_stmt = (
+        select(System.ai_risk_class, func.count())
+        .where(System.uses_ai == True)  # noqa: E712
+        .where(System.ai_risk_class.is_not(None))
+        .group_by(System.ai_risk_class)
+    )
+    if organization_id:
+        ai_risk_stmt = ai_risk_stmt.where(System.organization_id == organization_id)
+    ai_risk_result = await db.execute(ai_risk_stmt)
+    ai_by_risk_class = {str(row[0].value): row[1] for row in ai_risk_result.all()}
+
+    # Klassningsstatus
+    with_classification = await db.scalar(
+        select(func.count()).select_from(
+            select(System).where(System.classifications.any()).options(
+                selectinload(System.classifications)
+            ).subquery()
+        )
+    ) or 0
+    without_classification = total - with_classification
+
+    # Expired classifications — systems where most recent classification has valid_until < today
+    from datetime import date as date_type
+    today_date = date_type.today()
+    expired_subq = (
+        select(
+            SystemClassification.system_id,
+            func.max(SystemClassification.classified_at).label("latest"),
+        )
+        .group_by(SystemClassification.system_id)
+        .subquery()
+    )
+    expired_cls_stmt = (
+        select(func.count(func.distinct(SystemClassification.system_id)))
+        .join(expired_subq, SystemClassification.system_id == expired_subq.c.system_id)
+        .where(SystemClassification.classified_at == expired_subq.c.latest)
+        .where(SystemClassification.valid_until.is_not(None))
+        .where(SystemClassification.valid_until < today_date)
+    )
+    expired_classification = await db.scalar(expired_cls_stmt) or 0
+
+    classification_stats = {
+        "with_classification": with_classification,
+        "without_classification": without_classification,
+        "expired": expired_classification,
+    }
+
+    # GDPR-stats
+    pub_agreement_count = await db.scalar(
+        select(func.count(func.distinct(GDPRTreatment.system_id))).where(
+            GDPRTreatment.processor_agreement_status.is_not(None)
+        )
+    ) or 0
+
+    dpia_count = await db.scalar(
+        select(func.count(func.distinct(GDPRTreatment.system_id))).where(
+            GDPRTreatment.dpia_conducted == True  # noqa: E712
+        )
+    ) or 0
+
+    gdpr_stats = {
+        "pub_agreement_count": pub_agreement_count,
+        "dpia_count": dpia_count,
+    }
+
     return {
         "total_systems": total,
         "by_lifecycle_status": by_lifecycle,
         "by_criticality": by_criticality,
         "nis2_applicable_count": nis2_count,
         "treats_personal_data_count": gdpr_count,
+        "uses_ai_count": uses_ai_count,
+        "ai_by_risk_class": ai_by_risk_class,
+        "classification_stats": classification_stats,
+        "gdpr_stats": gdpr_stats,
     }

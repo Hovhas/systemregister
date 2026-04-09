@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate, useBlocker } from "react-router-dom"
+import { useUndoStack } from "@/lib/useUndoStack"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
 import axios from "axios"
@@ -112,7 +113,7 @@ export default function SystemFormPage() {
   const navigate = useNavigate()
   const isEdit = Boolean(id)
 
-  const [form, setForm] = useState<FormState>(defaultForm)
+  const { value: form, setValue: setForm, undo, canUndo } = useUndoStack<FormState>(defaultForm)
   const [apiError, setApiError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -349,13 +350,18 @@ export default function SystemFormPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           {isEdit ? "Redigera system" : "Nytt system"}
         </h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(isEdit ? `/systems/${id}` : "/systems")}
-        >
-          Avbryt
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={undo} disabled={!canUndo}>
+            Ångra
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(isEdit ? `/systems/${id}` : "/systems")}
+          >
+            Avbryt
+          </Button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-8">

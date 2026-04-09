@@ -61,6 +61,20 @@ from app.schemas.reports import (  # noqa: F401
     ComplianceGaps,
     ComplianceGapSummary,
     ComplianceGapResponse,
+    GDPRReportEntry,
+    GDPRReportSummary,
+    GDPRReportResponse,
+    AIReportEntry,
+    AIModuleEntry,
+    AIReportSummary,
+    AIReportResponse,
+    ClassificationReportEntry,
+    ClassificationReportSummary,
+    ClassificationReportResponse,
+    LifecycleContractEntry,
+    LifecycleSystemEntry,
+    LifecycleReportSummary,
+    LifecycleReportResponse,
 )
 
 from app.schemas.audit import (  # noqa: F401

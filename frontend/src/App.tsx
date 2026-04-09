@@ -20,11 +20,17 @@ import {
   ClipboardListIcon,
   SunIcon,
   MoonIcon,
+  FolderIcon,
+  PuzzleIcon,
+  PackageIcon,
+  DatabaseIcon,
+  CheckSquareIcon,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { getNotifications } from "@/lib/api"
 import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts"
 
+import { SkipLink } from "@/components/SkipLink"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -44,6 +50,11 @@ import ReportsPage from "@/pages/ReportsPage"
 import NotificationsPage from "@/pages/NotificationsPage"
 import OrganizationsPage from "@/pages/OrganizationsPage"
 import AuditPage from "@/pages/AuditPage"
+import ObjektPage from "@/pages/ObjektPage"
+import ComponentsPage from "@/pages/ComponentsPage"
+import ModulesPage from "@/pages/ModulesPage"
+import InformationAssetsPage from "@/pages/InformationAssetsPage"
+import ApprovalsPage from "@/pages/ApprovalsPage"
 
 // --- Dark mode ---
 
@@ -82,6 +93,11 @@ const ROUTE_TITLES: Record<string, string> = {
   "/import": "Import",
   "/reports": "Rapporter",
   "/audit": "Ändringslogg",
+  "/objekt": "Objekt",
+  "/components": "Komponenter",
+  "/modules": "Moduler",
+  "/information-assets": "Informationsmängder",
+  "/approvals": "Godkännanden",
 }
 
 function usePageTitle() {
@@ -137,6 +153,11 @@ const navItems = [
   { to: "/notifications", label: "Notifikationer", icon: BellIcon },
   { to: "/import", label: "Import", icon: UploadIcon },
   { to: "/reports", label: "Rapporter", icon: FileTextIcon },
+  { to: "/objekt", label: "Objekt", icon: FolderIcon },
+  { to: "/components", label: "Komponenter", icon: PuzzleIcon },
+  { to: "/modules", label: "Moduler", icon: PackageIcon },
+  { to: "/information-assets", label: "Informationsmängder", icon: DatabaseIcon },
+  { to: "/approvals", label: "Godkännanden", icon: CheckSquareIcon },
   { to: "/audit", label: "Ändringslogg", icon: ClipboardListIcon },
 ]
 
@@ -265,6 +286,7 @@ function Layout() {
 
   return (
     <div className="flex min-h-screen bg-background transition-theme">
+      <SkipLink />
       <Sidebar dark={dark} onToggleDark={() => setDark((d) => !d)} />
       <MobileNav
         open={mobileOpen}
@@ -289,7 +311,7 @@ function Layout() {
           <NotificationBell />
         </header>
 
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
+        <main id="main-content" tabIndex={-1} className="flex-1 p-4 md:p-8 overflow-auto">
           <Outlet />
         </main>
       </div>
@@ -316,6 +338,11 @@ const router = createBrowserRouter([
       { path: "/import", element: <ImportPage /> },
       { path: "/reports", element: <ReportsPage /> },
       { path: "/audit", element: <AuditPage /> },
+      { path: "/objekt", element: <ObjektPage /> },
+      { path: "/components", element: <ComponentsPage /> },
+      { path: "/modules", element: <ModulesPage /> },
+      { path: "/information-assets", element: <InformationAssetsPage /> },
+      { path: "/approvals", element: <ApprovalsPage /> },
     ],
   },
 ])

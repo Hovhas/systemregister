@@ -9,7 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rls import get_rls_db
 from app.models.models import System
-from app.schemas import ComplianceGapResponse, NIS2ReportResponse
+from app.schemas import (
+    ComplianceGapResponse, NIS2ReportResponse,
+    GDPRReportResponse, AIReportResponse,
+    ClassificationReportResponse, LifecycleReportResponse,
+)
 from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/reports", tags=["Rapporter"])
@@ -148,4 +152,175 @@ async def compliance_gap_pdf(db: AsyncSession = Depends(get_rls_db)):
     return StreamingResponse(
         BytesIO(pdf_bytes), media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=compliance-gap-rapport.pdf"},
+    )
+
+
+# --- GDPR-rapport ---
+
+@router.get("/gdpr", response_model=GDPRReportResponse)
+async def gdpr_report(
+    organization_id: UUID | None = Query(None, description="Filtrera per organisation"),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """GDPR-rapport med sammanfattning och systemlista."""
+    return await ReportService.get_gdpr_report(db, organization_id)
+
+
+@router.get("/gdpr.xlsx")
+async def gdpr_report_xlsx(
+    organization_id: UUID | None = Query(None),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """GDPR-rapport som Excel-fil."""
+    data = await ReportService.get_gdpr_report(db, organization_id)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "GDPR-system"
+    ws.append(["Namn", "Organisation-ID", "PuB-avtal", "DPIA", "Tredjelandsöverföring", "Saknar behandling", "Antal behandlingar"])
+    for s in data["systems"]:
+        ws.append([
+            s["name"], s["organization_id"],
+            "Ja" if s["has_pub"] else "Nej",
+            "Ja" if s["has_dpia"] else "Nej",
+            "Ja" if s["third_country_transfer"] else "Nej",
+            "Ja" if s["missing_treatment"] else "Nej",
+            s["treatment_count"],
+        ])
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=gdpr-rapport.xlsx"},
+    )
+
+
+# --- AI-rapport ---
+
+@router.get("/ai", response_model=AIReportResponse)
+async def ai_report(
+    organization_id: UUID | None = Query(None, description="Filtrera per organisation"),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """AI-förordningsrapport med sammanfattning och systemlista."""
+    return await ReportService.get_ai_report(db, organization_id)
+
+
+@router.get("/ai.xlsx")
+async def ai_report_xlsx(
+    organization_id: UUID | None = Query(None),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """AI-förordningsrapport som Excel-fil."""
+    data = await ReportService.get_ai_report(db, organization_id)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "AI-system"
+    ws.append(["Namn", "Organisation-ID", "Riskklass", "FRIA-status", "Transparens uppfylld", "Beskrivning"])
+    for s in data["systems"]:
+        ws.append([
+            s["name"], s["organization_id"],
+            s["ai_risk_class"] or "",
+            s["fria_status"] or "",
+            "Ja" if s["ai_transparency_fulfilled"] else "Nej",
+            s["ai_usage_description"] or "",
+        ])
+    if data["modules"]:
+        ws_mod = wb.create_sheet("AI-moduler")
+        ws_mod.append(["Namn", "Organisation-ID", "Riskklass"])
+        for m in data["modules"]:
+            ws_mod.append([m["name"], m["organization_id"], m["ai_risk_class"] or ""])
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=ai-rapport.xlsx"},
+    )
+
+
+# --- Klassningsstatus-rapport ---
+
+@router.get("/classification-status", response_model=ClassificationReportResponse)
+async def classification_status_report(
+    organization_id: UUID | None = Query(None, description="Filtrera per organisation"),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """Klassningsstatusrapport med sammanfattning och systemlista."""
+    return await ReportService.get_classification_report(db, organization_id)
+
+
+@router.get("/classification-status.xlsx")
+async def classification_status_report_xlsx(
+    organization_id: UUID | None = Query(None),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """Klassningsstatusrapport som Excel-fil."""
+    data = await ReportService.get_classification_report(db, organization_id)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Klassningsstatus"
+    ws.append(["Namn", "Organisation-ID", "Har klassning", "Senaste klassningsdatum", "Utgången"])
+    for s in data["systems"]:
+        ws.append([
+            s["name"], s["organization_id"],
+            "Ja" if s["has_classification"] else "Nej",
+            s["most_recent_date"] or "",
+            "Ja" if s["is_expired"] else "Nej",
+        ])
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=klassningsstatus-rapport.xlsx"},
+    )
+
+
+# --- Livscykel-rapport ---
+
+@router.get("/lifecycle", response_model=LifecycleReportResponse)
+async def lifecycle_report(
+    organization_id: UUID | None = Query(None, description="Filtrera per organisation"),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """Livscykelrapport med utgående avtal, end-of-support och avveckling."""
+    return await ReportService.get_lifecycle_report(db, organization_id)
+
+
+@router.get("/lifecycle.xlsx")
+async def lifecycle_report_xlsx(
+    organization_id: UUID | None = Query(None),
+    db: AsyncSession = Depends(get_rls_db),
+):
+    """Livscykelrapport som Excel-fil."""
+    data = await ReportService.get_lifecycle_report(db, organization_id)
+    wb = Workbook()
+
+    ws_contracts = wb.active
+    ws_contracts.title = "Utgående avtal"
+    ws_contracts.append(["Leverantör", "System-ID", "Slutdatum", "Dagar kvar"])
+    for c in data["contracts"]:
+        ws_contracts.append([c["supplier_name"], c["system_id"], c["contract_end"], c["days_remaining"]])
+
+    ws_eos = wb.create_sheet("End-of-support")
+    ws_eos.append(["Namn", "Organisation-ID", "Slutdatum support", "Dagar kvar"])
+    for s in data["end_of_support_systems"]:
+        ws_eos.append([s["name"], s["organization_id"], s.get("end_of_support_date", ""), s.get("days_remaining", "")])
+
+    ws_decomm = wb.create_sheet("Under avveckling")
+    ws_decomm.append(["Namn", "Organisation-ID", "Planerat avvecklingsdatum"])
+    for s in data["decommissioning_systems"]:
+        ws_decomm.append([s["name"], s["organization_id"], s.get("planned_decommission_date", "")])
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=livscykel-rapport.xlsx"},
     )

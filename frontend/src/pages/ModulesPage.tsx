@@ -1,11 +1,10 @@
 import { useState, useCallback } from "react"
-import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, PlusIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
+import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
 
-import { getSystems, getOrganizations } from "@/lib/api"
-import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
-import { categoryLabels, lifecycleLabels, criticalityLabels, criticalityBadgeClass } from "@/lib/labels"
+import { getModules, getOrganizations } from "@/lib/api"
+import { LifecycleStatus, AIRiskClass } from "@/types"
+import { lifecycleLabels, aiRiskClassLabels, aiRiskBadgeClass } from "@/lib/labels"
 import {
   Table,
   TableBody,
@@ -41,36 +40,23 @@ function TableRowSkeleton() {
 
 // --- Hjälpkomponenter ---
 
-function CriticalityBadge({ value }: { value: Criticality }) {
-  const colorClass = criticalityBadgeClass[value]
-
+function AIRiskBadge({ value }: { value: AIRiskClass }) {
+  const colorClass = aiRiskBadgeClass[value]
   return (
     <span
       className={`inline-flex h-6 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${colorClass}`}
     >
-      {criticalityLabels[value]}
+      {aiRiskClassLabels[value]}
     </span>
   )
 }
 
-function Nis2Badge({ applicable }: { applicable: boolean }) {
-  return applicable ? (
-    <Badge variant="default">Ja</Badge>
-  ) : (
-    <Badge variant="outline">Nej</Badge>
-  )
-}
+const PAGE_SIZE = 50
 
-const PAGE_SIZE = 25
-
-export default function SystemsPage() {
-  const navigate = useNavigate()
+export default function ModulesPage() {
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [organization, setOrganization] = useState("")
-  const [category, setCategory] = useState<SystemCategory | "">("")
-  const [lifecycle, setLifecycle] = useState<LifecycleStatus | "">("")
-  const [criticality, setCriticality] = useState<Criticality | "">("")
   const [offset, setOffset] = useState(0)
   const [sortField, setSortField] = useState<string>("name")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
@@ -104,41 +90,23 @@ export default function SystemsPage() {
   )
 
   const isSearching = searchInput !== debouncedSearch
-  const hasFilters = !!(organization || category || lifecycle || criticality || debouncedSearch)
+  const hasFilters = !!(organization || debouncedSearch)
 
   function clearFilters() {
     setSearchInput("")
     setDebouncedSearch("")
     setOrganization("")
-    setCategory("")
-    setLifecycle("")
-    setCriticality("")
     setOffset(0)
   }
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: [
-      "systems",
-      debouncedSearch,
-      organization,
-      category,
-      lifecycle,
-      criticality,
-      offset,
-      sortField,
-      sortDir,
-    ],
+    queryKey: ["modules", debouncedSearch, organization, offset],
     queryFn: () =>
-      getSystems({
+      getModules({
         q: debouncedSearch || undefined,
         organization_id: organization || undefined,
-        system_category: category || undefined,
-        lifecycle_status: lifecycle || undefined,
-        criticality: criticality || undefined,
         limit: PAGE_SIZE,
         offset,
-        sort_by: sortField,
-        sort_dir: sortDir,
       }),
   })
 
@@ -148,22 +116,17 @@ export default function SystemsPage() {
 
   function SortHeader({ field, label }: { field: string; label: string }) {
     const active = sortField === field
-    function handleSort() {
-      if (active) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-      else {
-        setSortField(field)
-        setSortDir("asc")
-      }
-      setOffset(0)
-    }
     return (
       <TableHead
         className="cursor-pointer select-none hover:text-foreground transition-colors"
-        onClick={handleSort}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSort() } }}
-        tabIndex={0}
-        aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-        aria-label={`Sortera efter ${label}`}
+        onClick={() => {
+          if (active) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+          else {
+            setSortField(field)
+            setSortDir("asc")
+          }
+          setOffset(0)
+        }}
       >
         <span className="flex items-center gap-1">
           {label}
@@ -183,14 +146,11 @@ export default function SystemsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">System</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Moduler</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {total > 0 ? `${total} system totalt` : "Inga system hittade"}
+            {total > 0 ? `${total} moduler totalt` : "Inga moduler hittade"}
           </p>
         </div>
-        <Button onClick={() => navigate("/systems/new")}>
-          <PlusIcon className="mr-1.5 size-4" /> Nytt system
-        </Button>
       </div>
 
       {/* Filter-rad */}
@@ -202,12 +162,10 @@ export default function SystemsPage() {
             <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           )}
           <Input
-            placeholder="Sök system..."
+            placeholder="Sök moduler..."
             value={searchInput}
             onChange={handleSearchChange}
             className="pl-9"
-            data-shortcut="search"
-            aria-label="Sök system"
           />
         </div>
 
@@ -233,72 +191,6 @@ export default function SystemsPage() {
           </SelectContent>
         </Select>
 
-        <Select
-          value={category as string}
-          onValueChange={(val) => {
-            setCategory(val as SystemCategory | "")
-            setOffset(0)
-          }}
-        >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Kategori">
-              {category ? categoryLabels[category as SystemCategory] : undefined}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Alla kategorier</SelectItem>
-            {Object.values(SystemCategory).map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {categoryLabels[cat]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={lifecycle as string}
-          onValueChange={(val) => {
-            setLifecycle(val as LifecycleStatus | "")
-            setOffset(0)
-          }}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Livscykelstatus">
-              {lifecycle ? lifecycleLabels[lifecycle as LifecycleStatus] : undefined}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Alla statusar</SelectItem>
-            {Object.values(LifecycleStatus).map((s) => (
-              <SelectItem key={s} value={s}>
-                {lifecycleLabels[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={criticality as string}
-          onValueChange={(val) => {
-            setCriticality(val as Criticality | "")
-            setOffset(0)
-          }}
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Kritikalitet">
-              {criticality ? criticalityLabels[criticality as Criticality] : undefined}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Alla nivåer</SelectItem>
-            {Object.values(Criticality).map((c) => (
-              <SelectItem key={c} value={c}>
-                {criticalityLabels[c]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {hasFilters && (
           <Button
             variant="ghost"
@@ -315,7 +207,7 @@ export default function SystemsPage() {
       {/* Tabell */}
       {isError ? (
         <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          <p>Kunde inte hämta system. Kontrollera att backend körs.</p>
+          <p>Kunde inte hämta moduler. Kontrollera att backend körs.</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             Försök igen
           </Button>
@@ -327,10 +219,10 @@ export default function SystemsPage() {
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <SortHeader field="name" label="Namn" />
                 <SortHeader field="organization_id" label="Organisation" />
-                <SortHeader field="system_category" label="Kategori" />
-                <SortHeader field="criticality" label="Kritikalitet" />
-                <SortHeader field="lifecycle_status" label="Status" />
-                <TableHead>NIS2</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Produkt</TableHead>
+                <TableHead>AI</TableHead>
+                <TableHead>AI-riskklass</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -341,33 +233,38 @@ export default function SystemsPage() {
               ) : data?.items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    Inga system matchar sökningen
+                    Inga moduler matchar sökningen
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.items.map((system, idx) => (
+                data?.items.map((mod, idx) => (
                   <TableRow
-                    key={system.id}
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
-                    tabIndex={0}
-                    onClick={() => navigate(`/systems/${system.id}`)}
-                    onKeyDown={(e) => { if (e.key === "Enter") navigate(`/systems/${system.id}`) }}
+                    key={mod.id}
+                    className={`transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
                   >
-                    <TableCell className="font-medium">{system.name}</TableCell>
+                    <TableCell className="font-medium">{mod.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {orgNameMap[system.organization_id] ?? system.organization_id}
+                      {orgNameMap[mod.organization_id] ?? mod.organization_id}
                     </TableCell>
                     <TableCell>
-                      {categoryLabels[system.system_category]}
+                      {mod.lifecycle_status
+                        ? lifecycleLabels[mod.lifecycle_status as LifecycleStatus] ?? mod.lifecycle_status
+                        : "—"}
+                    </TableCell>
+                    <TableCell>{mod.product_name ?? "—"}</TableCell>
+                    <TableCell>
+                      {mod.uses_ai ? (
+                        <Badge variant="default">Ja</Badge>
+                      ) : (
+                        <Badge variant="outline">Nej</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <CriticalityBadge value={system.criticality} />
-                    </TableCell>
-                    <TableCell>
-                      {lifecycleLabels[system.lifecycle_status]}
-                    </TableCell>
-                    <TableCell>
-                      <Nis2Badge applicable={system.nis2_applicable} />
+                      {mod.ai_risk_class ? (
+                        <AIRiskBadge value={mod.ai_risk_class as AIRiskClass} />
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

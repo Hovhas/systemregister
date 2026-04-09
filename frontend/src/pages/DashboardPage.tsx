@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangleIcon, TrendingUpIcon, ShieldIcon, UsersIcon, ServerIcon } from "lucide-react"
+import { AlertTriangleIcon, TrendingUpIcon, ShieldIcon, UsersIcon, ServerIcon, BrainCircuitIcon, FileCheckIcon, LockIcon } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -27,7 +27,8 @@ import {
 import { getExpiringContracts, getSystemStats, getOrganizations } from "@/lib/api"
 import type { ExpiringContract, SystemStats, Organization } from "@/types"
 import { Criticality } from "@/types"
-import { criticalityLabels, criticalityVariant, lifecycleLabels } from "@/lib/labels"
+import { criticalityLabels, criticalityVariant, lifecycleLabels, aiRiskClassLabels, aiRiskBadgeClass } from "@/lib/labels"
+import { AIRiskClass } from "@/types"
 
 // ---------------------------------------------------------------------------
 // Skeleton loader
@@ -214,6 +215,107 @@ export default function DashboardPage() {
           />
         </div>
       ) : null}
+
+      {/* Nya KPI-kort: AI, GDPR, Klassning */}
+      {stats && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* AI-användning */}
+          <Card className="group hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  AI-användning
+                </CardTitle>
+                <div className="rounded-lg p-2 bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                  <BrainCircuitIcon className="size-4" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-1">
+              <p className="text-3xl font-bold tracking-tight">{stats.uses_ai_count}</p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {formatPercent(stats.uses_ai_count, total)} av alla system
+              </p>
+              {Object.keys(stats.ai_by_risk_class).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {Object.entries(stats.ai_by_risk_class).map(([rc, count]) => (
+                    <Badge
+                      key={rc}
+                      variant="outline"
+                      className={aiRiskBadgeClass[rc as AIRiskClass] ?? ""}
+                    >
+                      {aiRiskClassLabels[rc as AIRiskClass] ?? rc}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* GDPR-täckning */}
+          <Card className="group hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  GDPR-täckning
+                </CardTitle>
+                <div className="rounded-lg p-2 bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+                  <LockIcon className="size-4" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-1">
+              <div className="space-y-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">PuB-avtal</p>
+                  <p className="text-2xl font-bold tracking-tight">
+                    {stats.gdpr_stats.pub_agreement_count}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">
+                      system ({formatPercent(stats.gdpr_stats.pub_agreement_count, stats.treats_personal_data_count)})
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">DPIA genomförd</p>
+                  <p className="text-2xl font-bold tracking-tight">
+                    {stats.gdpr_stats.dpia_count}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">
+                      system ({formatPercent(stats.gdpr_stats.dpia_count, stats.treats_personal_data_count)})
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Klassningsstatus */}
+          <Card className="group hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-muted-foreground text-sm font-medium">
+                  Klassningsstatus
+                </CardTitle>
+                <div className="rounded-lg p-2 bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                  <FileCheckIcon className="size-4" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-1">
+              <p className="text-3xl font-bold tracking-tight">
+                {formatPercent(stats.classification_stats.with_classification, total)}
+              </p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {stats.classification_stats.with_classification} av {total} system klassade
+              </p>
+              {stats.classification_stats.expired > 0 && (
+                <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                  {stats.classification_stats.expired} utgångna klassningar
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Utgående avtal */}
       <Card>

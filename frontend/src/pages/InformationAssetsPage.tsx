@@ -1,11 +1,8 @@
 import { useState, useCallback } from "react"
-import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { SearchIcon, PlusIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
+import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
 
-import { getSystems, getOrganizations } from "@/lib/api"
-import { SystemCategory, LifecycleStatus, Criticality } from "@/types"
-import { categoryLabels, lifecycleLabels, criticalityLabels, criticalityBadgeClass } from "@/lib/labels"
+import { getInformationAssets, getOrganizations } from "@/lib/api"
 import {
   Table,
   TableBody,
@@ -30,7 +27,7 @@ import {
 function TableRowSkeleton() {
   return (
     <TableRow>
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 7 }).map((_, i) => (
         <TableCell key={i}>
           <div className="skeleton h-4 w-full max-w-[120px]" />
         </TableCell>
@@ -39,38 +36,13 @@ function TableRowSkeleton() {
   )
 }
 
-// --- Hjälpkomponenter ---
+const PAGE_SIZE = 50
 
-function CriticalityBadge({ value }: { value: Criticality }) {
-  const colorClass = criticalityBadgeClass[value]
-
-  return (
-    <span
-      className={`inline-flex h-6 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${colorClass}`}
-    >
-      {criticalityLabels[value]}
-    </span>
-  )
-}
-
-function Nis2Badge({ applicable }: { applicable: boolean }) {
-  return applicable ? (
-    <Badge variant="default">Ja</Badge>
-  ) : (
-    <Badge variant="outline">Nej</Badge>
-  )
-}
-
-const PAGE_SIZE = 25
-
-export default function SystemsPage() {
-  const navigate = useNavigate()
+export default function InformationAssetsPage() {
   const [searchInput, setSearchInput] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [organization, setOrganization] = useState("")
-  const [category, setCategory] = useState<SystemCategory | "">("")
-  const [lifecycle, setLifecycle] = useState<LifecycleStatus | "">("")
-  const [criticality, setCriticality] = useState<Criticality | "">("")
+  const [personalData, setPersonalData] = useState<"" | "true" | "false">("")
   const [offset, setOffset] = useState(0)
   const [sortField, setSortField] = useState<string>("name")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
@@ -104,41 +76,25 @@ export default function SystemsPage() {
   )
 
   const isSearching = searchInput !== debouncedSearch
-  const hasFilters = !!(organization || category || lifecycle || criticality || debouncedSearch)
+  const hasFilters = !!(organization || personalData || debouncedSearch)
 
   function clearFilters() {
     setSearchInput("")
     setDebouncedSearch("")
     setOrganization("")
-    setCategory("")
-    setLifecycle("")
-    setCriticality("")
+    setPersonalData("")
     setOffset(0)
   }
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: [
-      "systems",
-      debouncedSearch,
-      organization,
-      category,
-      lifecycle,
-      criticality,
-      offset,
-      sortField,
-      sortDir,
-    ],
+    queryKey: ["information-assets", debouncedSearch, organization, personalData, offset],
     queryFn: () =>
-      getSystems({
+      getInformationAssets({
         q: debouncedSearch || undefined,
         organization_id: organization || undefined,
-        system_category: category || undefined,
-        lifecycle_status: lifecycle || undefined,
-        criticality: criticality || undefined,
+        contains_personal_data: personalData ? personalData === "true" : undefined,
         limit: PAGE_SIZE,
         offset,
-        sort_by: sortField,
-        sort_dir: sortDir,
       }),
   })
 
@@ -148,22 +104,17 @@ export default function SystemsPage() {
 
   function SortHeader({ field, label }: { field: string; label: string }) {
     const active = sortField === field
-    function handleSort() {
-      if (active) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-      else {
-        setSortField(field)
-        setSortDir("asc")
-      }
-      setOffset(0)
-    }
     return (
       <TableHead
         className="cursor-pointer select-none hover:text-foreground transition-colors"
-        onClick={handleSort}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSort() } }}
-        tabIndex={0}
-        aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-        aria-label={`Sortera efter ${label}`}
+        onClick={() => {
+          if (active) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+          else {
+            setSortField(field)
+            setSortDir("asc")
+          }
+          setOffset(0)
+        }}
       >
         <span className="flex items-center gap-1">
           {label}
@@ -183,14 +134,11 @@ export default function SystemsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">System</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Informationsmängder</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {total > 0 ? `${total} system totalt` : "Inga system hittade"}
+            {total > 0 ? `${total} informationsmängder totalt` : "Inga informationsmängder hittade"}
           </p>
         </div>
-        <Button onClick={() => navigate("/systems/new")}>
-          <PlusIcon className="mr-1.5 size-4" /> Nytt system
-        </Button>
       </div>
 
       {/* Filter-rad */}
@@ -202,12 +150,10 @@ export default function SystemsPage() {
             <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           )}
           <Input
-            placeholder="Sök system..."
+            placeholder="Sök informationsmängder..."
             value={searchInput}
             onChange={handleSearchChange}
             className="pl-9"
-            data-shortcut="search"
-            aria-label="Sök system"
           />
         </div>
 
@@ -234,68 +180,21 @@ export default function SystemsPage() {
         </Select>
 
         <Select
-          value={category as string}
+          value={personalData || undefined}
           onValueChange={(val) => {
-            setCategory(val as SystemCategory | "")
+            setPersonalData(val as "" | "true" | "false")
             setOffset(0)
           }}
         >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Kategori">
-              {category ? categoryLabels[category as SystemCategory] : undefined}
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="Personuppgifter">
+              {personalData === "true" ? "Innehåller personuppgifter" : personalData === "false" ? "Utan personuppgifter" : undefined}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alla kategorier</SelectItem>
-            {Object.values(SystemCategory).map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {categoryLabels[cat]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={lifecycle as string}
-          onValueChange={(val) => {
-            setLifecycle(val as LifecycleStatus | "")
-            setOffset(0)
-          }}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Livscykelstatus">
-              {lifecycle ? lifecycleLabels[lifecycle as LifecycleStatus] : undefined}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Alla statusar</SelectItem>
-            {Object.values(LifecycleStatus).map((s) => (
-              <SelectItem key={s} value={s}>
-                {lifecycleLabels[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={criticality as string}
-          onValueChange={(val) => {
-            setCriticality(val as Criticality | "")
-            setOffset(0)
-          }}
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Kritikalitet">
-              {criticality ? criticalityLabels[criticality as Criticality] : undefined}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Alla nivåer</SelectItem>
-            {Object.values(Criticality).map((c) => (
-              <SelectItem key={c} value={c}>
-                {criticalityLabels[c]}
-              </SelectItem>
-            ))}
+            <SelectItem value="">Alla</SelectItem>
+            <SelectItem value="true">Innehåller personuppgifter</SelectItem>
+            <SelectItem value="false">Utan personuppgifter</SelectItem>
           </SelectContent>
         </Select>
 
@@ -315,7 +214,7 @@ export default function SystemsPage() {
       {/* Tabell */}
       {isError ? (
         <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          <p>Kunde inte hämta system. Kontrollera att backend körs.</p>
+          <p>Kunde inte hämta informationsmängder. Kontrollera att backend körs.</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             Försök igen
           </Button>
@@ -327,10 +226,11 @@ export default function SystemsPage() {
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <SortHeader field="name" label="Namn" />
                 <SortHeader field="organization_id" label="Organisation" />
-                <SortHeader field="system_category" label="Kategori" />
-                <SortHeader field="criticality" label="Kritikalitet" />
-                <SortHeader field="lifecycle_status" label="Status" />
-                <TableHead>NIS2</TableHead>
+                <TableHead>Informationsägare</TableHead>
+                <TableHead className="text-center w-12">K</TableHead>
+                <TableHead className="text-center w-12">R</TableHead>
+                <TableHead className="text-center w-12">T</TableHead>
+                <TableHead>Personuppgifter</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -340,34 +240,30 @@ export default function SystemsPage() {
                 ))
               ) : data?.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    Inga system matchar sökningen
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    Inga informationsmängder matchar sökningen
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.items.map((system, idx) => (
+                data?.items.map((asset, idx) => (
                   <TableRow
-                    key={system.id}
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
-                    tabIndex={0}
-                    onClick={() => navigate(`/systems/${system.id}`)}
-                    onKeyDown={(e) => { if (e.key === "Enter") navigate(`/systems/${system.id}`) }}
+                    key={asset.id}
+                    className={`transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
                   >
-                    <TableCell className="font-medium">{system.name}</TableCell>
+                    <TableCell className="font-medium">{asset.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {orgNameMap[system.organization_id] ?? system.organization_id}
+                      {orgNameMap[asset.organization_id] ?? asset.organization_id}
                     </TableCell>
+                    <TableCell>{asset.information_owner ?? "—"}</TableCell>
+                    <TableCell className="text-center">{asset.confidentiality ?? "—"}</TableCell>
+                    <TableCell className="text-center">{asset.integrity ?? "—"}</TableCell>
+                    <TableCell className="text-center">{asset.availability ?? "—"}</TableCell>
                     <TableCell>
-                      {categoryLabels[system.system_category]}
-                    </TableCell>
-                    <TableCell>
-                      <CriticalityBadge value={system.criticality} />
-                    </TableCell>
-                    <TableCell>
-                      {lifecycleLabels[system.lifecycle_status]}
-                    </TableCell>
-                    <TableCell>
-                      <Nis2Badge applicable={system.nis2_applicable} />
+                      {asset.contains_personal_data ? (
+                        <Badge variant="default">Ja</Badge>
+                      ) : (
+                        <Badge variant="outline">Nej</Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
