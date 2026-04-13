@@ -9,7 +9,7 @@ IT-systemregister för Sundsvalls kommunkoncern. Multi-org-stöd för DigIT (13+
 - **Backend:** Python 3.12, FastAPI, SQLAlchemy 2.0 (async), Alembic, PostgreSQL 16
 - **Frontend:** React 19, TypeScript, Vite 8, Tailwind CSS 4, shadcn/ui, TanStack Query v5, React Router v7
 - **Auth:** OIDC (Authentik/Keycloak) — placeholder med JWT under utveckling
-- **Deployment:** k3s, Flux CD, Kustomize, Longhorn PVC, Traefik IngressRoute, SOPS/age
+- **Deployment:** Dokploy (Docker-based PaaS), GitHub Actions for CI
 - **Lokal dev:** Docker Compose (backend + postgres + frontend)
 
 ## Arkitektur
@@ -17,10 +17,10 @@ IT-systemregister för Sundsvalls kommunkoncern. Multi-org-stöd för DigIT (13+
 ```
 ┌─────────────┐     ┌──────────────┐     ┌────────────┐
 │  React SPA  │────▶│  FastAPI API  │────▶│ PostgreSQL │
-│  (Nginx)    │     │  (Uvicorn)   │     │  (CNPG)    │
+│  (Nginx)    │     │  (Uvicorn)   │     │            │
 └─────────────┘     └──────────────┘     └────────────┘
       │                    │
-      └──── Traefik ───────┘
+      └──── Dokploy ───────┘
 ```
 
 ## UX-kontext
@@ -109,7 +109,7 @@ Avtal/leverantörer. Fält: id, system_id (FK), supplier_name, supplier_org_numb
 ## Fas-plan
 
 ### Fas 1–5 — KLAR
-Backend (52+ endpoints), frontend (10 sidor), Docker, K8s deploy, Flux CD — live på intern.hovhas.se.
+Backend (52+ endpoints), frontend (10 sidor), Docker — live på systemregister.hakans.sundsvall.dev via Dokploy.
 
 ### Fas 6 — UX och polish — KLAR
 - Inline onBlur-validering i formulär
@@ -168,4 +168,14 @@ cd frontend && npm run dev
 
 ## Miljövariabler
 
-Se `.env.example`. Känsliga värden hanteras via SOPS i k8s.
+Se `.env.example`. Känsliga värden hanteras via Dokploy Environment-variabler.
+
+## v2.0 — Bundle-refactoring
+
+Kodbasen genomgår en stegvis refactoring organiserad som "bundles":
+- **BUNDLE TEST** — session-isolering, CI-pipeline
+- **BUNDLE DOCS** — dokumentation, pre-commit hooks, PR-template, runbooks
+- **BUNDLE TYPES** — TypeScript strict mode, delade typer
+- **BUNDLE AUTH** — OIDC-integration (Fas 7)
+
+Varje bundle har en arbetsplan (AP-xxx) med verifierbara steg.

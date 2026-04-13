@@ -172,7 +172,7 @@ async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_d
 
 
 @router.patch("/{system_id}", response_model=SystemResponse)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def update_system(system_id: UUID, data: SystemUpdate, db: AsyncSession = Depends(get_rls_db)):
     system = await db.get(System, system_id)
     if not system:
@@ -185,7 +185,7 @@ async def update_system(system_id: UUID, data: SystemUpdate, db: AsyncSession = 
 
 
 @router.delete("/{system_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def delete_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
     system = await db.get(System, system_id)
     if not system:

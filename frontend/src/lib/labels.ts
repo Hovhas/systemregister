@@ -9,10 +9,18 @@ import {
   FRIAStatus,
   ApprovalStatus,
   ApprovalType,
+  OrganizationType,
 } from "@/types"
 
 // --- Centrala etiketter för enums ---
 // Alla svenska UI-etiketter samlade på ett ställe.
+
+export const organizationTypeLabels: Record<OrganizationType, string> = {
+  [OrganizationType.KOMMUN]: "Kommun",
+  [OrganizationType.BOLAG]: "Bolag",
+  [OrganizationType.SAMVERKAN]: "Samverkansorgan",
+  [OrganizationType.DIGIT]: "DigIT",
+}
 
 export const categoryLabels: Record<SystemCategory, string> = {
   [SystemCategory.VERKSAMHETSSYSTEM]: "Verksamhetssystem",

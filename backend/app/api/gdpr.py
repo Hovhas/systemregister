@@ -17,7 +17,7 @@ router = APIRouter(tags=["GDPR"])
     response_model=GDPRTreatmentResponse,
     status_code=status.HTTP_201_CREATED,
 )
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def create_gdpr_treatment(
     system_id: UUID,
     data: GDPRTreatmentCreate,
@@ -57,7 +57,7 @@ async def list_gdpr_treatments(
 
 
 @router.patch("/gdpr/{treatment_id}", response_model=GDPRTreatmentResponse)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def update_gdpr_treatment(
     treatment_id: UUID,
     data: GDPRTreatmentUpdate,
@@ -77,7 +77,7 @@ async def update_gdpr_treatment(
 
 
 @router.delete("/gdpr/{treatment_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def delete_gdpr_treatment(
     treatment_id: UUID,
     db: AsyncSession = Depends(get_rls_db),

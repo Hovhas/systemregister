@@ -1,0 +1,42 @@
+name: Säkerhetsproblem
+description: Rapportera ett säkerhetsproblem (ej akut sårbarhet)
+title: "[Säkerhet]: "
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **OBS:** Om du har hittat en akut sårbarhet, skapa INTE en publik issue.
+        Kontakta projektansvarig direkt.
+  - type: textarea
+    id: description
+    attributes:
+      label: Beskrivning
+      description: Beskriv säkerhetsproblemet
+    validations:
+      required: true
+  - type: dropdown
+    id: owasp
+    attributes:
+      label: OWASP Top 10 kategori
+      options:
+        - A01 Broken Access Control
+        - A02 Cryptographic Failures
+        - A03 Injection
+        - A04 Insecure Design
+        - A05 Security Misconfiguration
+        - A06 Vulnerable Components
+        - A07 Authentication Failures
+        - A08 Data Integrity Failures
+        - A09 Logging Failures
+        - A10 SSRF
+        - Annan / okänd
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Påverkan
+      description: Vad kan en angripare uppnå?
+    validations:
+      required: true

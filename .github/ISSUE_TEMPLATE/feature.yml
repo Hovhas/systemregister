@@ -1,0 +1,26 @@
+name: Ny funktion
+description: Föreslå en ny funktion eller förbättring
+title: "[Funktion]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Beskrivning
+      description: Beskriv den nya funktionen
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Varför behövs detta? Vilken kravspec-punkt (FK-xx) gäller?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptanskriterier
+      description: Vad ska uppfyllas för att funktionen ska anses klar?
+    validations:
+      required: true

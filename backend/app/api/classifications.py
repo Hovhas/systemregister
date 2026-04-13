@@ -17,7 +17,7 @@ router = APIRouter(tags=["Classifications"])
     response_model=ClassificationResponse,
     status_code=status.HTTP_201_CREATED,
 )
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def create_classification(
     system_id: UUID,
     data: ClassificationCreate,

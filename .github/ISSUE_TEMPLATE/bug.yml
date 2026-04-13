@@ -1,0 +1,48 @@
+name: Buggrapport
+description: Rapportera ett fel i systemregister
+title: "[Bugg]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Beskrivning
+      description: Beskriv buggen kortfattat
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steg för att reproducera
+      description: Steg-för-steg hur man ser felet
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Förväntat beteende
+      description: Vad borde hända?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Faktiskt beteende
+      description: Vad händer istället?
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Allvarlighetsgrad
+      options:
+        - Låg
+        - Medel
+        - Hög
+        - Kritisk
+    validations:
+      required: true

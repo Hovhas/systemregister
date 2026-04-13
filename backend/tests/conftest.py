@@ -205,9 +205,27 @@ async def db_session(test_engine):
     """
     Provide a transactional database session that rolls back after each test.
     This keeps tests isolated without recreating tables.
+
+    Session isolation strategy:
+    - NullPool (see test_engine) ensures no connection reuse across tests.
+    - RLS context (ROLE + app.current_org_id) is reset BOTH at session start
+      and in the finally block to guard against leaks even if a test errors out
+      mid-flight.
+    - The transaction is always rolled back so no test data persists.
     """
     connection = await test_engine.connect()
     transaction = await connection.begin()
+
+    # Reset RLS context at the START of each test to prevent leaks from
+    # any previous test that may have set ROLE or app.current_org_id.
+    try:
+        await connection.execute(text("RESET ROLE"))
+        await connection.execute(text("RESET SESSION AUTHORIZATION"))
+        await connection.execute(
+            text("SELECT set_config('app.current_org_id', '', true)")
+        )
+    except Exception:
+        pass
 
     session_factory = async_sessionmaker(
         bind=connection,

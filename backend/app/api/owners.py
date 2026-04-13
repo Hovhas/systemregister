@@ -17,7 +17,7 @@ router = APIRouter(tags=["Owners"])
     response_model=OwnerResponse,
     status_code=status.HTTP_201_CREATED,
 )
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def create_owner(
     system_id: UUID,
     data: OwnerCreate,
@@ -64,7 +64,7 @@ async def list_owners(
 
 
 @router.patch("/owners/{owner_id}", response_model=OwnerResponse)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def update_owner(
     owner_id: UUID,
     data: OwnerUpdate,
@@ -84,7 +84,7 @@ async def update_owner(
 
 
 @router.delete("/owners/{owner_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def delete_owner(
     owner_id: UUID,
     db: AsyncSession = Depends(get_rls_db),

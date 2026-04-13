@@ -17,7 +17,7 @@ system_router = APIRouter(tags=["Integrations"])
 
 
 @router.post("/", response_model=IntegrationResponse, status_code=status.HTTP_201_CREATED)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def create_integration(
     data: IntegrationCreate,
     db: AsyncSession = Depends(get_rls_db),
@@ -77,7 +77,7 @@ async def get_integration(
 
 
 @router.patch("/{integration_id}", response_model=IntegrationResponse)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def update_integration(
     integration_id: UUID,
     data: IntegrationUpdate,
@@ -97,7 +97,7 @@ async def update_integration(
 
 
 @router.delete("/{integration_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(P1.1/P1.2): Apply org-context from auth token when auth is implemented.
+# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
 async def delete_integration(
     integration_id: UUID,
     db: AsyncSession = Depends(get_rls_db),
