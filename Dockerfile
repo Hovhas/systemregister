@@ -27,16 +27,25 @@ COPY backend/ .
 # Kopiera frontend build till static dir
 COPY --from=frontend-build /app/dist /app/static
 
-# Weasyprint system-dependencies
+# Weasyprint system-dependencies + curl för HEALTHCHECK
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 \
     libcairo2 libgdk-pixbuf-2.0-0 libharfbuzz0b libffi-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Kopiera entrypoint-script (kör alembic upgrade head före uvicorn)
+COPY scripts/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Non-root user
-RUN useradd -r -s /bin/false appuser && chown -R appuser:appuser /app
+RUN useradd -r -s /bin/bash appuser && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Healthcheck mot /health (database-roundtrip)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -fs http://localhost:8000/health || exit 1
+
+ENTRYPOINT ["/app/entrypoint.sh"]

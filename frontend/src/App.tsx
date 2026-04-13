@@ -205,10 +205,10 @@ function Sidebar({ dark, onToggleDark }: { dark: boolean; onToggleDark: () => vo
         <button
           onClick={onToggleDark}
           className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-all duration-150"
-          aria-label={dark ? "Byt till ljust tema" : "Byt till morkt tema"}
+          aria-label={dark ? "Byt till ljust tema" : "Byt till mörkt tema"}
         >
           {dark ? <SunIcon className="size-[18px]" /> : <MoonIcon className="size-[18px]" />}
-          {dark ? "Ljust tema" : "Morkt tema"}
+          {dark ? "Ljust tema" : "Mörkt tema"}
         </button>
       </div>
     </aside>
@@ -267,7 +267,7 @@ function MobileNav({
             className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm text-foreground/70 hover:bg-accent hover:text-accent-foreground transition-all duration-150"
           >
             {dark ? <SunIcon className="size-[18px]" /> : <MoonIcon className="size-[18px]" />}
-            {dark ? "Ljust tema" : "Morkt tema"}
+            {dark ? "Ljust tema" : "Mörkt tema"}
           </button>
         </div>
       </SheetContent>

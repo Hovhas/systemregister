@@ -6,8 +6,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -35,13 +34,25 @@ from app.api.approvals import router as approvals_router
 from app.api.sbom import router as sbom_router
 from app.api.me import router as me_router
 from app.api.webhooks import router as webhooks_router
+from app.api.health import router as health_router
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # Startup — säkerhetskontroller (OWASP A02/A05)
+    if settings.environment == "production":
+        _weak_secret_keys = (
+            "change-me-in-production",
+            "dev-secret-key-change-in-prod",
+            "",
+        )
+        if settings.secret_key in _weak_secret_keys:
+            raise RuntimeError(
+                "SECRET_KEY måste roteras i produktion. "
+                "Sätt env var SECRET_KEY=<slumpmässig 32-byte hex-sträng>."
+            )
     register_audit_listeners()
     register_listener(sync_to_metakatalog)
     yield
@@ -56,9 +67,21 @@ app = FastAPI(
 )
 
 # --- Rate Limiting (ASVS V13) ---
-limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit_default])
+# Limitern flyttad till app.core.rate_limit för delning mellan moduler
+from app.core.rate_limit import limiter  # noqa: E402
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# --- IntegrityError → 422 (OWASP A08 / API-kontrakt) ---
+from sqlalchemy.exc import IntegrityError  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
+
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Databas-constraint överträdd (troligen dublett eller ogiltig FK-referens)"},
+    )
 
 # --- OWASP Security Headers Middleware (ASVS V14) ---
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -119,6 +142,9 @@ app.include_router(approvals_router, prefix="/api/v1")
 app.include_router(sbom_router, prefix="/api/v1")
 app.include_router(me_router, prefix="/api/v1")
 app.include_router(webhooks_router, prefix="/api/v1")
+
+# Health check — ingen /api/v1-prefix (för Docker HEALTHCHECK + load balancer)
+app.include_router(health_router)
 
 
 # --- OWASP A05: Suppress stack traces in production (ASVS V7) ---

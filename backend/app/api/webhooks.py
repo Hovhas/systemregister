@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.database import get_db
+from app.core.rls import get_rls_db
 from app.models.models import System
 
 logger = logging.getLogger(__name__)
@@ -26,16 +26,25 @@ class MetakatalogPayload(BaseModel):
 async def receive_metakatalog_webhook(
     payload: MetakatalogPayload,
     x_webhook_secret: str = Header(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_rls_db),
 ):
-    """Receive system sync events from Metakatalog."""
+    """Receive system sync events from Metakatalog.
+
+    Security:
+    - HMAC-validering FÖRST (fail fast innan feature-flag eller DB-anrop)
+    - RLS via X-Organization-Id header (server-till-server, men isoleras per org)
+    """
     settings = get_settings()
 
+    # 1) Fail fast på signatur (innan feature-flag, innan DB-anrop)
+    if not settings.metakatalog_webhook_secret or not hmac.compare_digest(
+        x_webhook_secret, settings.metakatalog_webhook_secret
+    ):
+        raise HTTPException(status_code=401, detail="Ogiltig webhook-signatur")
+
+    # 2) Feature-flag
     if not settings.metakatalog_enabled:
         raise HTTPException(status_code=404, detail="Metakatalog-integration ej aktiverad")
-
-    if not hmac.compare_digest(x_webhook_secret, settings.metakatalog_webhook_secret):
-        raise HTTPException(status_code=401, detail="Ogiltig webhook-signatur")
 
     logger.info("Metakatalog webhook: %s for %s", payload.event, payload.metakatalog_id)
 
