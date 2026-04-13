@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.rls import get_rls_db
-from app.models import System, SystemClassification, SystemOwner, GDPRTreatment
-from app.models.enums import SystemCategory, LifecycleStatus, Criticality, AIRiskClass
+from app.models import System, SystemClassification, SystemOwner, GDPRTreatment, Objekt, Module, Component, InformationAsset, Approval
+from app.models.enums import SystemCategory, LifecycleStatus, Criticality, AIRiskClass, ApprovalStatus
 from app.schemas import (
     SystemCreate, SystemUpdate, SystemResponse, SystemDetailResponse,
     PaginatedResponse,
@@ -80,7 +80,7 @@ async def list_systems(
     total = await db.scalar(count_stmt) or 0
 
     # Paginate
-    stmt = stmt.order_by(System.name).offset(offset).limit(limit)
+    stmt = stmt.order_by(System.created_at.desc(), System.id).offset(offset).limit(limit)
     result = await db.execute(stmt)
     systems = result.scalars().all()
 
@@ -319,6 +319,32 @@ async def system_stats(
         "dpia_count": dpia_count,
     }
 
+    # --- Entity counts (Objekt, Module, Component, InformationAsset, pending Approvals) ---
+    org_filter_objekt = [Objekt.organization_id == organization_id] if organization_id else []
+    org_filter_module = [Module.organization_id == organization_id] if organization_id else []
+    org_filter_component = [Component.organization_id == organization_id] if organization_id else []
+    org_filter_asset = [InformationAsset.organization_id == organization_id] if organization_id else []
+    org_filter_approval = [Approval.organization_id == organization_id] if organization_id else []
+
+    objekt_count = await db.scalar(
+        select(func.count()).select_from(Objekt).where(*org_filter_objekt)
+    ) or 0
+    module_count = await db.scalar(
+        select(func.count()).select_from(Module).where(*org_filter_module)
+    ) or 0
+    component_count = await db.scalar(
+        select(func.count()).select_from(Component).where(*org_filter_component)
+    ) or 0
+    information_asset_count = await db.scalar(
+        select(func.count()).select_from(InformationAsset).where(*org_filter_asset)
+    ) or 0
+    pending_approval_count = await db.scalar(
+        select(func.count()).select_from(Approval).where(
+            Approval.status == ApprovalStatus.PENDING,
+            *org_filter_approval,
+        )
+    ) or 0
+
     return {
         "total_systems": total,
         "by_lifecycle_status": by_lifecycle,
@@ -329,4 +355,9 @@ async def system_stats(
         "ai_by_risk_class": ai_by_risk_class,
         "classification_stats": classification_stats,
         "gdpr_stats": gdpr_stats,
+        "objekt_count": objekt_count,
+        "module_count": module_count,
+        "information_asset_count": information_asset_count,
+        "component_count": component_count,
+        "pending_approval_count": pending_approval_count,
     }

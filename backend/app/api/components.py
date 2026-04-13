@@ -30,7 +30,7 @@ async def list_components(
     if q:
         stmt = stmt.where(Component.name.ilike(f"%{q}%"))
     total = await db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    stmt = stmt.order_by(Component.name).offset(offset).limit(limit)
+    stmt = stmt.order_by(Component.created_at.desc(), Component.id).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return PaginatedResponse(items=result.scalars().all(), total=total, limit=limit, offset=offset)
 

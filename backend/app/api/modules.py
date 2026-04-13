@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,17 +18,40 @@ router = APIRouter(prefix="/modules", tags=["Modul"])
 async def list_modules(
     organization_id: UUID | None = Query(None),
     q: str | None = Query(None),
+    include_counts: bool = Query(False, description="Inkludera systems_count per modul"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_rls_db),
 ):
-    stmt = select(Module)
+    base = select(Module)
     if organization_id:
-        stmt = stmt.where(Module.organization_id == organization_id)
+        base = base.where(Module.organization_id == organization_id)
     if q:
-        stmt = stmt.where(Module.name.ilike(f"%{q}%"))
-    total = await db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    stmt = stmt.order_by(Module.name).offset(offset).limit(limit)
+        base = base.where(Module.name.ilike(f"%{q}%"))
+    total = await db.scalar(select(func.count()).select_from(base.subquery())) or 0
+
+    if include_counts:
+        systems_count_sq = (
+            select(func.count(module_system_link.c.system_id))
+            .where(module_system_link.c.module_id == Module.id)
+            .correlate(Module)
+            .scalar_subquery()
+        )
+        stmt = (
+            base.add_columns(systems_count_sq.label("systems_count"))
+            .order_by(Module.created_at.desc(), Module.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = (await db.execute(stmt)).all()
+        items: list[dict[str, Any]] = []
+        for mod, count in rows:
+            item = ModuleResponse.model_validate(mod).model_dump()
+            item["systems_count"] = count or 0
+            items.append(item)
+        return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
+
+    stmt = base.order_by(Module.created_at.desc(), Module.id).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return PaginatedResponse(items=result.scalars().all(), total=total, limit=limit, offset=offset)
 

@@ -203,6 +203,10 @@ class ReportService:
         stmt = (
             select(System)
             .where(System.uses_ai == True)  # noqa: E712
+            .options(
+                selectinload(System.gdpr_treatments),
+                selectinload(System.owners),
+            )
             .order_by(System.name)
         )
         if organization_id:

@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -5,7 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rls import get_rls_db
-from app.models import Objekt
+from app.models import Objekt, System
 from app.schemas import (
     ObjektCreate, ObjektUpdate, ObjektResponse, PaginatedResponse,
 )
@@ -17,17 +18,40 @@ router = APIRouter(prefix="/objekt", tags=["Objekt"])
 async def list_objekt(
     organization_id: UUID | None = Query(None),
     q: str | None = Query(None),
+    include_counts: bool = Query(False, description="Inkludera system_count per objekt"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_rls_db),
 ):
-    stmt = select(Objekt)
+    base = select(Objekt)
     if organization_id:
-        stmt = stmt.where(Objekt.organization_id == organization_id)
+        base = base.where(Objekt.organization_id == organization_id)
     if q:
-        stmt = stmt.where(Objekt.name.ilike(f"%{q}%"))
-    total = await db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    stmt = stmt.order_by(Objekt.name).offset(offset).limit(limit)
+        base = base.where(Objekt.name.ilike(f"%{q}%"))
+    total = await db.scalar(select(func.count()).select_from(base.subquery())) or 0
+
+    if include_counts:
+        system_count_sq = (
+            select(func.count(System.id))
+            .where(System.objekt_id == Objekt.id)
+            .correlate(Objekt)
+            .scalar_subquery()
+        )
+        stmt = (
+            base.add_columns(system_count_sq.label("system_count"))
+            .order_by(Objekt.created_at.desc(), Objekt.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = (await db.execute(stmt)).all()
+        items: list[dict[str, Any]] = []
+        for obj, count in rows:
+            item = ObjektResponse.model_validate(obj).model_dump()
+            item["system_count"] = count or 0
+            items.append(item)
+        return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
+
+    stmt = base.order_by(Objekt.created_at.desc(), Objekt.id).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return PaginatedResponse(items=result.scalars().all(), total=total, limit=limit, offset=offset)
 

@@ -37,6 +37,7 @@ class Organization(Base):
 
     # Relationships
     systems: Mapped[list["System"]] = relationship(back_populates="organization")
+    objekt: Mapped[list["Objekt"]] = relationship(back_populates="organization")
     children: Mapped[list["Organization"]] = relationship(back_populates="parent")
     parent: Mapped["Organization | None"] = relationship(back_populates="children", remote_side=[id])
 
@@ -327,7 +328,7 @@ class Objekt(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["Organization"] = relationship()
+    organization: Mapped["Organization"] = relationship(back_populates="objekt")
     systems: Mapped[list["System"]] = relationship(back_populates="objekt")
 
 

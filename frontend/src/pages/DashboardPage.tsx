@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangleIcon, TrendingUpIcon, ShieldIcon, UsersIcon, ServerIcon, BrainCircuitIcon, FileCheckIcon, LockIcon } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { AlertTriangleIcon, TrendingUpIcon, ShieldIcon, UsersIcon, ServerIcon, BrainCircuitIcon, FileCheckIcon, LockIcon, FolderIcon, PuzzleIcon, PackageIcon, DatabaseIcon, ClipboardCheckIcon } from "lucide-react"
 import {
   Card,
   CardContent,
@@ -110,6 +111,7 @@ function KpiCard({ title, value, subtitle, icon: Icon, iconClassName }: KpiCardP
 // ---------------------------------------------------------------------------
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
   const [selectedOrg, setSelectedOrg] = useState<string>("alla")
 
   const { data: orgs } = useQuery<Organization[]>({
@@ -315,6 +317,107 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Entiteter */}
+      {stats && (
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Entiteter</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <Card
+              className="group hover:shadow-md transition-shadow duration-200 cursor-pointer"
+              onClick={() => navigate("/objekt")}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-sm font-medium">Objekt</CardTitle>
+                  <div className="rounded-lg p-2 bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
+                    <FolderIcon className="size-4" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <p className="text-3xl font-bold tracking-tight">{stats.objekt_count}</p>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="group hover:shadow-md transition-shadow duration-200 cursor-pointer"
+              onClick={() => navigate("/modules")}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-sm font-medium">Moduler</CardTitle>
+                  <div className="rounded-lg p-2 bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-400">
+                    <PackageIcon className="size-4" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <p className="text-3xl font-bold tracking-tight">{stats.module_count}</p>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="group hover:shadow-md transition-shadow duration-200 cursor-pointer"
+              onClick={() => navigate("/components")}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-sm font-medium">Komponenter</CardTitle>
+                  <div className="rounded-lg p-2 bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400">
+                    <PuzzleIcon className="size-4" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <p className="text-3xl font-bold tracking-tight">{stats.component_count}</p>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="group hover:shadow-md transition-shadow duration-200 cursor-pointer"
+              onClick={() => navigate("/information-assets")}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-sm font-medium">Informationsm.</CardTitle>
+                  <div className="rounded-lg p-2 bg-cyan-50 text-cyan-600 dark:bg-cyan-950 dark:text-cyan-400">
+                    <DatabaseIcon className="size-4" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <p className="text-3xl font-bold tracking-tight">{stats.information_asset_count}</p>
+              </CardContent>
+            </Card>
+
+            <Card
+              className={`group hover:shadow-md transition-shadow duration-200 cursor-pointer ${
+                stats.pending_approval_count > 0
+                  ? "ring-2 ring-yellow-400/50 bg-yellow-50/30 dark:bg-yellow-950/20"
+                  : ""
+              }`}
+              onClick={() => navigate("/approvals")}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-muted-foreground text-sm font-medium">Vantande godk.</CardTitle>
+                  <div className={`rounded-lg p-2 ${
+                    stats.pending_approval_count > 0
+                      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                      : "bg-slate-50 text-slate-600 dark:bg-slate-950 dark:text-slate-400"
+                  }`}>
+                    <ClipboardCheckIcon className="size-4" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <p className="text-3xl font-bold tracking-tight">{stats.pending_approval_count}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       )}
 
       {/* Utgående avtal */}

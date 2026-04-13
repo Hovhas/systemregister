@@ -1,4 +1,6 @@
 import os
+import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -13,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import get_settings
 from app.core.audit import register_audit_listeners
 from app.core.events import register_listener
+from app.core.logging_config import configure_logging, request_id_var, user_id_var, org_id_var
 from app.services.metakatalog_service import sync_to_metakatalog
 from app.api.organizations import router as org_router
 from app.api.systems import router as sys_router
@@ -35,6 +38,8 @@ from app.api.sbom import router as sbom_router
 from app.api.me import router as me_router
 from app.api.webhooks import router as webhooks_router
 from app.api.health import router as health_router
+from app.api.metrics import router as metrics_router
+from app.api.metrics import http_requests_total, http_request_duration_seconds
 
 settings = get_settings()
 
@@ -53,6 +58,10 @@ async def lifespan(app: FastAPI):
                 "SECRET_KEY måste roteras i produktion. "
                 "Sätt env var SECRET_KEY=<slumpmässig 32-byte hex-sträng>."
             )
+    configure_logging(
+        level=settings.log_level,
+        structured=settings.environment != "development",
+    )
     register_audit_listeners()
     register_listener(sync_to_metakatalog)
     yield
@@ -107,6 +116,40 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
+
+# --- Request Context Middleware (korrelations-ID per request) ---
+class RequestContextMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request_id_var.set(req_id)
+        # Set user_id, org_id from headers if available (will come from JWT later)
+        org_id_var.set(request.headers.get("X-Organization-Id"))
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = req_id
+        return response
+
+app.add_middleware(RequestContextMiddleware)
+
+
+# --- Prometheus Metrics Middleware ---
+class MetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        duration = time.time() - start
+        endpoint = request.url.path
+        # Skip /metrics itself to avoid recursion
+        if endpoint != "/metrics":
+            http_requests_total.labels(
+                method=request.method, endpoint=endpoint, status=response.status_code
+            ).inc()
+            http_request_duration_seconds.labels(
+                method=request.method, endpoint=endpoint
+            ).observe(duration)
+        return response
+
+app.add_middleware(MetricsMiddleware)
+
 # Trusted proxy headers (Traefik sätter X-Forwarded-Proto)
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=settings.trusted_proxy_hosts)
@@ -145,6 +188,9 @@ app.include_router(webhooks_router, prefix="/api/v1")
 
 # Health check — ingen /api/v1-prefix (för Docker HEALTHCHECK + load balancer)
 app.include_router(health_router)
+
+# Metrics — ingen /api/v1-prefix (för Prometheus scraping)
+app.include_router(metrics_router)
 
 
 # --- OWASP A05: Suppress stack traces in production (ASVS V7) ---

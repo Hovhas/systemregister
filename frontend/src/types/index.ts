@@ -442,6 +442,11 @@ export interface SystemStats {
     pub_agreement_count: number
     dpia_count: number
   }
+  objekt_count: number
+  module_count: number
+  information_asset_count: number
+  component_count: number
+  pending_approval_count: number
 }
 
 // --- Sökparametrar ---

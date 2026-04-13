@@ -39,6 +39,7 @@ class ObjektResponse(BaseModel):
     object_leader: str | None
     created_at: datetime
     updated_at: datetime
+    system_count: int | None = None
 
 
 # --- Komponent ---
@@ -134,6 +135,7 @@ class ModuleResponse(BaseModel):
     supplier: str | None
     created_at: datetime
     updated_at: datetime
+    systems_count: int | None = None
 
 
 class ModuleLinkRequest(BaseModel):
@@ -212,6 +214,7 @@ class InformationAssetResponse(BaseModel):
     last_ihp_review: date | None
     created_at: datetime
     updated_at: datetime
+    systems_count: int | None = None
 
 
 class InformationAssetLinkRequest(BaseModel):

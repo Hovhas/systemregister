@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import {
   createBrowserRouter,
   RouterProvider,
@@ -42,25 +42,25 @@ import {
 } from "@/components/ui/sheet"
 import { Toaster } from "@/components/ui/sonner"
 
-import DashboardPage from "@/pages/DashboardPage"
-import SystemsPage from "@/pages/SystemsPage"
-import SystemDetailPage from "@/pages/SystemDetailPage"
-import SystemFormPage from "@/pages/SystemFormPage"
-import DependenciesPage from "@/pages/DependenciesPage"
-import ImportPage from "@/pages/ImportPage"
-import ReportsPage from "@/pages/ReportsPage"
-import NotificationsPage from "@/pages/NotificationsPage"
-import OrganizationsPage from "@/pages/OrganizationsPage"
-import AuditPage from "@/pages/AuditPage"
-import ObjektPage from "@/pages/ObjektPage"
-import ComponentsPage from "@/pages/ComponentsPage"
-import ModulesPage from "@/pages/ModulesPage"
-import InformationAssetsPage from "@/pages/InformationAssetsPage"
-import ApprovalsPage from "@/pages/ApprovalsPage"
-import ObjektDetailPage from "@/pages/ObjektDetailPage"
-import ModuleDetailPage from "@/pages/ModuleDetailPage"
-import InformationAssetDetailPage from "@/pages/InformationAssetDetailPage"
-import ApprovalDetailPage from "@/pages/ApprovalDetailPage"
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
+const SystemsPage = lazy(() => import("@/pages/SystemsPage"))
+const SystemDetailPage = lazy(() => import("@/pages/SystemDetailPage"))
+const SystemFormPage = lazy(() => import("@/pages/SystemFormPage"))
+const DependenciesPage = lazy(() => import("@/pages/DependenciesPage"))
+const ImportPage = lazy(() => import("@/pages/ImportPage"))
+const ReportsPage = lazy(() => import("@/pages/ReportsPage"))
+const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"))
+const OrganizationsPage = lazy(() => import("@/pages/OrganizationsPage"))
+const AuditPage = lazy(() => import("@/pages/AuditPage"))
+const ObjektPage = lazy(() => import("@/pages/ObjektPage"))
+const ComponentsPage = lazy(() => import("@/pages/ComponentsPage"))
+const ModulesPage = lazy(() => import("@/pages/ModulesPage"))
+const InformationAssetsPage = lazy(() => import("@/pages/InformationAssetsPage"))
+const ApprovalsPage = lazy(() => import("@/pages/ApprovalsPage"))
+const ObjektDetailPage = lazy(() => import("@/pages/ObjektDetailPage"))
+const ModuleDetailPage = lazy(() => import("@/pages/ModuleDetailPage"))
+const InformationAssetDetailPage = lazy(() => import("@/pages/InformationAssetDetailPage"))
+const ApprovalDetailPage = lazy(() => import("@/pages/ApprovalDetailPage"))
 
 // --- Dark mode ---
 
@@ -151,20 +151,50 @@ function NotificationBell() {
 
 // --- Navigationsstruktur ---
 
-const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
-  { to: "/systems", label: "System", icon: ServerIcon },
-  { to: "/organizations", label: "Organisationer", icon: BuildingIcon },
-  { to: "/dependencies", label: "Beroendekarta", icon: GitForkIcon },
-  { to: "/notifications", label: "Notifikationer", icon: BellIcon },
-  { to: "/import", label: "Import", icon: UploadIcon },
-  { to: "/reports", label: "Rapporter", icon: FileTextIcon },
-  { to: "/objekt", label: "Objekt", icon: FolderIcon },
-  { to: "/components", label: "Komponenter", icon: PuzzleIcon },
-  { to: "/modules", label: "Moduler", icon: PackageIcon },
-  { to: "/information-assets", label: "Informationsmängder", icon: DatabaseIcon },
-  { to: "/approvals", label: "Godkännanden", icon: CheckSquareIcon },
-  { to: "/audit", label: "Ändringslogg", icon: ClipboardListIcon },
+interface NavGroup {
+  label: string
+  items: { to: string; label: string; icon: React.ComponentType<{ className?: string }> }[]
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: "Översikt",
+    items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
+    ],
+  },
+  {
+    label: "Huvuddata",
+    items: [
+      { to: "/systems", label: "System", icon: ServerIcon },
+      { to: "/objekt", label: "Objekt", icon: FolderIcon },
+      { to: "/organizations", label: "Organisationer", icon: BuildingIcon },
+    ],
+  },
+  {
+    label: "System-delar",
+    items: [
+      { to: "/components", label: "Komponenter", icon: PuzzleIcon },
+      { to: "/modules", label: "Moduler", icon: PackageIcon },
+      { to: "/information-assets", label: "Informationsmängder", icon: DatabaseIcon },
+    ],
+  },
+  {
+    label: "Arbete",
+    items: [
+      { to: "/dependencies", label: "Beroendekarta", icon: GitForkIcon },
+      { to: "/approvals", label: "Godkännanden", icon: CheckSquareIcon },
+      { to: "/notifications", label: "Notifikationer", icon: BellIcon },
+    ],
+  },
+  {
+    label: "Verktyg",
+    items: [
+      { to: "/import", label: "Import", icon: UploadIcon },
+      { to: "/reports", label: "Rapporter", icon: FileTextIcon },
+      { to: "/audit", label: "Ändringslogg", icon: ClipboardListIcon },
+    ],
+  },
 ]
 
 // --- Sidofält (desktop) ---
@@ -186,23 +216,33 @@ function Sidebar({ dark, onToggleDark }: { dark: boolean; onToggleDark: () => vo
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-0.5 px-3 py-3 flex-1">
-        {navItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              [
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-              ].join(" ")
-            }
-          >
-            <Icon className="size-[18px] shrink-0" />
-            {label}
-          </NavLink>
+      <nav className="flex-1 px-3 py-4 space-y-6 overflow-auto">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {group.label}
+            </p>
+            <ul className="space-y-0.5">
+              {group.items.map(({ to, label, icon: Icon }) => (
+                <li key={to}>
+                  <NavLink
+                    to={to}
+                    className={({ isActive }) =>
+                      [
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150",
+                        isActive
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                      ].join(" ")
+                    }
+                  >
+                    <Icon className="size-[18px] shrink-0" />
+                    {label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
       </nav>
 
@@ -247,24 +287,34 @@ function MobileNav({
             </span>
           </SheetTitle>
         </SheetHeader>
-        <nav className="flex flex-col gap-0.5 px-3 py-3 flex-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => onOpenChange(false)}
-              className={({ isActive }) =>
-                [
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150",
-                  isActive
-                    ? "bg-accent text-accent-foreground font-medium"
-                    : "text-foreground/70 hover:bg-accent hover:text-accent-foreground",
-                ].join(" ")
-              }
-            >
-              <Icon className="size-[18px] shrink-0" />
-              {label}
-            </NavLink>
+        <nav className="flex-1 px-3 py-4 space-y-6 overflow-auto">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.label}
+              </p>
+              <ul className="space-y-0.5">
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <li key={to}>
+                    <NavLink
+                      to={to}
+                      onClick={() => onOpenChange(false)}
+                      className={({ isActive }) =>
+                        [
+                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150",
+                          isActive
+                            ? "bg-accent text-accent-foreground font-medium"
+                            : "text-foreground/70 hover:bg-accent hover:text-accent-foreground",
+                        ].join(" ")
+                      }
+                    >
+                      <Icon className="size-[18px] shrink-0" />
+                      {label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
         </nav>
         <div className="px-3 py-3 border-t mt-auto">
@@ -281,14 +331,32 @@ function MobileNav({
   )
 }
 
+// --- Loading skeleton for lazy pages ---
+
+function PageLoadingSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="skeleton h-8 w-64" />
+      <div className="skeleton h-4 w-full" />
+      <div className="skeleton h-64 w-full" />
+    </div>
+  )
+}
+
 // --- Layout ---
 
 function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dark, setDark] = useDarkMode()
+  const location = useLocation()
 
   usePageTitle()
   useKeyboardShortcuts()
+
+  // Focus main content on route change for screen readers
+  useEffect(() => {
+    document.getElementById("main-content")?.focus()
+  }, [location.pathname])
 
   return (
     <div className="flex min-h-screen bg-background transition-theme">
@@ -319,7 +387,9 @@ function Layout() {
         </header>
 
         <main id="main-content" tabIndex={-1} className="flex-1 p-4 md:p-8 overflow-auto">
-          <Outlet />
+          <Suspense fallback={<PageLoadingSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <Toaster />

@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,19 +20,42 @@ async def list_information_assets(
     organization_id: UUID | None = Query(None),
     contains_personal_data: bool | None = Query(None),
     q: str | None = Query(None),
+    include_counts: bool = Query(False, description="Inkludera systems_count per informationsmängd"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_rls_db),
 ):
-    stmt = select(InformationAsset)
+    base = select(InformationAsset)
     if organization_id:
-        stmt = stmt.where(InformationAsset.organization_id == organization_id)
+        base = base.where(InformationAsset.organization_id == organization_id)
     if contains_personal_data is not None:
-        stmt = stmt.where(InformationAsset.contains_personal_data == contains_personal_data)
+        base = base.where(InformationAsset.contains_personal_data == contains_personal_data)
     if q:
-        stmt = stmt.where(InformationAsset.name.ilike(f"%{q}%"))
-    total = await db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    stmt = stmt.order_by(InformationAsset.name).offset(offset).limit(limit)
+        base = base.where(InformationAsset.name.ilike(f"%{q}%"))
+    total = await db.scalar(select(func.count()).select_from(base.subquery())) or 0
+
+    if include_counts:
+        systems_count_sq = (
+            select(func.count(information_asset_system_link.c.system_id))
+            .where(information_asset_system_link.c.information_asset_id == InformationAsset.id)
+            .correlate(InformationAsset)
+            .scalar_subquery()
+        )
+        stmt = (
+            base.add_columns(systems_count_sq.label("systems_count"))
+            .order_by(InformationAsset.created_at.desc(), InformationAsset.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = (await db.execute(stmt)).all()
+        items: list[dict[str, Any]] = []
+        for asset, count in rows:
+            item = InformationAssetResponse.model_validate(asset).model_dump()
+            item["systems_count"] = count or 0
+            items.append(item)
+        return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
+
+    stmt = base.order_by(InformationAsset.created_at.desc(), InformationAsset.id).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return PaginatedResponse(items=result.scalars().all(), total=total, limit=limit, offset=offset)
 
