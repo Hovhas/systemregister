@@ -31,6 +31,8 @@ import { getNotifications } from "@/lib/api"
 import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts"
 
 import { SkipLink } from "@/components/SkipLink"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
+import { KeyboardHelpModal } from "@/components/shared/KeyboardHelpModal"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -287,6 +289,7 @@ function Layout() {
   return (
     <div className="flex min-h-screen bg-background transition-theme">
       <SkipLink />
+      <KeyboardHelpModal />
       <Sidebar dark={dark} onToggleDark={() => setDark((d) => !d)} />
       <MobileNav
         open={mobileOpen}
@@ -350,5 +353,9 @@ const router = createBrowserRouter([
 // --- App ---
 
 export default function App() {
-  return <RouterProvider router={router} />
+  return (
+    <ErrorBoundary>
+      <RouterProvider router={router} />
+    </ErrorBoundary>
+  )
 }

@@ -1,11 +1,17 @@
 import { useId } from "react"
 
+export interface AriaProps {
+  id: string
+  "aria-invalid"?: boolean
+  "aria-describedby"?: string
+}
+
 interface FormFieldProps {
   label: string
   required?: boolean
   error?: string
   helpText?: string
-  children: React.ReactNode | ((id: string, ariaProps: Record<string, any>) => React.ReactNode)
+  children: React.ReactNode | ((id: string, ariaProps: AriaProps) => React.ReactNode)
 }
 
 export function FormField({ label, required, error, helpText, children }: FormFieldProps) {
@@ -18,7 +24,7 @@ export function FormField({ label, required, error, helpText, children }: FormFi
     helpText && !error ? helpId : null,
   ].filter(Boolean).join(" ") || undefined
 
-  const ariaProps: Record<string, any> = {
+  const ariaProps: AriaProps = {
     id,
     "aria-invalid": error ? true : undefined,
     "aria-describedby": ariaDescribedBy,
@@ -31,7 +37,11 @@ export function FormField({ label, required, error, helpText, children }: FormFi
         {required && <span className="ml-0.5 text-destructive" aria-hidden="true">*</span>}
         {required && <span className="sr-only"> (obligatoriskt)</span>}
       </label>
-      {typeof children === "function" ? (children as any)(id, ariaProps) : children}
+      {typeof children === "function"
+        ? (children.length >= 2
+            ? (children as (id: string, a: AriaProps) => React.ReactNode)(id, ariaProps)
+            : (children as (id: string) => React.ReactNode)(id))
+        : children}
       {helpText && !error && (
         <p id={helpId} className="text-xs text-muted-foreground leading-relaxed">{helpText}</p>
       )}
