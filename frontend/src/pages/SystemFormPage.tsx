@@ -7,7 +7,7 @@ import axios from "axios"
 
 import { SystemCategory, LifecycleStatus, Criticality, NIS2Classification } from "@/types"
 import type { SystemCreate, SystemUpdate } from "@/types"
-import { createSystem, updateSystem, getSystem, getOrganizations } from "@/lib/api"
+import { createSystem, updateSystem, getSystem, getOrganizations, getObjekt } from "@/lib/api"
 import { categoryLabels, lifecycleLabels, criticalityLabels, nis2ClassificationLabels } from "@/lib/labels"
 import {
   Card,
@@ -72,6 +72,8 @@ interface FormState {
   security_protection: boolean
   last_risk_assessment_date: string
   klassa_reference_id: string
+  // Entitetshierarki
+  objekt_id: string
 }
 
 const defaultForm: FormState = {
@@ -104,6 +106,7 @@ const defaultForm: FormState = {
   security_protection: false,
   last_risk_assessment_date: "",
   klassa_reference_id: "",
+  objekt_id: "",
 }
 
 // --- Huvudkomponent ---
@@ -130,6 +133,13 @@ export default function SystemFormPage() {
   const { data: organizations = [] } = useQuery({
     queryKey: ["organizations"],
     queryFn: getOrganizations,
+  })
+
+  // Hämta objekt baserat på vald organisation
+  const { data: objektData } = useQuery({
+    queryKey: ["objekt", form.organization_id],
+    queryFn: () => getObjekt({ organization_id: form.organization_id, limit: 200 }),
+    enabled: !!form.organization_id,
   })
 
   // Prefill formulär vid redigering
@@ -165,6 +175,7 @@ export default function SystemFormPage() {
         security_protection: existingSystem.security_protection,
         last_risk_assessment_date: existingSystem.last_risk_assessment_date ?? "",
         klassa_reference_id: existingSystem.klassa_reference_id ?? "",
+        objekt_id: existingSystem.objekt_id ?? "",
       })
     }
   }, [existingSystem])
@@ -201,6 +212,7 @@ export default function SystemFormPage() {
         security_protection: existingSystem.security_protection,
         last_risk_assessment_date: existingSystem.last_risk_assessment_date ?? "",
         klassa_reference_id: existingSystem.klassa_reference_id ?? "",
+        objekt_id: existingSystem.objekt_id ?? "",
       }
     : defaultForm
 
@@ -309,6 +321,7 @@ export default function SystemFormPage() {
       security_protection: form.security_protection,
       last_risk_assessment_date: form.last_risk_assessment_date || undefined,
       klassa_reference_id: form.klassa_reference_id || undefined,
+      objekt_id: form.objekt_id || undefined,
     }
 
     if (isEdit) {
@@ -454,6 +467,29 @@ export default function SystemFormPage() {
                   onChange={(e) => set("business_area", e.target.value)}
                   placeholder="t.ex. HR, Ekonomi, Vård"
                 />
+              )}
+            </FormField>
+
+            <FormField label="Objekt" helpText="Vilket förvaltningsobjekt systemet tillhör">
+              {(id) => (
+                <Select
+                  value={form.objekt_id || undefined}
+                  onValueChange={(val) => set("objekt_id", val ?? "")}
+                >
+                  <SelectTrigger id={id}>
+                    <SelectValue placeholder="Ej kopplat">
+                      {form.objekt_id
+                        ? (objektData?.items ?? []).find((o) => o.id === form.objekt_id)?.name
+                        : undefined}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Inget objekt</SelectItem>
+                    {(objektData?.items ?? []).map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </FormField>
 

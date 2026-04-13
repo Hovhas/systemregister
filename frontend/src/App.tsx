@@ -57,6 +57,10 @@ import ComponentsPage from "@/pages/ComponentsPage"
 import ModulesPage from "@/pages/ModulesPage"
 import InformationAssetsPage from "@/pages/InformationAssetsPage"
 import ApprovalsPage from "@/pages/ApprovalsPage"
+import ObjektDetailPage from "@/pages/ObjektDetailPage"
+import ModuleDetailPage from "@/pages/ModuleDetailPage"
+import InformationAssetDetailPage from "@/pages/InformationAssetDetailPage"
+import ApprovalDetailPage from "@/pages/ApprovalDetailPage"
 
 // --- Dark mode ---
 
@@ -346,6 +350,10 @@ const router = createBrowserRouter([
       { path: "/modules", element: <ModulesPage /> },
       { path: "/information-assets", element: <InformationAssetsPage /> },
       { path: "/approvals", element: <ApprovalsPage /> },
+      { path: "/objekt/:id", element: <ObjektDetailPage /> },
+      { path: "/modules/:id", element: <ModuleDetailPage /> },
+      { path: "/information-assets/:id", element: <InformationAssetDetailPage /> },
+      { path: "/approvals/:id", element: <ApprovalDetailPage /> },
     ],
   },
 ])

@@ -354,8 +354,18 @@ export async function createComponent(data: ComponentCreate): Promise<Component>
   return res.data
 }
 
+export async function updateComponent(id: string, data: Partial<ComponentCreate>): Promise<Component> {
+  const res = await api.patch<Component>(`/components/${id}`, data)
+  return res.data
+}
+
 export async function deleteComponent(id: string): Promise<void> {
   await api.delete(`/components/${id}`)
+}
+
+export async function getComponentById(id: string): Promise<Component> {
+  const res = await api.get<Component>(`/components/${id}`)
+  return res.data
 }
 
 // --- Moduler ---
@@ -370,8 +380,18 @@ export async function createModule(data: ModuleCreate): Promise<Module> {
   return res.data
 }
 
+export async function updateModule(id: string, data: Partial<ModuleCreate>): Promise<Module> {
+  const res = await api.patch<Module>(`/modules/${id}`, data)
+  return res.data
+}
+
 export async function deleteModule(id: string): Promise<void> {
   await api.delete(`/modules/${id}`)
+}
+
+export async function getModule(id: string): Promise<Module> {
+  const res = await api.get<Module>(`/modules/${id}`)
+  return res.data
 }
 
 export async function linkModuleToSystem(moduleId: string, systemId: string): Promise<void> {
@@ -394,8 +414,18 @@ export async function createInformationAsset(data: InformationAssetCreate): Prom
   return res.data
 }
 
+export async function updateInformationAsset(id: string, data: Partial<InformationAssetCreate>): Promise<InformationAsset> {
+  const res = await api.patch<InformationAsset>(`/information-assets/${id}`, data)
+  return res.data
+}
+
 export async function deleteInformationAsset(id: string): Promise<void> {
   await api.delete(`/information-assets/${id}`)
+}
+
+export async function getInformationAsset(id: string): Promise<InformationAsset> {
+  const res = await api.get<InformationAsset>(`/information-assets/${id}`)
+  return res.data
 }
 
 export async function linkAssetToSystem(assetId: string, systemId: string): Promise<void> {
@@ -427,6 +457,11 @@ export async function createApproval(data: ApprovalCreate): Promise<Approval> {
 
 export async function reviewApproval(id: string, data: ApprovalReview): Promise<Approval> {
   const res = await api.post<Approval>(`/approvals/${id}/review`, data)
+  return res.data
+}
+
+export async function getApproval(id: string): Promise<Approval> {
+  const res = await api.get<Approval>(`/approvals/${id}`)
   return res.data
 }
 

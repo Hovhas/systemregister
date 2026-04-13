@@ -29,6 +29,11 @@ import {
   AvtalTab,
   ExtendedAttributesTab,
   AuditTimeline,
+  ObjektTab,
+  KomponenterTab,
+  ModulerTab,
+  InformationsmangderTab,
+  GodkannandenTab,
 } from "@/components/system-detail"
 
 // --- Hjälp-hook ---
@@ -195,6 +200,32 @@ export default function SystemDetailPage() {
           <TabsTrigger value="integrationer">Integrationer</TabsTrigger>
           <TabsTrigger value="gdpr">GDPR</TabsTrigger>
           <TabsTrigger value="avtal">Avtal</TabsTrigger>
+          <TabsTrigger value="objekt">Objekt</TabsTrigger>
+          <TabsTrigger value="komponenter">
+            Komponenter
+            {(system.components?.length ?? 0) > 0 && (
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({system.components!.length})
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="moduler">
+            Moduler
+            {(system.modules_used?.length ?? 0) > 0 && (
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({system.modules_used!.length})
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="informationsmangder">
+            Informationsmängder
+            {(system.information_assets?.length ?? 0) > 0 && (
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({system.information_assets!.length})
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="godkannanden">Godkännanden</TabsTrigger>
           <TabsTrigger value="ovrigt">Övrig data</TabsTrigger>
           <TabsTrigger value="andringslogg">Ändringslogg</TabsTrigger>
         </TabsList>
@@ -221,6 +252,26 @@ export default function SystemDetailPage() {
 
         <TabsContent value="avtal" className="mt-6">
           <AvtalTab systemId={system.id} />
+        </TabsContent>
+
+        <TabsContent value="objekt" className="mt-6">
+          <ObjektTab system={system} />
+        </TabsContent>
+
+        <TabsContent value="komponenter" className="mt-6">
+          <KomponenterTab system={system} />
+        </TabsContent>
+
+        <TabsContent value="moduler" className="mt-6">
+          <ModulerTab system={system} />
+        </TabsContent>
+
+        <TabsContent value="informationsmangder" className="mt-6">
+          <InformationsmangderTab system={system} />
+        </TabsContent>
+
+        <TabsContent value="godkannanden" className="mt-6">
+          <GodkannandenTab system={system} />
         </TabsContent>
 
         <TabsContent value="ovrigt" className="mt-6">

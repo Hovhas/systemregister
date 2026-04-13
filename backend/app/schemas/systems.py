@@ -11,6 +11,14 @@ from app.schemas.base import SafeStringMixin
 from app.schemas.classifications import ClassificationResponse
 from app.schemas.owners import OwnerResponse
 from app.schemas.gdpr import GDPRTreatmentResponse
+from app.schemas.contracts import ContractResponse
+from app.schemas.integrations import IntegrationResponse
+from app.schemas.entities import (
+    ObjektResponse,
+    ModuleResponse,
+    InformationAssetResponse,
+    ComponentResponse,
+)
 
 
 # --- System ---
@@ -266,3 +274,10 @@ class SystemDetailResponse(SystemResponse):
     classifications: list[ClassificationResponse] = []
     owners: list[OwnerResponse] = []
     gdpr_treatments: list[GDPRTreatmentResponse] = []
+    contracts: list[ContractResponse] = []
+    integrations_out: list[IntegrationResponse] = []
+    integrations_in: list[IntegrationResponse] = []
+    objekt: ObjektResponse | None = None
+    modules_used: list[ModuleResponse] = []
+    information_assets: list[InformationAssetResponse] = []
+    components: list[ComponentResponse] = []

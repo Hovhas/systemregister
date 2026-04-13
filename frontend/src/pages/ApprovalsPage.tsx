@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { XIcon, CheckIcon, XCircleIcon, PlusIcon } from "lucide-react"
@@ -71,6 +72,7 @@ const emptyApprovalForm: ApprovalCreate = {
 }
 
 export default function ApprovalsPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
   const [newApproval, setNewApproval] = useState<ApprovalCreate>({ ...emptyApprovalForm })
@@ -281,7 +283,8 @@ export default function ApprovalsPage() {
                 data?.items.map((approval, idx) => (
                   <TableRow
                     key={approval.id}
-                    className={`transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
+                    onClick={() => navigate(`/approvals/${approval.id}`)}
                   >
                     <TableCell className="font-medium">{approval.title}</TableCell>
                     <TableCell>
@@ -301,7 +304,7 @@ export default function ApprovalsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openReviewDialog(approval.id, "godkänd")}
+                            onClick={(e) => { e.stopPropagation(); openReviewDialog(approval.id, "godkänd") }}
                           >
                             <CheckIcon className="mr-1 size-3.5" />
                             Godkänn
@@ -309,7 +312,7 @@ export default function ApprovalsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openReviewDialog(approval.id, "avvisad")}
+                            onClick={(e) => { e.stopPropagation(); openReviewDialog(approval.id, "avvisad") }}
                           >
                             <XCircleIcon className="mr-1 size-3.5" />
                             Avvisa

@@ -100,6 +100,13 @@ async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
             selectinload(System.classifications),
             selectinload(System.owners),
             selectinload(System.gdpr_treatments),
+            selectinload(System.contracts),
+            selectinload(System.integrations_out),
+            selectinload(System.integrations_in),
+            selectinload(System.objekt),
+            selectinload(System.modules_used),
+            selectinload(System.information_assets),
+            selectinload(System.components),
         )
         .where(System.id == system_id)
     )

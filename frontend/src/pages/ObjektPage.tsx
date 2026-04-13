@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react"
+import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon, PlusIcon } from "lucide-react"
@@ -55,6 +56,7 @@ const emptyObjektForm: ObjektCreate = {
 }
 
 export default function ObjektPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
   const [newObjekt, setNewObjekt] = useState<ObjektCreate>({ ...emptyObjektForm })
@@ -259,7 +261,8 @@ export default function ObjektPage() {
                 data?.items.map((objekt, idx) => (
                   <TableRow
                     key={objekt.id}
-                    className={`transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
+                    onClick={() => navigate(`/objekt/${objekt.id}`)}
                   >
                     <TableCell className="font-medium">{objekt.name}</TableCell>
                     <TableCell className="text-muted-foreground">

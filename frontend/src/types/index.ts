@@ -408,8 +408,14 @@ export interface SystemDetail extends System {
   classifications: Classification[]
   owners: Owner[]
   integrations?: Integration[]
+  integrations_out?: Integration[]
+  integrations_in?: Integration[]
   gdpr_treatments?: GDPRTreatment[]
   contracts?: Contract[]
+  objekt?: Objekt | null
+  modules_used?: Module[]
+  information_assets?: InformationAsset[]
+  components?: Component[]
 }
 
 export interface PaginatedResponse<T> {

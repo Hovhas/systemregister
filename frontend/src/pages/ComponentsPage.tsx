@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react"
+import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { SearchIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon, ExternalLinkIcon, PlusIcon } from "lucide-react"
@@ -57,6 +58,7 @@ const emptyComponentForm: ComponentCreate = {
 }
 
 export default function ComponentsPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
   const [newComponent, setNewComponent] = useState<ComponentCreate>({ ...emptyComponentForm })
@@ -294,7 +296,8 @@ export default function ComponentsPage() {
                 data?.items.map((component, idx) => (
                   <TableRow
                     key={component.id}
-                    className={`transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${idx % 2 === 1 ? "bg-muted/20" : ""}`}
+                    onClick={() => navigate(`/systems/${component.system_id}`)}
                   >
                     <TableCell className="font-medium">{component.name}</TableCell>
                     <TableCell className="text-muted-foreground">
