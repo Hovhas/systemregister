@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rls import get_rls_db
-from app.models.models import Organization
+from app.models import Organization
 from app.services.import_service import ImportService
 
 router = APIRouter(prefix="/import", tags=["Import"])

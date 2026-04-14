@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_system_or_404
 from app.core.rls import get_rls_db
-from app.models.models import Contract
+from app.models import Contract
 from app.schemas import ContractCreate, ContractUpdate, ContractResponse
 
 router = APIRouter(tags=["Contracts"])
@@ -57,16 +57,16 @@ async def list_contracts(
     return result.scalars().all()
 
 
-@router.patch("/contracts/{contract_id}", response_model=ContractResponse)
-# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
+@router.patch("/systems/{system_id}/contracts/{contract_id}", response_model=ContractResponse)
 async def update_contract(
+    system_id: UUID,
     contract_id: UUID,
     data: ContractUpdate,
     db: AsyncSession = Depends(get_rls_db),
 ):
     """Update a contract."""
     contract = await db.get(Contract, contract_id)
-    if not contract:
+    if not contract or contract.system_id != system_id:
         raise HTTPException(status_code=404, detail="Contract not found")
 
     for key, value in data.model_dump(exclude_unset=True).items():
@@ -77,15 +77,15 @@ async def update_contract(
     return contract
 
 
-@router.delete("/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
-# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
+@router.delete("/systems/{system_id}/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_contract(
+    system_id: UUID,
     contract_id: UUID,
     db: AsyncSession = Depends(get_rls_db),
 ):
     """Delete a contract."""
     contract = await db.get(Contract, contract_id)
-    if not contract:
+    if not contract or contract.system_id != system_id:
         raise HTTPException(status_code=404, detail="Contract not found")
     await db.delete(contract)
     await db.flush()

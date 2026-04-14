@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useNavigate, useBlocker } from "react-router-dom"
 import { useUndoStack } from "@/lib/useUndoStack"
 import { useQuery, useMutation } from "@tanstack/react-query"
@@ -120,7 +120,6 @@ export default function SystemFormPage() {
   const [apiError, setApiError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
   const [submitted, setSubmitted] = useState(false)
-  const submittedRef = useRef(false)
 
   // Hämta befintligt system vid redigering
   const { data: existingSystem } = useQuery({
@@ -216,7 +215,7 @@ export default function SystemFormPage() {
       }
     : defaultForm
 
-  const isDirty = !submitted && !submittedRef.current && JSON.stringify(form) !== JSON.stringify(baselineForm)
+  const isDirty = !submitted && JSON.stringify(form) !== JSON.stringify(baselineForm)
 
   // Varna vid stängning av flik/webbläsare
   useEffect(() => {
@@ -255,7 +254,6 @@ export default function SystemFormPage() {
   const createMutation = useMutation({
     mutationFn: (data: SystemCreate) => createSystem(data),
     onSuccess: (system) => {
-      submittedRef.current = true
       setSubmitted(true)
       toast.success("System skapat")
       navigate(`/systems/${system.id}`)
@@ -266,7 +264,6 @@ export default function SystemFormPage() {
   const updateMutation = useMutation({
     mutationFn: (data: SystemUpdate) => updateSystem(id!, data),
     onSuccess: (system) => {
-      submittedRef.current = true
       setSubmitted(true)
       toast.success("System uppdaterat")
       navigate(`/systems/${system.id}`)

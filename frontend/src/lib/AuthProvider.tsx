@@ -23,29 +23,29 @@ const AuthContext = createContext<AuthContextType>({
   accessToken: null,
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext)
 }
 
 const OIDC_ENABLED = import.meta.env.VITE_OIDC_ENABLED === "true"
 
+const DEV_USER: AuthUser = {
+  sub: "dev",
+  email: null,
+  name: null,
+  org_id: null,
+  is_superadmin: true,
+  roles: [],
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(!OIDC_ENABLED ? DEV_USER : null)
   const [isLoading, setIsLoading] = useState(OIDC_ENABLED)
-  const [accessToken, _setAccessToken] = useState<string | null>(null)
+  const [accessToken] = useState<string | null>(null)
 
   useEffect(() => {
     if (!OIDC_ENABLED) {
-      // Dev mode: no auth required
-      setUser({
-        sub: "dev",
-        email: null,
-        name: null,
-        org_id: null,
-        is_superadmin: true,
-        roles: [],
-      })
-      setIsLoading(false)
       return
     }
 

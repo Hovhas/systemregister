@@ -8,7 +8,7 @@ from openpyxl import Workbook
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rls import get_rls_db
-from app.models.models import System
+from app.models import System
 from app.schemas import (
     ComplianceGapResponse, NIS2ReportResponse,
     GDPRReportResponse, AIReportResponse,

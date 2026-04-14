@@ -1,5 +1,5 @@
 """
-Tests for /api/v1/systems/{id}/owners and /api/v1/owners/{id} endpoints.
+Tests for /api/v1/systems/{id}/owners and /api/v1/systems/{id}/owners/{id} endpoints.
 """
 
 import pytest
@@ -100,14 +100,14 @@ async def test_list_owners_empty(client):
 
 @pytest.mark.asyncio
 async def test_update_owner(client):
-    """PATCH /api/v1/owners/{id} updates fields without touching others."""
+    """PATCH /api/v1/systems/{system_id}/owners/{id} updates fields without touching others."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
     owner = await create_owner(client, system["id"], org["id"])
     owner_id = owner["id"]
 
     patch = {"name": "Anna Eriksson", "email": "anna.eriksson@sundsvall.se"}
-    resp = await client.patch(f"/api/v1/owners/{owner_id}", json=patch)
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/owners/{owner_id}", json=patch)
 
     assert resp.status_code == 200, f"Expected 200: {resp.text}"
     body = resp.json()
@@ -120,12 +120,12 @@ async def test_update_owner(client):
 
 @pytest.mark.asyncio
 async def test_update_owner_role(client):
-    """PATCH /api/v1/owners/{id} can update the role."""
+    """PATCH /api/v1/systems/{system_id}/owners/{id} can update the role."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
     owner = await create_owner(client, system["id"], org["id"], role="systemägare")
 
-    resp = await client.patch(f"/api/v1/owners/{owner['id']}", json={"role": "teknisk_förvaltare"})
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/owners/{owner['id']}", json={"role": "teknisk_förvaltare"})
 
     assert resp.status_code == 200, f"Expected 200: {resp.text}"
     assert resp.json()["role"] == "teknisk_förvaltare"
@@ -133,22 +133,22 @@ async def test_update_owner_role(client):
 
 @pytest.mark.asyncio
 async def test_update_owner_not_found(client):
-    """PATCH /api/v1/owners/{id} with non-existent id returns 404."""
+    """PATCH /api/v1/systems/{system_id}/owners/{id} with non-existent id returns 404."""
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.patch(f"/api/v1/owners/{fake_id}", json={"name": "Ghost"})
+    resp = await client.patch(f"/api/v1/systems/{fake_id}/owners/{fake_id}", json={"name": "Ghost"})
 
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_owner(client):
-    """DELETE /api/v1/owners/{id} removes the owner and returns 204."""
+    """DELETE /api/v1/systems/{system_id}/owners/{id} removes the owner and returns 204."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
     owner = await create_owner(client, system["id"], org["id"])
     owner_id = owner["id"]
 
-    delete_resp = await client.delete(f"/api/v1/owners/{owner_id}")
+    delete_resp = await client.delete(f"/api/v1/systems/{system['id']}/owners/{owner_id}")
     assert delete_resp.status_code == 204, f"Expected 204: {delete_resp.text}"
 
     # Verify it's gone from the system's owner list
@@ -160,9 +160,9 @@ async def test_delete_owner(client):
 
 @pytest.mark.asyncio
 async def test_delete_owner_not_found(client):
-    """DELETE /api/v1/owners/{id} with non-existent id returns 404."""
+    """DELETE /api/v1/systems/{system_id}/owners/{id} with non-existent id returns 404."""
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.delete(f"/api/v1/owners/{fake_id}")
+    resp = await client.delete(f"/api/v1/systems/{fake_id}/owners/{fake_id}")
 
     assert resp.status_code == 404
 
@@ -284,7 +284,7 @@ async def test_update_owner_phone_number(client):
     system = await create_system(client, org["id"])
     owner = await create_owner(client, system["id"], org["id"])
 
-    resp = await client.patch(f"/api/v1/owners/{owner['id']}", json={"phone": "070-9876543"})
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/owners/{owner['id']}", json={"phone": "070-9876543"})
     assert resp.status_code == 200, f"Expected 200: {resp.text}"
     assert resp.json()["phone"] == "070-9876543"
 

@@ -11,7 +11,7 @@ import {
   afterAll,
   afterEach,
 } from "vitest"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
@@ -74,9 +74,6 @@ function getImportBtn(idx: number): HTMLElement {
   return screen.getAllByRole("button", { name: /^importera$/i })[idx]
 }
 
-function getFileInputByIdx(idx: number): HTMLInputElement {
-  return document.querySelectorAll('input[type="file"]')[idx] as HTMLInputElement
-}
 
 // --- Tester ---
 
@@ -245,15 +242,9 @@ describe("ImportPage", () => {
       renderImport()
       await waitFor(() => screen.getByText(/dra och släpp/i))
 
-      const dropZone = screen.getByText(/dra och släpp/i).closest("div")!
+      screen.getByText(/dra och släpp/i).closest("div")!
       const file = createFile("drag.csv", "text/csv")
 
-      // Simulera drop-event
-      const dataTransfer = {
-        files: [file],
-        items: [],
-        types: [],
-      }
       await userEvent.upload(
         document.querySelector('input[type="file"]') as HTMLInputElement,
         file

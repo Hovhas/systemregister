@@ -22,13 +22,14 @@ import ReportsPage from "@/pages/ReportsPage"
 let fetchSpy: ReturnType<typeof vi.spyOn>
 
 beforeEach(() => {
-  // Mock fetch to return a blob response for download tests
-  fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(new Blob(["data"]), {
-      status: 200,
-      headers: { "content-type": "application/octet-stream" },
-    })
-  )
+  // Mock fetch to return a Response-like object for download tests
+  // (jsdom's Blob doesn't support .stream(), so we can't use `new Response(blob)`)
+  fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+    ok: true,
+    status: 200,
+    headers: new Headers({ "content-type": "application/octet-stream" }),
+    blob: () => Promise.resolve(new Blob(["data"])),
+  } as unknown as Response)
   // Mock URL.createObjectURL and revokeObjectURL
   vi.stubGlobal("URL", {
     ...URL,
@@ -64,11 +65,15 @@ describe("ReportsPage", () => {
       ).toBeInTheDocument()
     })
 
-    it("renderar 3 rapportkort", () => {
+    it("renderar 7 rapportkort", () => {
       renderReports()
-      // NIS2, Compliance Gap, Export
+      // NIS2, Compliance Gap, GDPR, AI, Klassningsstatus, Livscykelrapport, Export
       expect(screen.getByText(/nis2-rapport/i)).toBeInTheDocument()
       expect(screen.getByText(/compliance gap-analys/i)).toBeInTheDocument()
+      expect(screen.getByText(/gdpr-rapport/i)).toBeInTheDocument()
+      expect(screen.getByText(/ai-förordningsrapport/i)).toBeInTheDocument()
+      expect(screen.getByText(/klassningsstatusrapport/i)).toBeInTheDocument()
+      expect(screen.getByText(/livscykelrapport/i)).toBeInTheDocument()
       expect(screen.getAllByText(/export/i).length).toBeGreaterThanOrEqual(1)
     })
 
@@ -219,14 +224,14 @@ describe("ReportsPage", () => {
 
     it("alla nedladdningsknappar anropar fetch", async () => {
       renderReports()
-      // 9 download buttons: 4 NIS2 + 2 Compliance + 3 Export
+      // 17 download buttons: 4 NIS2 + 2 Compliance + 2 GDPR + 2 AI + 2 Klassning + 2 Livscykel + 3 Export
       const jsonBtns = screen.getAllByRole("button", { name: /^json$/i })
       const excelBtns = screen.getAllByRole("button", { name: /^excel$/i })
       const pdfBtns = screen.getAllByRole("button", { name: /^pdf$/i })
       const htmlBtns = screen.getAllByRole("button", { name: /^html$/i })
       const exportBtns = screen.getAllByRole("button", { name: /^system/i })
       const allBtns = [...jsonBtns, ...excelBtns, ...pdfBtns, ...htmlBtns, ...exportBtns]
-      expect(allBtns.length).toBe(9)
+      expect(allBtns.length).toBe(17)
     })
   })
 

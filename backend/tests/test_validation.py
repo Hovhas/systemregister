@@ -1110,7 +1110,7 @@ async def test_patch_contract_empty_body(client):
     org = await create_org(client)
     system = await create_system(client, org["id"])
     contract = await create_contract(client, system["id"])
-    resp = await client.patch(f"/api/v1/contracts/{contract['id']}", json={})
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/contracts/{contract['id']}", json={})
     assert resp.status_code == 200, f"Empty PATCH should succeed: {resp.text}"
 
 
@@ -1120,5 +1120,5 @@ async def test_patch_owner_empty_body(client):
     org = await create_org(client)
     system = await create_system(client, org["id"])
     owner = await create_owner(client, system["id"], org["id"])
-    resp = await client.patch(f"/api/v1/owners/{owner['id']}", json={})
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/owners/{owner['id']}", json={})
     assert resp.status_code == 200, f"Empty PATCH should succeed: {resp.text}"

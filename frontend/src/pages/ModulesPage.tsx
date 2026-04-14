@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -97,19 +97,14 @@ export default function ModulesPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
   // Debounce sökning 300ms
-  const debounceRef = useCallback(
-    (() => {
-      let timer: ReturnType<typeof setTimeout>
-      return (value: string) => {
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-          setDebouncedSearch(value)
-          setOffset(0)
-        }, 300)
-      }
-    })(),
-    []
-  )
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const debounceRef = useCallback((value: string) => {
+    clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value)
+      setOffset(0)
+    }, 300)
+  }, [])
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSearchInput(e.target.value)
@@ -149,19 +144,21 @@ export default function ModulesPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
 
-  function SortHeader({ field, label }: { field: string; label: string }) {
+  function handleSort(field: string) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    else {
+      setSortField(field)
+      setSortDir("asc")
+    }
+    setOffset(0)
+  }
+
+  function renderSortHeader(field: string, label: string) {
     const active = sortField === field
     return (
       <TableHead
         className="cursor-pointer select-none hover:text-foreground transition-colors"
-        onClick={() => {
-          if (active) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-          else {
-            setSortField(field)
-            setSortDir("asc")
-          }
-          setOffset(0)
-        }}
+        onClick={() => handleSort(field)}
       >
         <span className="flex items-center gap-1">
           {label}
@@ -256,8 +253,8 @@ export default function ModulesPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <SortHeader field="name" label="Namn" />
-                <SortHeader field="organization_id" label="Organisation" />
+                {renderSortHeader("name", "Namn")}
+                {renderSortHeader("organization_id", "Organisation")}
                 <TableHead>Status</TableHead>
                 <TableHead>Produkt</TableHead>
                 <TableHead>AI</TableHead>

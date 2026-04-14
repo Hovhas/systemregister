@@ -213,8 +213,8 @@ export async function deleteSystem(id: string): Promise<void> {
 
 // --- Owner CRUD ---
 
-export async function deleteOwner(ownerId: string): Promise<void> {
-  await api.delete(`/owners/${ownerId}`)
+export async function deleteOwner(systemId: string, ownerId: string): Promise<void> {
+  await api.delete(`/systems/${systemId}/owners/${ownerId}`)
 }
 
 // --- Integration CRUD ---
@@ -243,8 +243,8 @@ export async function createGDPRTreatment(
   return res.data
 }
 
-export async function deleteGDPRTreatment(id: string): Promise<void> {
-  await api.delete(`/gdpr/${id}`)
+export async function deleteGDPRTreatment(systemId: string, id: string): Promise<void> {
+  await api.delete(`/systems/${systemId}/gdpr/${id}`)
 }
 
 // --- Contracts ---
@@ -262,8 +262,8 @@ export async function createContract(
   return res.data
 }
 
-export async function deleteContract(id: string): Promise<void> {
-  await api.delete(`/contracts/${id}`)
+export async function deleteContract(systemId: string, id: string): Promise<void> {
+  await api.delete(`/systems/${systemId}/contracts/${id}`)
 }
 
 // --- Import ---

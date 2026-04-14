@@ -25,7 +25,7 @@ import {
 
 // --- Testdata ---
 
-function makeSystem(overrides: Partial<ReturnType<typeof baseSystem>> = {}) {
+function makeSystem(overrides: Record<string, unknown> = {}) {
   return {
     id: "sys-1",
     name: "Ekonomisystem",
@@ -94,10 +94,6 @@ function makeSystem(overrides: Partial<ReturnType<typeof baseSystem>> = {}) {
     last_reviewed_by: null,
     ...overrides,
   }
-}
-
-function baseSystem(overrides = {}) {
-  return makeSystem(overrides)
 }
 
 const systemsList = [

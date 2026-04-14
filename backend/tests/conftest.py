@@ -41,25 +41,62 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
+def _derive_sync_url(async_url: str) -> str:
+    """Convert asyncpg URL to sync psycopg2 URL for alembic."""
+    return async_url.replace("postgresql+asyncpg://", "postgresql://")
+
+
+def _run_alembic_upgrade(sync_url: str) -> None:
+    """Run alembic upgrade head against the given database (synchronous).
+
+    This is the single source of truth for schema + RLS policies —
+    no more duplicated SQL between conftest and migration files.
+    """
+    import os
+    from alembic.config import Config
+    from alembic import command
+
+    alembic_ini = os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
+    alembic_cfg = Config(alembic_ini)
+    alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
+    command.upgrade(alembic_cfg, "head")
+
+
+def _run_alembic_downgrade(sync_url: str) -> None:
+    """Run alembic downgrade base against the given database (synchronous)."""
+    import os
+    from alembic.config import Config
+    from alembic import command
+
+    alembic_ini = os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
+    alembic_cfg = Config(alembic_ini)
+    alembic_cfg.set_main_option("sqlalchemy.url", sync_url)
+    command.downgrade(alembic_cfg, "base")
+
+
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
     """Create async engine for the test database (session-scoped).
 
+    Uses alembic upgrade head as the single source of truth for schema
+    and RLS policies — eliminates drift between conftest and migrations.
+
     Uses NullPool to prevent connection state (RLS context, SET LOCAL)
-    from leaking between tests via pooled connections. Each test gets
-    a fresh connection, eliminating the session-isolation failures that
-    occur when running `pytest tests/` (all files).
+    from leaking between tests via pooled connections.
     """
     from sqlalchemy.pool import NullPool
+
+    sync_url = _derive_sync_url(TEST_DATABASE_URL)
+
+    # Run all migrations (schema + RLS + indexes) via alembic
+    _run_alembic_upgrade(sync_url)
+
     engine = create_async_engine(
         TEST_DATABASE_URL, echo=False,
         poolclass=NullPool,
     )
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # Skapa icke-superuser roll + ge grants (krävs för att RLS ska enforças)
+    # Create the non-superuser role for RLS enforcement in tests
     async with engine.begin() as conn:
         await conn.execute(text("""
             DO $$
@@ -76,126 +113,10 @@ async def test_engine():
         await conn.execute(text("GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO systemregister_app"))
         await conn.execute(text("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO systemregister_app"))
 
-    # RLS-funktioner och policies (från alembic/versions/0001_enable_rls_multi_org.py)
-    async with engine.begin() as conn:
-        await conn.execute(text("""
-            CREATE OR REPLACE FUNCTION set_org_context(p_org_id UUID)
-            RETURNS void
-            LANGUAGE plpgsql
-            SECURITY DEFINER
-            AS $$
-            BEGIN
-                PERFORM set_config('app.current_org_id', p_org_id::text, true);
-            END;
-            $$;
-        """))
-
-        await conn.execute(text("""
-            CREATE OR REPLACE FUNCTION current_org_id()
-            RETURNS UUID
-            LANGUAGE plpgsql
-            STABLE
-            AS $$
-            DECLARE
-                v_setting text;
-            BEGIN
-                v_setting := current_setting('app.current_org_id', true);
-                IF v_setting IS NULL OR v_setting = '' THEN
-                    RETURN NULL;
-                END IF;
-                RETURN v_setting::UUID;
-            EXCEPTION WHEN others THEN
-                RETURN NULL;
-            END;
-            $$;
-        """))
-
-        for table in [
-            "systems",
-            "system_owners",
-            "system_classifications",
-            "system_integrations",
-            "gdpr_treatments",
-            "contracts",
-        ]:
-            await conn.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;"))
-            await conn.execute(text(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;"))
-
-        # Drop existing policies first (idempotent setup)
-        for table in [
-            "systems", "system_owners", "system_classifications",
-            "system_integrations", "gdpr_treatments", "contracts",
-        ]:
-            await conn.execute(text(f"DROP POLICY IF EXISTS org_isolation ON {table};"))
-
-        # Policies med NULL-bypass: utan org-context ser man allt (bypass-mode)
-        await conn.execute(text("""
-            CREATE POLICY org_isolation ON systems
-            AS PERMISSIVE FOR ALL TO PUBLIC
-            USING (current_org_id() IS NULL OR organization_id = current_org_id());
-        """))
-
-        await conn.execute(text("""
-            CREATE POLICY org_isolation ON system_owners
-            AS PERMISSIVE FOR ALL TO PUBLIC
-            USING (current_org_id() IS NULL OR organization_id = current_org_id());
-        """))
-
-        await conn.execute(text("""
-            CREATE POLICY org_isolation ON system_classifications
-            AS PERMISSIVE FOR ALL TO PUBLIC
-            USING (
-                current_org_id() IS NULL OR EXISTS (
-                    SELECT 1 FROM systems s
-                    WHERE s.id = system_classifications.system_id
-                      AND s.organization_id = current_org_id()
-                )
-            );
-        """))
-
-        await conn.execute(text("""
-            CREATE POLICY org_isolation ON system_integrations
-            AS PERMISSIVE FOR ALL TO PUBLIC
-            USING (
-                current_org_id() IS NULL OR EXISTS (
-                    SELECT 1 FROM systems s
-                    WHERE s.organization_id = current_org_id()
-                      AND (
-                          s.id = system_integrations.source_system_id
-                       OR s.id = system_integrations.target_system_id
-                      )
-                )
-            );
-        """))
-
-        await conn.execute(text("""
-            CREATE POLICY org_isolation ON gdpr_treatments
-            AS PERMISSIVE FOR ALL TO PUBLIC
-            USING (
-                current_org_id() IS NULL OR EXISTS (
-                    SELECT 1 FROM systems s
-                    WHERE s.id = gdpr_treatments.system_id
-                      AND s.organization_id = current_org_id()
-                )
-            );
-        """))
-
-        await conn.execute(text("""
-            CREATE POLICY org_isolation ON contracts
-            AS PERMISSIVE FOR ALL TO PUBLIC
-            USING (
-                current_org_id() IS NULL OR EXISTS (
-                    SELECT 1 FROM systems s
-                    WHERE s.id = contracts.system_id
-                      AND s.organization_id = current_org_id()
-                )
-            );
-        """))
-
     yield engine
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    # Teardown: downgrade all migrations (drops tables, policies, functions)
+    _run_alembic_downgrade(sync_url)
 
     await engine.dispose()
 

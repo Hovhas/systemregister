@@ -2,7 +2,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rls import get_rls_db
@@ -30,11 +29,7 @@ async def get_organization(org_id: UUID, db: AsyncSession = Depends(get_rls_db))
 async def create_organization(data: OrganizationCreate, db: AsyncSession = Depends(get_rls_db)):
     org = Organization(**data.model_dump())
     db.add(org)
-    try:
-        await db.flush()
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(status_code=409, detail="Organisation med detta org-nummer finns redan")
+    await db.flush()
     await db.refresh(org)
     return org
 

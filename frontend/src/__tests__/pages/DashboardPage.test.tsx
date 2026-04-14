@@ -3,8 +3,8 @@
  * ~40 testfall
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { MemoryRouter } from "react-router-dom"
@@ -34,6 +34,22 @@ const mockStats = {
   },
   nis2_applicable_count: 10,
   treats_personal_data_count: 18,
+  uses_ai_count: 3,
+  ai_by_risk_class: {},
+  classification_stats: {
+    with_classification: 20,
+    without_classification: 22,
+    expired: 0,
+  },
+  gdpr_stats: {
+    pub_agreement_count: 14,
+    dpia_count: 2,
+  },
+  objekt_count: 4,
+  module_count: 6,
+  information_asset_count: 9,
+  component_count: 11,
+  pending_approval_count: 0,
 }
 
 const mockStatsOrg1 = {
@@ -42,6 +58,22 @@ const mockStatsOrg1 = {
   by_criticality: { kritisk: 3, hög: 5, medel: 4, låg: 3 },
   nis2_applicable_count: 4,
   treats_personal_data_count: 7,
+  uses_ai_count: 1,
+  ai_by_risk_class: {},
+  classification_stats: {
+    with_classification: 8,
+    without_classification: 7,
+    expired: 0,
+  },
+  gdpr_stats: {
+    pub_agreement_count: 2,
+    dpia_count: 1,
+  },
+  objekt_count: 2,
+  module_count: 3,
+  information_asset_count: 4,
+  component_count: 5,
+  pending_approval_count: 0,
 }
 
 const mockEmptyStats = {
@@ -50,6 +82,22 @@ const mockEmptyStats = {
   by_criticality: {},
   nis2_applicable_count: 0,
   treats_personal_data_count: 0,
+  uses_ai_count: 0,
+  ai_by_risk_class: {},
+  classification_stats: {
+    with_classification: 0,
+    without_classification: 0,
+    expired: 0,
+  },
+  gdpr_stats: {
+    pub_agreement_count: 0,
+    dpia_count: 0,
+  },
+  objekt_count: 0,
+  module_count: 0,
+  information_asset_count: 0,
+  component_count: 0,
+  pending_approval_count: 0,
 }
 
 // --- MSW-server ---

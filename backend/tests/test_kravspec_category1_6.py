@@ -267,7 +267,7 @@ async def test_cat2_delete_owner(client, role):
     owner = await create_owner(client, system["id"], org["id"], role=role)
     owner_id = owner["id"]
 
-    del_resp = await client.delete(f"/api/v1/owners/{owner_id}")
+    del_resp = await client.delete(f"/api/v1/systems/{system['id']}/owners/{owner_id}")
     assert del_resp.status_code == 204
 
     resp = await client.get(f"/api/v1/systems/{system['id']}/owners")

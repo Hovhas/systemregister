@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, or_, cast, String
-from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -151,22 +151,7 @@ async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_d
 
     system = System(**data.model_dump())
     db.add(system)
-    try:
-        await db.flush()
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=422,
-            detail="Organisationen finns inte eller databaskonflikt"
-        )
-    except ProgrammingError as e:
-        await db.rollback()
-        if "row-level security" in str(e).lower() or "insufficient_privilege" in str(e).lower():
-            raise HTTPException(
-                status_code=403,
-                detail="Åtkomst nekad: systemet tillhör en annan organisation"
-            )
-        raise
+    await db.flush()
     await db.refresh(system)
     return system
 

@@ -106,7 +106,7 @@ def _make_audit_entry(
     Reads current_user and client_ip from session.info (set by RLS/auth layer).
     """
     # Late import to avoid circular dependency at module load time
-    from app.models.models import AuditLog  # noqa: PLC0415
+    from app.models import AuditLog  # noqa: PLC0415
 
     return AuditLog(
         id=uuid.uuid4(),

@@ -81,7 +81,7 @@ export function AvtalTab({ systemId }: { systemId: string }) {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteContract(id),
+    mutationFn: (id: string) => deleteContract(systemId, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts", systemId] })
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
@@ -107,10 +107,12 @@ export function AvtalTab({ systemId }: { systemId: string }) {
     createMutation.mutate(payload)
   }
 
+  const [now] = useState(() => Date.now())
+
   function contractRowClass(contract: Contract): string {
     if (!contract.contract_end) return ""
     const daysLeft = Math.ceil(
-      (new Date(contract.contract_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(contract.contract_end).getTime() - now) / (1000 * 60 * 60 * 24)
     )
     if (daysLeft < 0) return "bg-red-50 dark:bg-red-950/20"
     if (daysLeft <= 90) return "bg-orange-50 dark:bg-orange-950/20"
@@ -120,7 +122,7 @@ export function AvtalTab({ systemId }: { systemId: string }) {
   function ContractExpiryBadge({ contract }: { contract: Contract }) {
     if (!contract.contract_end) return null
     const daysLeft = Math.ceil(
-      (new Date(contract.contract_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(contract.contract_end).getTime() - now) / (1000 * 60 * 60 * 24)
     )
     if (daysLeft < 0) {
       return (
