@@ -79,7 +79,7 @@ export function AgareTab({
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteOwner(id),
+    mutationFn: (id: string) => deleteOwner(systemId, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })
       toast.success("Ägare borttagen")

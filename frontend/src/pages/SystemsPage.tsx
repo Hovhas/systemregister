@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { SearchIcon, PlusIcon, ChevronUpIcon, ChevronDownIcon, XIcon, Loader2Icon } from "lucide-react"
@@ -76,19 +76,14 @@ export default function SystemsPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
   // Debounce sökning 300ms
-  const debounceRef = useCallback(
-    (() => {
-      let timer: ReturnType<typeof setTimeout>
-      return (value: string) => {
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-          setDebouncedSearch(value)
-          setOffset(0)
-        }, 300)
-      }
-    })(),
-    []
-  )
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const debounceRef = useCallback((value: string) => {
+    clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value)
+      setOffset(0)
+    }, 300)
+  }, [])
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSearchInput(e.target.value)
@@ -146,21 +141,22 @@ export default function SystemsPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
 
-  function SortHeader({ field, label }: { field: string; label: string }) {
-    const active = sortField === field
-    function handleSort() {
-      if (active) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-      else {
-        setSortField(field)
-        setSortDir("asc")
-      }
-      setOffset(0)
+  function handleSort(field: string) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    else {
+      setSortField(field)
+      setSortDir("asc")
     }
+    setOffset(0)
+  }
+
+  function renderSortHeader(field: string, label: string) {
+    const active = sortField === field
     return (
       <TableHead
         className="cursor-pointer select-none hover:text-foreground transition-colors"
-        onClick={handleSort}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSort() } }}
+        onClick={() => handleSort(field)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSort(field) } }}
         tabIndex={0}
         aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
         aria-label={`Sortera efter ${label}`}
@@ -325,11 +321,11 @@ export default function SystemsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <SortHeader field="name" label="Namn" />
-                <SortHeader field="organization_id" label="Organisation" />
-                <SortHeader field="system_category" label="Kategori" />
-                <SortHeader field="criticality" label="Kritikalitet" />
-                <SortHeader field="lifecycle_status" label="Status" />
+                {renderSortHeader("name", "Namn")}
+                {renderSortHeader("organization_id", "Organisation")}
+                {renderSortHeader("system_category", "Kategori")}
+                {renderSortHeader("criticality", "Kritikalitet")}
+                {renderSortHeader("lifecycle_status", "Status")}
                 <TableHead>NIS2</TableHead>
               </TableRow>
             </TableHeader>

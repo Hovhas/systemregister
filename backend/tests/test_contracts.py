@@ -1,5 +1,5 @@
 """
-Tests for /api/v1/systems/{id}/contracts, /api/v1/contracts/{id},
+Tests for /api/v1/systems/{id}/contracts, /api/v1/systems/{id}/contracts/{id},
 and /api/v1/contracts/expiring endpoints.
 """
 
@@ -118,7 +118,7 @@ async def test_list_contracts_empty(client):
 
 @pytest.mark.asyncio
 async def test_update_contract(client):
-    """PATCH /api/v1/contracts/{id} updates fields without touching others."""
+    """PATCH /api/v1/systems/{system_id}/contracts/{id} updates fields without touching others."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
     contract = await create_contract(client, system["id"], **CONTRACT_BASE)
@@ -129,7 +129,7 @@ async def test_update_contract(client):
         "annual_license_cost": 500000,
         "auto_renewal": True,
     }
-    resp = await client.patch(f"/api/v1/contracts/{contract_id}", json=patch)
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/contracts/{contract_id}", json=patch)
 
     assert resp.status_code == 200, f"Expected 200: {resp.text}"
     body = resp.json()
@@ -143,22 +143,22 @@ async def test_update_contract(client):
 
 @pytest.mark.asyncio
 async def test_update_contract_not_found(client):
-    """PATCH /api/v1/contracts/{id} with non-existent id returns 404."""
+    """PATCH /api/v1/systems/{system_id}/contracts/{id} with non-existent id returns 404."""
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.patch(f"/api/v1/contracts/{fake_id}", json={"supplier_name": "Ghost"})
+    resp = await client.patch(f"/api/v1/systems/{fake_id}/contracts/{fake_id}", json={"supplier_name": "Ghost"})
 
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_contract(client):
-    """DELETE /api/v1/contracts/{id} removes contract and returns 204."""
+    """DELETE /api/v1/systems/{system_id}/contracts/{id} removes contract and returns 204."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
     contract = await create_contract(client, system["id"])
     contract_id = contract["id"]
 
-    delete_resp = await client.delete(f"/api/v1/contracts/{contract_id}")
+    delete_resp = await client.delete(f"/api/v1/systems/{system['id']}/contracts/{contract_id}")
     assert delete_resp.status_code == 204, f"Expected 204: {delete_resp.text}"
 
     # Verify it's gone from the system's list
@@ -170,9 +170,9 @@ async def test_delete_contract(client):
 
 @pytest.mark.asyncio
 async def test_delete_contract_not_found(client):
-    """DELETE /api/v1/contracts/{id} with non-existent id returns 404."""
+    """DELETE /api/v1/systems/{system_id}/contracts/{id} with non-existent id returns 404."""
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.delete(f"/api/v1/contracts/{fake_id}")
+    resp = await client.delete(f"/api/v1/systems/{fake_id}/contracts/{fake_id}")
 
     assert resp.status_code == 404
 

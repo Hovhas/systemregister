@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.rls import get_rls_db
-from app.models.models import AuditLog
+from app.models import AuditLog
 from app.schemas import AuditListResponse, AuditEntryResponse
 
 router = APIRouter(prefix="/audit", tags=["Audit"])

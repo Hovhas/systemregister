@@ -37,10 +37,8 @@ jobs:
           uv pip install --system pytest pytest-asyncio httpx ruff pip-audit
       - name: Ruff lint
         run: cd backend && ruff check .
-        continue-on-error: true  # TODO: fixa befintliga lint-fel och ta bort detta
       - name: Security scan (pip-audit)
         run: cd backend && pip-audit --requirement pyproject.toml
-        continue-on-error: true
       - name: Run backend tests (per file for session isolation)
         env:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
@@ -71,7 +69,6 @@ jobs:
         run: cd frontend && npm ci
       - name: ESLint
         run: cd frontend && npm run lint
-        continue-on-error: true  # TODO: fixa befintliga lint-varningar
       - name: TypeScript check
         run: cd frontend && npx tsc -b
       - name: Vitest
@@ -80,7 +77,6 @@ jobs:
         run: cd frontend && npm run build
       - name: npm audit
         run: cd frontend && npm audit --audit-level=high
-        continue-on-error: true
 
   build:
     needs: [backend-test, frontend-test]

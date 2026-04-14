@@ -133,7 +133,7 @@ afterAll(() => server.close())
 
 // --- Hjälpfunktioner ---
 
-// Form-selects i ordning: 0=Organisation, 1=Kategori, 2=Livscykelstatus, 3=Kritikalitet
+// Form-selects i ordning: 0=Organisation, 1=Kategori, 2=Objekt, 3=Livscykelstatus, 4=Kritikalitet
 function getFormSelect(index: number) {
   return screen.getAllByRole("combobox")[index]
 }
@@ -216,9 +216,9 @@ describe("SystemFormPage", () => {
 
     it("visar standard-livscykel I drift", async () => {
       renderCreateForm()
-      // Öppna Livscykelstatus-select (index 2) och verifiera att I drift finns som option
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
-      await userEvent.click(screen.getAllByRole("combobox")[2])
+      // Öppna Livscykelstatus-select (index 3) och verifiera att I drift finns som option
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(5))
+      await userEvent.click(screen.getAllByRole("combobox")[3])
       await waitFor(() =>
         expect(screen.getByRole("option", { name: /i drift/i })).toBeInTheDocument()
       )
@@ -227,9 +227,9 @@ describe("SystemFormPage", () => {
 
     it("visar standard-kritikalitet Medel", async () => {
       renderCreateForm()
-      // Öppna Kritikalitet-select (index 3) och verifiera att Medel finns som option
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
-      await userEvent.click(screen.getAllByRole("combobox")[3])
+      // Öppna Kritikalitet-select (index 4) och verifiera att Medel finns som option
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(5))
+      await userEvent.click(screen.getAllByRole("combobox")[4])
       await waitFor(() =>
         expect(screen.getByRole("option", { name: /medel/i })).toBeInTheDocument()
       )
@@ -419,8 +419,8 @@ describe("SystemFormPage", () => {
 
     it("visar alla livscykel-alternativ i dropdown", async () => {
       renderCreateForm()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
-      await userEvent.click(getFormSelect(2))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(5))
+      await userEvent.click(getFormSelect(3))
       await waitFor(() => {
         expect(
           screen.getByRole("option", { name: "Planerad" })
@@ -442,8 +442,8 @@ describe("SystemFormPage", () => {
 
     it("visar alla kritikalitet-alternativ i dropdown", async () => {
       renderCreateForm()
-      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(4))
-      await userEvent.click(getFormSelect(3))
+      await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThanOrEqual(5))
+      await userEvent.click(getFormSelect(4))
       await waitFor(() => {
         expect(screen.getByRole("option", { name: "Låg" })).toBeInTheDocument()
         expect(

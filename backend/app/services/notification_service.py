@@ -6,7 +6,7 @@ from sqlalchemy import select, func, and_, or_ as sa_or
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.models import Approval, System, SystemClassification, Contract
+from app.models import Approval, System, SystemClassification, Contract
 from app.models.enums import ApprovalStatus
 
 

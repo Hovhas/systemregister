@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_system_or_404
 from app.core.rls import get_rls_db
-from app.models.models import GDPRTreatment
+from app.models import GDPRTreatment
 from app.schemas import GDPRTreatmentCreate, GDPRTreatmentUpdate, GDPRTreatmentResponse
 
 router = APIRouter(tags=["GDPR"])
@@ -56,16 +56,16 @@ async def list_gdpr_treatments(
     return result.scalars().all()
 
 
-@router.patch("/gdpr/{treatment_id}", response_model=GDPRTreatmentResponse)
-# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
+@router.patch("/systems/{system_id}/gdpr/{treatment_id}", response_model=GDPRTreatmentResponse)
 async def update_gdpr_treatment(
+    system_id: UUID,
     treatment_id: UUID,
     data: GDPRTreatmentUpdate,
     db: AsyncSession = Depends(get_rls_db),
 ):
     """Update a GDPR treatment record."""
     treatment = await db.get(GDPRTreatment, treatment_id)
-    if not treatment:
+    if not treatment or treatment.system_id != system_id:
         raise HTTPException(status_code=404, detail="GDPR treatment not found")
 
     for key, value in data.model_dump(exclude_unset=True).items():
@@ -76,15 +76,15 @@ async def update_gdpr_treatment(
     return treatment
 
 
-@router.delete("/gdpr/{treatment_id}", status_code=status.HTTP_204_NO_CONTENT)
-# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
+@router.delete("/systems/{system_id}/gdpr/{treatment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_gdpr_treatment(
+    system_id: UUID,
     treatment_id: UUID,
     db: AsyncSession = Depends(get_rls_db),
 ):
     """Delete a GDPR treatment record."""
     treatment = await db.get(GDPRTreatment, treatment_id)
-    if not treatment:
+    if not treatment or treatment.system_id != system_id:
         raise HTTPException(status_code=404, detail="GDPR treatment not found")
     await db.delete(treatment)
     await db.flush()

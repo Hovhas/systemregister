@@ -752,12 +752,12 @@ describe("API-klient", () => {
     it("DELETE till /owners/:id", async () => {
       let deleteCalled = false
       server.use(
-        http.delete("/api/v1/owners/:id", () => {
+        http.delete("/api/v1/systems/:systemId/owners/:id", () => {
           deleteCalled = true
           return new HttpResponse(null, { status: 204 })
         })
       )
-      await deleteOwner("own-1")
+      await deleteOwner("sys-1", "own-1")
       expect(deleteCalled).toBe(true)
     })
   })
@@ -897,12 +897,12 @@ describe("API-klient", () => {
     it("deleteGDPRTreatment DELETE till /gdpr/:id", async () => {
       let deleteCalled = false
       server.use(
-        http.delete("/api/v1/gdpr/:id", () => {
+        http.delete("/api/v1/systems/:systemId/gdpr/:id", () => {
           deleteCalled = true
           return new HttpResponse(null, { status: 204 })
         })
       )
-      await deleteGDPRTreatment("gdpr-1")
+      await deleteGDPRTreatment("sys-1", "gdpr-1")
       expect(deleteCalled).toBe(true)
     })
   })
@@ -938,12 +938,12 @@ describe("API-klient", () => {
     it("deleteContract DELETE till /contracts/:id", async () => {
       let deleteCalled = false
       server.use(
-        http.delete("/api/v1/contracts/:id", () => {
+        http.delete("/api/v1/systems/:systemId/contracts/:id", () => {
           deleteCalled = true
           return new HttpResponse(null, { status: 204 })
         })
       )
-      await deleteContract("con-1")
+      await deleteContract("sys-1", "con-1")
       expect(deleteCalled).toBe(true)
     })
   })

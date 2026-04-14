@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.models import Contract, Module, System, SystemClassification
+from app.models import Contract, Module, System, SystemClassification
 
 
 class ReportService:

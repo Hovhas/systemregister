@@ -63,16 +63,16 @@ async def list_owners(
     return result.scalars().all()
 
 
-@router.patch("/owners/{owner_id}", response_model=OwnerResponse)
-# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
+@router.patch("/systems/{system_id}/owners/{owner_id}", response_model=OwnerResponse)
 async def update_owner(
+    system_id: UUID,
     owner_id: UUID,
     data: OwnerUpdate,
     db: AsyncSession = Depends(get_rls_db),
 ):
     """Update an owner entry."""
     owner = await db.get(SystemOwner, owner_id)
-    if not owner:
+    if not owner or owner.system_id != system_id:
         raise HTTPException(status_code=404, detail="Owner not found")
 
     for key, value in data.model_dump(exclude_unset=True).items():
@@ -83,15 +83,15 @@ async def update_owner(
     return owner
 
 
-@router.delete("/owners/{owner_id}", status_code=status.HTTP_204_NO_CONTENT)
-# Org-context from X-Organization-Id header (or JWT when OIDC_ENABLED=true).
+@router.delete("/systems/{system_id}/owners/{owner_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_owner(
+    system_id: UUID,
     owner_id: UUID,
     db: AsyncSession = Depends(get_rls_db),
 ):
     """Remove an owner entry."""
     owner = await db.get(SystemOwner, owner_id)
-    if not owner:
+    if not owner or owner.system_id != system_id:
         raise HTTPException(status_code=404, detail="Owner not found")
     await db.delete(owner)
     await db.flush()

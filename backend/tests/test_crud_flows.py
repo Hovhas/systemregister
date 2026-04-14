@@ -312,7 +312,7 @@ async def test_delete_system_cascades_to_owners(client):
 
     # Systemet borta → PATCH owner borde ge 404 eller 500
     resp = await client.patch(
-        f"/api/v1/owners/{owner['id']}",
+        f"/api/v1/systems/{sys['id']}/owners/{owner['id']}",
         json={"name": "Uppdaterad"},
     )
     assert resp.status_code in (404, 500), f"Owner borde vara borta, fick {resp.status_code}"
@@ -535,12 +535,12 @@ async def test_create_owner_all_roles(client, role):
 
 @pytest.mark.asyncio
 async def test_patch_owner(client):
-    """PATCH /owners/{id} uppdaterar ägare korrekt."""
+    """PATCH /systems/{system_id}/owners/{id} uppdaterar ägare korrekt."""
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     owner = await create_owner(client, sys["id"], org["id"], name="Gamla Ägaren")
 
-    resp = await client.patch(f"/api/v1/owners/{owner['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{sys['id']}/owners/{owner['id']}", json={
         "name": "Nya Ägaren",
         "email": "ny@agare.se",
     })
@@ -553,12 +553,12 @@ async def test_patch_owner(client):
 
 @pytest.mark.asyncio
 async def test_delete_owner(client):
-    """DELETE /owners/{id} tar bort ägaren."""
+    """DELETE /systems/{system_id}/owners/{id} tar bort ägaren."""
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     owner = await create_owner(client, sys["id"], org["id"])
 
-    del_resp = await client.delete(f"/api/v1/owners/{owner['id']}")
+    del_resp = await client.delete(f"/api/v1/systems/{sys['id']}/owners/{owner['id']}")
     assert del_resp.status_code == 204
 
     list_resp = await client.get(f"/api/v1/systems/{sys['id']}/owners")
@@ -622,12 +622,12 @@ async def test_create_contract_full(client):
 
 @pytest.mark.asyncio
 async def test_patch_contract(client):
-    """PATCH /contracts/{id} uppdaterar kontraktsfält."""
+    """PATCH /systems/{system_id}/contracts/{id} uppdaterar kontraktsfält."""
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     contract = await create_contract(client, sys["id"])
 
-    resp = await client.patch(f"/api/v1/contracts/{contract['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}", json={
         "sla_description": "Uppdaterad SLA",
         "auto_renewal": True,
     })
@@ -638,12 +638,12 @@ async def test_patch_contract(client):
 
 @pytest.mark.asyncio
 async def test_delete_contract(client):
-    """DELETE /contracts/{id} tar bort kontrakt."""
+    """DELETE /systems/{system_id}/contracts/{id} tar bort kontrakt."""
     org = await create_org(client)
     sys = await create_system(client, org["id"])
     contract = await create_contract(client, sys["id"])
 
-    del_resp = await client.delete(f"/api/v1/contracts/{contract['id']}")
+    del_resp = await client.delete(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}")
     assert del_resp.status_code == 204
 
     list_resp = await client.get(f"/api/v1/systems/{sys['id']}/contracts")

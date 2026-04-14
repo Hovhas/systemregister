@@ -189,7 +189,7 @@ class SystemClassification(Base):
     availability: Mapped[int] = mapped_column(Integer, nullable=False)  # 0-4
     traceability: Mapped[int | None] = mapped_column(Integer)  # 0-4, optional
     classified_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    classified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    classified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.clock_timestamp())
     valid_until: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
 

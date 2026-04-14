@@ -810,7 +810,7 @@ async def test_contract_flow_renew_contract(client):
                                       contract_end=str(today + timedelta(days=30)))
 
     new_end = str(today + timedelta(days=365))
-    resp = await client.patch(f"/api/v1/contracts/{contract['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}", json={
         "contract_end": new_end,
         "auto_renewal": True,
     })
@@ -831,7 +831,7 @@ async def test_contract_flow_terminate_contract(client):
     sys = await create_system(client, org["id"])
     contract = await create_contract(client, sys["id"])
 
-    del_resp = await client.delete(f"/api/v1/contracts/{contract['id']}")
+    del_resp = await client.delete(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}")
     assert del_resp.status_code == 204
 
     list_resp = await client.get(f"/api/v1/systems/{sys['id']}/contracts")
@@ -1607,7 +1607,7 @@ async def test_e2e_contract_lifecycle_with_renewal(client):
     assert contract["id"] in [c["id"] for c in expiring_resp.json()]
 
     new_end = str(today + timedelta(days=730))
-    renew_resp = await client.patch(f"/api/v1/contracts/{contract['id']}", json={
+    renew_resp = await client.patch(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}", json={
         "contract_end": new_end,
         "auto_renewal": True,
     })

@@ -92,7 +92,7 @@ export function GdprTab({
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteGDPRTreatment(id),
+    mutationFn: (id: string) => deleteGDPRTreatment(systemId, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gdpr", systemId] })
       queryClient.invalidateQueries({ queryKey: ["system", systemId] })

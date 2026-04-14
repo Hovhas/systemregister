@@ -103,14 +103,14 @@ async def test_get_org_invalid_uuid(client):
 @pytest.mark.asyncio
 async def test_patch_owner_nonexistent(client):
     """PATCH nonexistent owner returns 404."""
-    resp = await client.patch(f"/api/v1/owners/{FAKE_UUID}", json={"name": "X"})
+    resp = await client.patch(f"/api/v1/systems/{FAKE_UUID}/owners/{FAKE_UUID}", json={"name": "X"})
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_owner_nonexistent(client):
     """DELETE nonexistent owner returns 404."""
-    resp = await client.delete(f"/api/v1/owners/{FAKE_UUID}")
+    resp = await client.delete(f"/api/v1/systems/{FAKE_UUID}/owners/{FAKE_UUID}")
     assert resp.status_code == 404
 
 
@@ -193,14 +193,14 @@ async def test_create_integration_invalid_type(client):
 @pytest.mark.asyncio
 async def test_patch_gdpr_nonexistent(client):
     """PATCH nonexistent GDPR treatment returns 404."""
-    resp = await client.patch(f"/api/v1/gdpr/{FAKE_UUID}", json={"legal_basis": "X"})
+    resp = await client.patch(f"/api/v1/systems/{FAKE_UUID}/gdpr/{FAKE_UUID}", json={"legal_basis": "X"})
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_gdpr_nonexistent(client):
     """DELETE nonexistent GDPR treatment returns 404."""
-    resp = await client.delete(f"/api/v1/gdpr/{FAKE_UUID}")
+    resp = await client.delete(f"/api/v1/systems/{FAKE_UUID}/gdpr/{FAKE_UUID}")
     assert resp.status_code == 404
 
 
@@ -224,14 +224,14 @@ async def test_create_gdpr_nonexistent_system(client):
 @pytest.mark.asyncio
 async def test_patch_contract_nonexistent(client):
     """PATCH nonexistent contract returns 404."""
-    resp = await client.patch(f"/api/v1/contracts/{FAKE_UUID}", json={"supplier_name": "X"})
+    resp = await client.patch(f"/api/v1/systems/{FAKE_UUID}/contracts/{FAKE_UUID}", json={"supplier_name": "X"})
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_contract_nonexistent(client):
     """DELETE nonexistent contract returns 404."""
-    resp = await client.delete(f"/api/v1/contracts/{FAKE_UUID}")
+    resp = await client.delete(f"/api/v1/systems/{FAKE_UUID}/contracts/{FAKE_UUID}")
     assert resp.status_code == 404
 
 

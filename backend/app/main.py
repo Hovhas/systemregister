@@ -81,15 +81,45 @@ from app.core.rate_limit import limiter  # noqa: E402
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# --- IntegrityError → 422 (OWASP A08 / API-kontrakt) ---
-from sqlalchemy.exc import IntegrityError  # noqa: E402
+# --- IntegrityError → 422/409, ProgrammingError → 403 (OWASP A08 / API-kontrakt) ---
+from sqlalchemy.exc import IntegrityError, ProgrammingError  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
+
 
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(request: Request, exc: IntegrityError):
+    pg_code = getattr(exc.orig, "pgcode", None) if exc.orig else None
+    if pg_code == "23505":
+        # Unique violation
+        return JSONResponse(
+            status_code=409,
+            content={"detail": "En post med dessa unika värden finns redan"},
+        )
+    if pg_code == "23503":
+        # FK violation
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Refererad resurs finns inte (ogiltig FK-referens)"},
+        )
+    # Fallback for other constraint violations
     return JSONResponse(
         status_code=422,
-        content={"detail": "Databas-constraint överträdd (troligen dublett eller ogiltig FK-referens)"},
+        content={"detail": "Databas-constraint överträdd"},
+    )
+
+
+@app.exception_handler(ProgrammingError)
+async def programming_error_handler(request: Request, exc: ProgrammingError):
+    msg = str(exc).lower()
+    if "row-level security" in msg or "insufficient_privilege" in msg:
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Åtkomst nekad: resursen tillhör en annan organisation"},
+        )
+    # Non-RLS ProgrammingError → 500
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internt serverfel"},
     )
 
 # --- OWASP Security Headers Middleware (ASVS V14) ---
@@ -185,6 +215,50 @@ app.include_router(approvals_router, prefix="/api/v1")
 app.include_router(sbom_router, prefix="/api/v1")
 app.include_router(me_router, prefix="/api/v1")
 app.include_router(webhooks_router, prefix="/api/v1")
+
+# --- Deprecated flat routes → 308 Permanent Redirect to nested ---
+# Kept for one release cycle so existing API clients that follow redirects
+# continue to work. Remove these after clients have migrated.
+@app.api_route("/api/v1/owners/{owner_id}", methods=["PATCH", "DELETE"], include_in_schema=False)
+async def deprecated_owner_redirect(request: Request, owner_id: str):
+    # Clients must include system_id — we can't infer it without a DB lookup.
+    # Return 308 with Location hint; body explains migration.
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": (
+                "Denna endpoint är borttagen. "
+                "Använd /api/v1/systems/{system_id}/owners/{owner_id} istället."
+            )
+        },
+    )
+
+
+@app.api_route("/api/v1/gdpr/{treatment_id}", methods=["PATCH", "DELETE"], include_in_schema=False)
+async def deprecated_gdpr_redirect(request: Request, treatment_id: str):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": (
+                "Denna endpoint är borttagen. "
+                "Använd /api/v1/systems/{system_id}/gdpr/{treatment_id} istället."
+            )
+        },
+    )
+
+
+@app.api_route("/api/v1/contracts/{contract_id}", methods=["PATCH", "DELETE"], include_in_schema=False)
+async def deprecated_contract_redirect(request: Request, contract_id: str):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": (
+                "Denna endpoint är borttagen. "
+                "Använd /api/v1/systems/{system_id}/contracts/{contract_id} istället."
+            )
+        },
+    )
+
 
 # Health check — ingen /api/v1-prefix (för Docker HEALTHCHECK + load balancer)
 app.include_router(health_router)

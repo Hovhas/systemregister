@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rls import get_rls_db
-from app.models.models import System, Module, module_system_link
+from app.models import System, Module, module_system_link
 
 router = APIRouter(prefix="/export", tags=["SBOM"])
 

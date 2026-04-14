@@ -961,7 +961,7 @@ async def test_kat8_contract_update_supplier_name(client):
     sys = await create_system(client, org["id"])
     contract = await create_contract(client, sys["id"], supplier_name="Gammalt Namn AB")
 
-    resp = await client.patch(f"/api/v1/contracts/{contract['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}", json={
         "supplier_name": "Nytt Namn AB",
     })
     assert resp.status_code == 200
@@ -984,7 +984,7 @@ async def test_kat8_contract_patch_individual_fields(client, patch_field, new_va
     sys = await create_system(client, org["id"])
     contract = await create_contract(client, sys["id"])
 
-    resp = await client.patch(f"/api/v1/contracts/{contract['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}", json={
         patch_field: new_value,
     })
     assert resp.status_code == 200, (
@@ -996,7 +996,7 @@ async def test_kat8_contract_patch_individual_fields(client, patch_field, new_va
 @pytest.mark.asyncio
 async def test_kat8_contract_patch_not_found(client):
     """PATCH okänt contract-id ska ge 404."""
-    resp = await client.patch(f"/api/v1/contracts/{FAKE_UUID}", json={
+    resp = await client.patch(f"/api/v1/systems/{FAKE_UUID}/contracts/{FAKE_UUID}", json={
         "supplier_name": "Ghost",
     })
     assert resp.status_code == 404
@@ -1009,7 +1009,7 @@ async def test_kat8_contract_delete_success(client):
     sys = await create_system(client, org["id"])
     contract = await create_contract(client, sys["id"])
 
-    resp = await client.delete(f"/api/v1/contracts/{contract['id']}")
+    resp = await client.delete(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}")
     assert resp.status_code == 204
 
     list_resp = await client.get(f"/api/v1/systems/{sys['id']}/contracts")
@@ -1478,7 +1478,7 @@ async def test_kat11_audit_update_contract_logged(client):
     sys = await create_system(client, org["id"])
     contract = await create_contract(client, sys["id"])
 
-    await client.patch(f"/api/v1/contracts/{contract['id']}", json={
+    await client.patch(f"/api/v1/systems/{sys['id']}/contracts/{contract['id']}", json={
         "annual_license_cost": 750000,
     })
 

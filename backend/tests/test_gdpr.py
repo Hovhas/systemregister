@@ -1,5 +1,5 @@
 """
-Tests for /api/v1/systems/{id}/gdpr and /api/v1/gdpr/{id} endpoints.
+Tests for /api/v1/systems/{id}/gdpr and /api/v1/systems/{id}/gdpr/{id} endpoints.
 """
 
 import pytest
@@ -107,7 +107,7 @@ async def test_list_gdpr_treatments_empty(client):
 
 @pytest.mark.asyncio
 async def test_update_gdpr_treatment(client):
-    """PATCH /api/v1/gdpr/{id} updates fields without touching others."""
+    """PATCH /api/v1/systems/{system_id}/gdpr/{id} updates fields without touching others."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
     treatment = await create_gdpr_treatment(client, system["id"], **GDPR_BASE)
@@ -118,7 +118,7 @@ async def test_update_gdpr_treatment(client):
         "dpia_conducted": False,
         "retention_policy": "5 år",
     }
-    resp = await client.patch(f"/api/v1/gdpr/{treatment_id}", json=patch)
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/gdpr/{treatment_id}", json=patch)
 
     assert resp.status_code == 200, f"Expected 200: {resp.text}"
     body = resp.json()
@@ -133,22 +133,22 @@ async def test_update_gdpr_treatment(client):
 
 @pytest.mark.asyncio
 async def test_update_gdpr_treatment_not_found(client):
-    """PATCH /api/v1/gdpr/{id} with non-existent id returns 404."""
+    """PATCH /api/v1/systems/{system_id}/gdpr/{id} with non-existent id returns 404."""
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.patch(f"/api/v1/gdpr/{fake_id}", json={"legal_basis": "test"})
+    resp = await client.patch(f"/api/v1/systems/{fake_id}/gdpr/{fake_id}", json={"legal_basis": "test"})
 
     assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_gdpr_treatment(client):
-    """DELETE /api/v1/gdpr/{id} removes treatment and returns 204."""
+    """DELETE /api/v1/systems/{system_id}/gdpr/{id} removes treatment and returns 204."""
     org = await create_org(client)
     system = await create_system(client, org["id"])
     treatment = await create_gdpr_treatment(client, system["id"])
     treatment_id = treatment["id"]
 
-    delete_resp = await client.delete(f"/api/v1/gdpr/{treatment_id}")
+    delete_resp = await client.delete(f"/api/v1/systems/{system['id']}/gdpr/{treatment_id}")
     assert delete_resp.status_code == 204, f"Expected 204: {delete_resp.text}"
 
     # Verify it's gone from the system's list
@@ -160,9 +160,9 @@ async def test_delete_gdpr_treatment(client):
 
 @pytest.mark.asyncio
 async def test_delete_gdpr_treatment_not_found(client):
-    """DELETE /api/v1/gdpr/{id} with non-existent id returns 404."""
+    """DELETE /api/v1/systems/{system_id}/gdpr/{id} with non-existent id returns 404."""
     fake_id = "00000000-0000-0000-0000-000000000000"
-    resp = await client.delete(f"/api/v1/gdpr/{fake_id}")
+    resp = await client.delete(f"/api/v1/systems/{fake_id}/gdpr/{fake_id}")
 
     assert resp.status_code == 404
 
@@ -417,7 +417,7 @@ async def test_gdpr_patch_data_categories(client):
     treatment = await create_gdpr_treatment(client, system["id"],
                                              data_categories=["vanliga"])
 
-    resp = await client.patch(f"/api/v1/gdpr/{treatment['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/gdpr/{treatment['id']}", json={
         "data_categories": ["vanliga", "känsliga_art9"],
     })
     assert resp.status_code == 200
@@ -433,7 +433,7 @@ async def test_gdpr_patch_dpia_status(client):
     treatment = await create_gdpr_treatment(client, system["id"],
                                              dpia_conducted=False)
 
-    resp = await client.patch(f"/api/v1/gdpr/{treatment['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/gdpr/{treatment['id']}", json={
         "dpia_conducted": True,
         "dpia_date": "2024-12-01",
     })
@@ -450,7 +450,7 @@ async def test_gdpr_patch_processor_agreement(client):
     treatment = await create_gdpr_treatment(client, system["id"],
                                              processor_agreement_status="under_framtagande")
 
-    resp = await client.patch(f"/api/v1/gdpr/{treatment['id']}", json={
+    resp = await client.patch(f"/api/v1/systems/{system['id']}/gdpr/{treatment['id']}", json={
         "processor_agreement_status": "ja",
     })
     assert resp.status_code == 200

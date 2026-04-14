@@ -40,7 +40,7 @@ async def create_classification(
         or classification.integrity >= 3
         or classification.availability >= 3
     ):
-        from app.models.models import System
+        from app.models import System
         system = await db.get(System, system_id)
         if system and not system.has_elevated_protection:
             system.has_elevated_protection = True
