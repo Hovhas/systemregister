@@ -369,7 +369,11 @@ export default function InformationAssetsPage() {
                 onValueChange={(val) => setNewAsset({ ...newAsset, organization_id: val ?? "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {newAsset.organization_id
+                      ? (orgs ?? []).find((o) => o.id === newAsset.organization_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(orgs ?? []).map((org) => (

@@ -382,7 +382,11 @@ export default function ComponentsPage() {
                 onValueChange={(val) => setNewComponent({ ...newComponent, system_id: val ?? "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj system" />
+                  <SelectValue placeholder="Välj system">
+                    {newComponent.system_id
+                      ? (systemsData?.items ?? []).find((s) => s.id === newComponent.system_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(systemsData?.items ?? []).map((sys) => (
@@ -400,7 +404,11 @@ export default function ComponentsPage() {
                 onValueChange={(val) => setNewComponent({ ...newComponent, organization_id: val ?? "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {newComponent.organization_id
+                      ? (orgs ?? []).find((o) => o.id === newComponent.organization_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(orgs ?? []).map((org) => (

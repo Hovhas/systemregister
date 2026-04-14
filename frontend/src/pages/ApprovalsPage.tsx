@@ -384,7 +384,11 @@ export default function ApprovalsPage() {
                 onValueChange={(val) => setNewApproval({ ...newApproval, organization_id: val ?? "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {newApproval.organization_id
+                      ? (orgs ?? []).find((o) => o.id === newApproval.organization_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(orgs ?? []).map((org) => (
@@ -402,7 +406,11 @@ export default function ApprovalsPage() {
                 onValueChange={(val) => setNewApproval({ ...newApproval, approval_type: val as ApprovalType })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj typ" />
+                  <SelectValue placeholder="Välj typ">
+                    {newApproval.approval_type
+                      ? approvalTypeLabels[newApproval.approval_type]
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(ApprovalType).map((t) => (

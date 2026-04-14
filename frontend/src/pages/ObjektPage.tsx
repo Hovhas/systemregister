@@ -334,7 +334,11 @@ export default function ObjektPage() {
                 onValueChange={(val) => setNewObjekt({ ...newObjekt, organization_id: val ?? "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {newObjekt.organization_id
+                      ? (orgs ?? []).find((o) => o.id === newObjekt.organization_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(orgs ?? []).map((org) => (

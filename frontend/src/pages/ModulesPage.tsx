@@ -367,7 +367,11 @@ export default function ModulesPage() {
                 onValueChange={(val) => setNewModule({ ...newModule, organization_id: val ?? "" })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {newModule.organization_id
+                      ? (orgs ?? []).find((o) => o.id === newModule.organization_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(orgs ?? []).map((org) => (
@@ -393,7 +397,11 @@ export default function ModulesPage() {
                 onValueChange={(val) => setNewModule({ ...newModule, lifecycle_status: val ? (val as LifecycleStatus) : undefined })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj status" />
+                  <SelectValue placeholder="Välj status">
+                    {newModule.lifecycle_status
+                      ? lifecycleLabels[newModule.lifecycle_status]
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Ingen</SelectItem>
@@ -423,7 +431,11 @@ export default function ModulesPage() {
                   onValueChange={(val) => setNewModule({ ...newModule, ai_risk_class: val ? (val as AIRiskClass) : undefined })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Välj riskklass" />
+                    <SelectValue placeholder="Välj riskklass">
+                      {newModule.ai_risk_class
+                        ? aiRiskClassLabels[newModule.ai_risk_class]
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Ingen</SelectItem>

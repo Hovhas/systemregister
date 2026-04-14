@@ -6,6 +6,8 @@ import { toast } from "sonner"
 
 import { getObjektById, deleteObjekt, updateObjekt, getSystems, getOrganizations } from "@/lib/api"
 import { formatDate } from "@/lib/format"
+import { categoryLabels, lifecycleLabels } from "@/lib/labels"
+import type { SystemCategory, LifecycleStatus } from "@/types"
 import { Breadcrumb } from "@/components/Breadcrumb"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { InfoRow } from "@/components/system-detail/helpers"
@@ -201,8 +203,8 @@ export default function ObjektDetailPage() {
                       onClick={() => navigate(`/systems/${sys.id}`)}
                     >
                       <TableCell className="font-medium">{sys.name}</TableCell>
-                      <TableCell>{sys.system_category}</TableCell>
-                      <TableCell>{sys.lifecycle_status}</TableCell>
+                      <TableCell>{categoryLabels[sys.system_category as SystemCategory] ?? sys.system_category}</TableCell>
+                      <TableCell>{lifecycleLabels[sys.lifecycle_status as LifecycleStatus] ?? sys.lifecycle_status}</TableCell>
                       <TableCell className="text-muted-foreground">{formatDate(sys.created_at)}</TableCell>
                     </TableRow>
                   ))}
