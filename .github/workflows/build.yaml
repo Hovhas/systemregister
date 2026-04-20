@@ -49,7 +49,13 @@ jobs:
           FAILED=""
           for f in tests/test_*.py; do
             echo "=== Running $f ==="
-            pytest "$f" -v || FAILED="$FAILED $f"
+            pytest "$f" -v
+            RC=$?
+            # Exit 5 = inga tester samlade (t.ex. alla markerade @pytest.mark.slow).
+            # Räkna bara som fel om exit-koden är non-zero OCH inte 5.
+            if [ $RC -ne 0 ] && [ $RC -ne 5 ]; then
+              FAILED="$FAILED $f"
+            fi
           done
           if [ -n "$FAILED" ]; then
             echo "Failed test files:$FAILED"
