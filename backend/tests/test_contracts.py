@@ -5,6 +5,7 @@ and /api/v1/contracts/expiring endpoints.
 
 import pytest
 from datetime import date, timedelta
+from uuid import uuid4
 
 from tests.factories import create_org, create_system, create_contract
 
@@ -277,8 +278,8 @@ async def test_expiring_contracts_invalid_days(client):
 async def test_contracts_scoped_to_system(client):
     """Contracts added to system A should not appear in system B's list."""
     org = await create_org(client)
-    system_a = await create_system(client, org["id"], name="System A")
-    system_b = await create_system(client, org["id"], name="System B")
+    system_a = await create_system(client, org["id"], name=f"ContrSysA-{uuid4().hex[:6]}")
+    system_b = await create_system(client, org["id"], name=f"ContrSysB-{uuid4().hex[:6]}")
 
     await create_contract(client, system_a["id"])
 

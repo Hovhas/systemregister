@@ -21,6 +21,7 @@ Målantal: ~200 testfall
 
 import pytest
 from datetime import date, timedelta
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -2179,7 +2180,7 @@ async def test_audit_pagination_limit(client):
     """Audit: limit-parameter ska begränsa antal returnerade poster."""
     org = await create_org(client)
     for i in range(5):
-        await create_system(client, org["id"], name=f"AuditPag {i}")
+        await create_system(client, org["id"], name=f"AudPag-{i}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/audit/", params={"limit": 2})
     assert resp.status_code == 200
@@ -2191,7 +2192,7 @@ async def test_audit_pagination_offset(client):
     """Audit: offset-parameter ska returnera nästa sida."""
     org = await create_org(client)
     for i in range(5):
-        await create_system(client, org["id"], name=f"AuditOff {i}")
+        await create_system(client, org["id"], name=f"AudOff-{i}-{uuid4().hex[:6]}")
 
     resp1 = await client.get("/api/v1/audit/", params={"limit": 2, "offset": 0})
     resp2 = await client.get("/api/v1/audit/", params={"limit": 2, "offset": 2})

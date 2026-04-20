@@ -422,8 +422,8 @@ async def test_compliance_integration_source_target_fields(client):
 async def test_compliance_integration_type_all_values(client):
     """integration_type ska acceptera api, filöverföring, databasreplikering, event, manuell."""
     org = await create_org(client)
-    src = await create_system(client, org["id"], name="Källsystem")
-    tgt = await create_system(client, org["id"], name="Målsystem")
+    src = await create_system(client, org["id"], name="Avsändarsystem")
+    tgt = await create_system(client, org["id"], name="Mottagarsystem")
     for itype in ["api", "filöverföring", "databasreplikering", "event", "manuell"]:
         resp = await client.post("/api/v1/integrations/", json={
             "source_system_id": src["id"],

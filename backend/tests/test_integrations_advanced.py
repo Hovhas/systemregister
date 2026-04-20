@@ -6,6 +6,7 @@ felhantering vid kaskad-borttagning och sällsynta kombinationer.
 """
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -106,9 +107,9 @@ async def test_integration_criticality_all_levels(client):
 async def test_integration_chain_a_b_c(client):
     """A→B→C: System B är beroende av A och C är beroende av B."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="ChainA")
-    sys_b = await create_system(client, org["id"], name="ChainB")
-    sys_c = await create_system(client, org["id"], name="ChainC")
+    sys_a = await create_system(client, org["id"], name=f"Kedja-A-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"Kedja-B-{uuid4().hex[:6]}")
+    sys_c = await create_system(client, org["id"], name=f"Kedja-C-{uuid4().hex[:6]}")
 
     integ_ab = await create_integration(client, sys_a["id"], sys_b["id"])
     integ_bc = await create_integration(client, sys_b["id"], sys_c["id"])
@@ -166,7 +167,7 @@ async def test_integration_hub_many_sources(client):
 
     sources = []
     for i in range(5):
-        src = await create_system(client, org["id"], name=f"Spoke{i}")
+        src = await create_system(client, org["id"], name=f"Spoke{i}-{uuid4().hex[:6]}")
         sources.append(src)
         await create_integration(client, src["id"], hub["id"])
 
@@ -405,9 +406,9 @@ async def test_system_integrations_bidirectional_counted(client):
 async def test_get_integrations_list_all(client):
     """GET /integrations/ utan filter returnerar alla integrationer."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="AllListA")
-    sys_b = await create_system(client, org["id"], name="AllListB")
-    sys_c = await create_system(client, org["id"], name="AllListC")
+    sys_a = await create_system(client, org["id"], name=f"ListSysA-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"ListSysB-{uuid4().hex[:6]}")
+    sys_c = await create_system(client, org["id"], name=f"ListSysC-{uuid4().hex[:6]}")
 
     i1 = await create_integration(client, sys_a["id"], sys_b["id"])
     i2 = await create_integration(client, sys_b["id"], sys_c["id"])

@@ -11,6 +11,7 @@ Dokumenterade buggar:
 """
 
 import pytest
+from uuid import uuid4
 from tests.factories import (
     create_org, create_system, create_owner,
 )
@@ -272,7 +273,7 @@ async def test_regression_notifications_returns_all_without_limit(client):
     org = await create_org(client)
     # Skapa 20 system utan klassning — genererar 20+ notifikationer
     for i in range(20):
-        await create_system(client, org["id"], name=f"UnclassifiedSys {i}")
+        await create_system(client, org["id"], name=f"Oklass-{i}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/notifications/", params={"limit": 200})
     assert resp.status_code == 200

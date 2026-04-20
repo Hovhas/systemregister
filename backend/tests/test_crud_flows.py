@@ -9,6 +9,7 @@ Täcker också felfall: 404, 422, ogiltiga enums, saknade fält m.m.
 
 import pytest
 from datetime import date, timedelta
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -337,7 +338,7 @@ async def test_list_systems_pagination(client):
     """GET /systems/ med limit/offset paginerar korrekt."""
     org = await create_org(client)
     for i in range(5):
-        await create_system(client, org["id"], name=f"PagSys {i}")
+        await create_system(client, org["id"], name=f"Pagsys-{i}-{uuid4().hex[:6]}")
 
     resp_page1 = await client.get("/api/v1/systems/", params={"limit": 2, "offset": 0, "organization_id": org["id"]})
     resp_page2 = await client.get("/api/v1/systems/", params={"limit": 2, "offset": 2, "organization_id": org["id"]})

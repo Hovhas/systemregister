@@ -16,6 +16,7 @@ set_org_context(). Fix requires refactoring conftest to use get_rls_db.
 """
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -326,9 +327,9 @@ async def test_rls_multiple_orgs_independent_system_counts(client):
     org_b = await create_org(client, name="CountOrgB", org_type="bolag")
 
     for i in range(3):
-        await create_system(client, org_a["id"], name=f"OrgA Sys {i}")
+        await create_system(client, org_a["id"], name=f"OrgASys-{i}-{uuid4().hex[:6]}")
     for i in range(2):
-        await create_system(client, org_b["id"], name=f"OrgB Sys {i}")
+        await create_system(client, org_b["id"], name=f"OrgBSys-{i}-{uuid4().hex[:6]}")
 
     resp_a = await get_with_org(client, "/api/v1/systems/", org_a["id"])
     resp_b = await get_with_org(client, "/api/v1/systems/", org_b["id"])

@@ -9,6 +9,7 @@ och att stora datamängder inte orsakar timeouts.
 
 import time
 import pytest
+from uuid import uuid4
 from tests.factories import (
     create_org, create_system, create_classification,
     create_owner, create_contract,
@@ -80,7 +81,7 @@ async def test_list_10_systems_fast(client):
     """GET /systems/ with 10 systems should respond within 1 second."""
     org = await create_org(client)
     for i in range(10):
-        await create_system(client, org["id"], name=f"System {i:03d}")
+        await create_system(client, org["id"], name=f"PerfSys-{i:03d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/systems/", params={"limit": 50})
@@ -134,7 +135,7 @@ async def test_list_50_systems_under_2_seconds(client):
     """GET /systems/ with 50 systems should respond within 2 seconds."""
     org = await create_org(client)
     for i in range(50):
-        await create_system(client, org["id"], name=f"PerfSystem {i:03d}")
+        await create_system(client, org["id"], name=f"Perf50-{i:03d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/systems/", params={"limit": 50})
@@ -149,7 +150,7 @@ async def test_search_50_systems_under_2_seconds(client):
     """Search across 50 systems should respond within 2 seconds."""
     org = await create_org(client)
     for i in range(50):
-        await create_system(client, org["id"], name=f"SearchSystem {i:03d}",
+        await create_system(client, org["id"], name=f"Srchsys-{i:03d}-{uuid4().hex[:6]}",
                            description=f"Beschrivning för system nummer {i}")
 
     start = time.monotonic()
@@ -166,7 +167,7 @@ async def test_stats_with_50_systems_under_2_seconds(client):
     """Stats endpoint with 50 systems should respond within 2 seconds."""
     org = await create_org(client)
     for i in range(50):
-        await create_system(client, org["id"], name=f"StatsSystem {i:03d}")
+        await create_system(client, org["id"], name=f"Statssys-{i:03d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/systems/stats/overview")
@@ -181,7 +182,7 @@ async def test_notifications_with_50_unclassified_systems(client):
     """Notifications with 50 unclassified systems should respond within 5 seconds."""
     org = await create_org(client)
     for i in range(50):
-        await create_system(client, org["id"], name=f"UnclassifiedSys {i:03d}")
+        await create_system(client, org["id"], name=f"Oklasssys-{i:03d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/notifications/")
@@ -205,7 +206,7 @@ async def test_pagination_page_1_vs_page_2_similar_speed(client):
     """First and second page should have similar response times."""
     org = await create_org(client)
     for i in range(30):
-        await create_system(client, org["id"], name=f"PagSystem {i:03d}")
+        await create_system(client, org["id"], name=f"Pagsys-{i:03d}-{uuid4().hex[:6]}")
 
     start1 = time.monotonic()
     resp1 = await client.get("/api/v1/systems/", params={"limit": 10, "offset": 0})
@@ -229,7 +230,7 @@ async def test_large_offset_not_slower_than_small_offset(client):
     """Querying at large offset should not be significantly slower."""
     org = await create_org(client)
     for i in range(30):
-        await create_system(client, org["id"], name=f"OffsetSystem {i:03d}")
+        await create_system(client, org["id"], name=f"Offsetsys-{i:03d}-{uuid4().hex[:6]}")
 
     start1 = time.monotonic()
     await client.get("/api/v1/systems/", params={"limit": 10, "offset": 0})
@@ -302,7 +303,7 @@ async def test_export_json_10_systems_fast(client):
     """JSON export with 10 systems should complete within 2 seconds."""
     org = await create_org(client)
     for i in range(10):
-        await create_system(client, org["id"], name=f"ExportSystem {i}")
+        await create_system(client, org["id"], name=f"Expsys-{i}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/export/systems.json")
@@ -352,7 +353,7 @@ async def test_compliance_gap_with_10_systems(client):
     """Compliance gap with 10 systems should complete within 3 seconds."""
     org = await create_org(client)
     for i in range(10):
-        await create_system(client, org["id"], name=f"GapSystem {i}")
+        await create_system(client, org["id"], name=f"Gapsys-{i}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/reports/compliance-gap")

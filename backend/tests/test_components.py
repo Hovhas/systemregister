@@ -3,6 +3,7 @@ Tests for /api/v1/components/ endpoints.
 """
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import create_org, create_system, create_component
 
@@ -74,8 +75,8 @@ async def test_list_components(client):
 async def test_list_components_by_system(client):
     """GET /api/v1/components/?system_id=X filters by system."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
+    sys_a = await create_system(client, org["id"], name=f"KompSysA-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"KompSysB-{uuid4().hex[:6]}")
     await create_component(client, sys_a["id"], org["id"], name="A-komp")
     await create_component(client, sys_b["id"], org["id"], name="B-komp")
 

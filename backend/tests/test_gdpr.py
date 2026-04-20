@@ -3,6 +3,7 @@ Tests for /api/v1/systems/{id}/gdpr and /api/v1/systems/{id}/gdpr/{id} endpoints
 """
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import create_org, create_system, create_gdpr_treatment
 
@@ -180,8 +181,8 @@ async def test_create_gdpr_invalid_system(client):
 async def test_gdpr_treatments_scoped_to_system(client):
     """GDPR treatments added to system A should not appear in system B's list."""
     org = await create_org(client)
-    system_a = await create_system(client, org["id"], name="System A")
-    system_b = await create_system(client, org["id"], name="System B")
+    system_a = await create_system(client, org["id"], name=f"GdprSysA-{uuid4().hex[:6]}")
+    system_b = await create_system(client, org["id"], name=f"GdprSysB-{uuid4().hex[:6]}")
 
     await create_gdpr_treatment(client, system_a["id"])
 

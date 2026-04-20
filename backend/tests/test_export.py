@@ -6,6 +6,7 @@ import csv
 import io
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import create_org, create_system
 
@@ -230,7 +231,7 @@ async def test_export_csv_parses_all_rows(client):
     """CSV-export innehåller en rad per system, inga extra rader."""
     org = await create_org(client, name="CSVParseOrg", org_number="111222-3333")
     for i in range(3):
-        await create_system(client, org["id"], name=f"CSV Row Sys {i}")
+        await create_system(client, org["id"], name=f"CsvRow-{i}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/export/systems.csv", params={"organization_id": org["id"]})
     assert resp.status_code == 200
@@ -389,7 +390,7 @@ async def test_export_json_large_dataset(client):
     """JSON-export hanterar dataset med 50 system."""
     org = await create_org(client, name="LargeExportOrg", org_number="LRG-001")
     for i in range(50):
-        await create_system(client, org["id"], name=f"LargeExportSys {i:03d}")
+        await create_system(client, org["id"], name=f"LgExp-{i:03d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/export/systems.json",
                              params={"organization_id": org["id"]})
@@ -403,7 +404,7 @@ async def test_export_csv_large_dataset(client):
     """CSV-export hanterar dataset med 50 system."""
     org = await create_org(client, name="LargeCSVOrg", org_number="LCV-002")
     for i in range(50):
-        await create_system(client, org["id"], name=f"LargeCSVSys {i:03d}")
+        await create_system(client, org["id"], name=f"LgCsv-{i:03d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/export/systems.csv",
                              params={"organization_id": org["id"]})

@@ -6,7 +6,7 @@ Use `**overrides` to customize specific fields.
 """
 
 from datetime import date
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from httpx import AsyncClient
 
@@ -14,7 +14,7 @@ from httpx import AsyncClient
 async def create_org(client: AsyncClient, **overrides) -> dict:
     """Create an organization and return the response dict."""
     data = {
-        "name": overrides.pop("name", "Test Organisation"),
+        "name": overrides.pop("name", f"Test Organisation {uuid4().hex[:8]}"),
         "org_number": overrides.pop("org_number", None),
         "org_type": overrides.pop("org_type", "kommun"),
         "parent_org_id": overrides.pop("parent_org_id", None),
@@ -34,7 +34,7 @@ async def create_system(client: AsyncClient, org_id: str, **overrides) -> dict:
     """Create a system and return the response dict."""
     data = {
         "organization_id": str(org_id),
-        "name": overrides.pop("name", "Testsystem"),
+        "name": overrides.pop("name", f"Testsystem {uuid4().hex[:8]}"),
         "description": overrides.pop("description", "Ett testsystem"),
         "system_category": overrides.pop("system_category", "verksamhetssystem"),
     }

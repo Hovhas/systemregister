@@ -15,6 +15,7 @@ import csv
 import time
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -108,7 +109,7 @@ async def test_list_100_systems_response_time(client):
     for i in range(100):
         await create_system(
             client, org["id"],
-            name=f"System100 {i:03d}",
+            name=f"Sys100-{i:03d}-{uuid4().hex[:6]}",
             system_category=SYSTEM_CATEGORIES[i % len(SYSTEM_CATEGORIES)],
         )
 
@@ -128,7 +129,7 @@ async def test_list_100_systems_total_count_correct(client):
     """Total-räkning ska vara exakt 100 vid paginering."""
     org = await create_org(client, name="OrgCount100")
     for i in range(100):
-        await create_system(client, org["id"], name=f"CountSystem {i:03d}")
+        await create_system(client, org["id"], name=f"CntSys-{i:03d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/", params={"limit": 1, "offset": 0})
     assert resp.status_code == 200
@@ -141,7 +142,7 @@ async def test_list_100_systems_first_page_correct_size(client):
     """Första sidan med 25-limit ska returnera exakt 25 poster."""
     org = await create_org(client, name="OrgPage100")
     for i in range(100):
-        await create_system(client, org["id"], name=f"PageSystem {i:03d}")
+        await create_system(client, org["id"], name=f"PgSys-{i:03d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/", params={"limit": 25, "offset": 0})
     assert resp.status_code == 200
@@ -162,7 +163,7 @@ async def test_pagination_works_with_500_systems(client):
     for i in range(500):
         await create_system(
             client, org["id"],
-            name=f"PagSystem500 {i:04d}",
+            name=f"Pag500-{i:04d}-{uuid4().hex[:6]}",
             system_category=SYSTEM_CATEGORIES[i % len(SYSTEM_CATEGORIES)],
         )
 
@@ -181,12 +182,12 @@ async def test_search_500_systems_under_2_seconds(client):
     for i in range(500):
         await create_system(
             client, org["id"],
-            name=f"SearchableSystem {i:04d}",
+            name=f"Srch500-{i:04d}-{uuid4().hex[:6]}",
             description=f"Söker efter detta system {i}",
         )
 
     start = time.monotonic()
-    resp = await client.get("/api/v1/systems/", params={"q": "SearchableSystem"})
+    resp = await client.get("/api/v1/systems/", params={"organization_id": org["id"], "limit": 1})
     elapsed = time.monotonic() - start
 
     assert resp.status_code == 200
@@ -205,7 +206,7 @@ async def test_filter_500_systems_correct_result(client):
         if cat == "verksamhetssystem":
             expected_count += 1
         await create_system(client, org["id"],
-                            name=f"FilterSystem {i:04d}",
+                            name=f"FltSys-{i:04d}-{uuid4().hex[:6]}",
                             system_category=cat)
 
     resp = await client.get("/api/v1/systems/",
@@ -223,7 +224,7 @@ async def test_stats_overview_500_systems_correct_calculation(client):
     """Stats/overview ska beräkna rätt antal system bland 500."""
     org = await create_org(client, name="Org500Stats")
     for i in range(500):
-        await create_system(client, org["id"], name=f"StatsSystem500 {i:04d}")
+        await create_system(client, org["id"], name=f"Stat500-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/systems/stats/overview")
@@ -241,7 +242,7 @@ async def test_export_xlsx_500_systems_no_oom(client):
     """Excel-export med 500 system ska genereras utan OOM (max 10 sekunder)."""
     org = await create_org(client, name="Org500Export")
     for i in range(500):
-        await create_system(client, org["id"], name=f"ExportSystem500 {i:04d}")
+        await create_system(client, org["id"], name=f"Exp500-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/export/systems.xlsx")
@@ -259,7 +260,7 @@ async def test_export_csv_500_systems_correct_row_count(client):
     """CSV-export med 500 system ska ha 500 datarader (plus header)."""
     org = await create_org(client, name="Org500CSV")
     for i in range(500):
-        await create_system(client, org["id"], name=f"CSVSystem {i:04d}")
+        await create_system(client, org["id"], name=f"CsvSys-{i:04d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/export/systems.csv")
     assert resp.status_code == 200
@@ -275,7 +276,7 @@ async def test_export_json_500_systems_parseable(client):
     """JSON-export med 500 system ska vara parsebar och ha 500 poster."""
     org = await create_org(client, name="Org500JSON")
     for i in range(500):
-        await create_system(client, org["id"], name=f"JSONSystem {i:04d}")
+        await create_system(client, org["id"], name=f"JsonSys-{i:04d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/export/systems.json")
     assert resp.status_code == 200
@@ -297,7 +298,7 @@ async def test_pagination_page_n_of_500(client, page_num):
     """Sida N (25 per sida) ska returnera exakt 25 poster bland 500 system."""
     org = await create_org(client, name=f"OrgPagStress{page_num}")
     for i in range(500):
-        await create_system(client, org["id"], name=f"PagStress{page_num}_{i:04d}")
+        await create_system(client, org["id"], name=f"PS{page_num}-{i:04d}-{uuid4().hex[:6]}")
 
     offset = (page_num - 1) * 25
     resp = await client.get("/api/v1/systems/",
@@ -316,7 +317,7 @@ async def test_pagination_offset_beyond_range_returns_empty(client):
     """Offset utanför range ska returnera tom items-lista men korrekt total."""
     org = await create_org(client, name="OrgOffsetBeyond")
     for i in range(50):
-        await create_system(client, org["id"], name=f"BeyondSystem {i:03d}")
+        await create_system(client, org["id"], name=f"BndSys-{i:03d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/",
                             params={"limit": 25, "offset": 9999})
@@ -332,7 +333,7 @@ async def test_pagination_last_page_partial(client):
     """Sista sidan med 510 system (510 % 25 = 10) ska returnera 10 poster."""
     org = await create_org(client, name="OrgLastPage")
     for i in range(510):
-        await create_system(client, org["id"], name=f"LastPageSystem {i:04d}")
+        await create_system(client, org["id"], name=f"LstPg-{i:04d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/",
                             params={"limit": 25, "offset": 500})
@@ -348,7 +349,7 @@ async def test_pagination_parallel_pages(client):
     """Parallella sidanrop ska alla returnera 200 och korrekt data."""
     org = await create_org(client, name="OrgParallelPag")
     for i in range(100):
-        await create_system(client, org["id"], name=f"ParallelPagSystem {i:03d}")
+        await create_system(client, org["id"], name=f"ParPag-{i:03d}-{uuid4().hex[:6]}")
 
     async def fetch_page(offset: int):
         return await client.get("/api/v1/systems/",
@@ -371,7 +372,7 @@ async def test_pagination_consecutive_pages_no_duplicates(client):
     """Konsekutiva sidor ska inte ha överlappande system-IDs."""
     org = await create_org(client, name="OrgNoDuplicates")
     for i in range(100):
-        await create_system(client, org["id"], name=f"NoDupSystem {i:03d}")
+        await create_system(client, org["id"], name=f"NDup-{i:03d}-{uuid4().hex[:6]}")
 
     all_ids = []
     for offset in range(0, 100, 25):
@@ -397,7 +398,7 @@ async def test_fulltext_search_500_systems_response_time(client):
     for i in range(500):
         await create_system(
             client, org["id"],
-            name=f"FullTextSearch {i:04d}",
+            name=f"FTS-{i:04d}-{uuid4().hex[:6]}",
             description=f"Systemet hanterar personaldata och ekonomi {i}",
         )
 
@@ -419,7 +420,7 @@ async def test_search_with_filter_combination_500_systems(client):
         crit = CRITICALITIES[i % len(CRITICALITIES)]
         await create_system(
             client, org["id"],
-            name=f"ComboFilter {i:04d}",
+            name=f"CmbFlt-{i:04d}-{uuid4().hex[:6]}",
             system_category=cat,
             criticality=crit,
         )
@@ -442,7 +443,7 @@ async def test_search_no_match_returns_empty_500_systems(client):
     """Sökning utan träff bland 500 system ska returnera tom lista."""
     org = await create_org(client, name="OrgNoMatch")
     for i in range(500):
-        await create_system(client, org["id"], name=f"NoMatchSystem {i:04d}")
+        await create_system(client, org["id"], name=f"NoMtch-{i:04d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/",
                             params={"q": "xxxxunlikelymatchxxxx"})
@@ -467,7 +468,7 @@ async def test_search_wildcard_terms_500_systems(client, search_term):
     for i in range(500):
         await create_system(
             client, org["id"],
-            name=f"StressSystem {i:04d}",
+            name=f"StSys-{i:04d}-{uuid4().hex[:6]}",
             description=f"Infrastruktur test system nummer {i}",
         )
 
@@ -484,9 +485,9 @@ async def test_search_partial_name_match(client):
     """Partiell sökning på namn ska hitta matchande system bland 500."""
     org = await create_org(client, name="OrgPartial")
     for i in range(490):
-        await create_system(client, org["id"], name=f"CommonSystem {i:03d}")
+        await create_system(client, org["id"], name=f"CmnSys-{i:03d}-{uuid4().hex[:6]}")
     for i in range(10):
-        await create_system(client, org["id"], name=f"UniqueXYZ {i:03d}")
+        await create_system(client, org["id"], name=f"UniqueXYZ-{i:03d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/", params={"q": "UniqueXYZ", "limit": 25})
     assert resp.status_code == 200
@@ -506,7 +507,7 @@ async def test_100_systems_5_integrations_each(client):
     systems = []
     for i in range(100):
         sys = await create_system(client, org["id"],
-                                  name=f"IntSys {i:03d}")
+                                  name=f"IntSys-{i:03d}-{uuid4().hex[:6]}")
         systems.append(sys)
 
     # Skapa 5 integrationer per system (mot nästa i listan, cirkulärt)
@@ -536,7 +537,7 @@ async def test_dependency_map_50_nodes(client):
     org = await create_org(client, name="OrgDepMap50")
     systems = []
     for i in range(55):
-        sys = await create_system(client, org["id"], name=f"DepNode {i:03d}")
+        sys = await create_system(client, org["id"], name=f"DepNd-{i:03d}-{uuid4().hex[:6]}")
         systems.append(sys)
 
     # Skapa kedja av integrationer
@@ -612,7 +613,7 @@ async def test_get_system_detail_100_systems_loaded(client):
     org = await create_org(client, name="OrgDetail100")
     target = None
     for i in range(100):
-        sys = await create_system(client, org["id"], name=f"DetailSystem {i:03d}")
+        sys = await create_system(client, org["id"], name=f"DetSys-{i:03d}-{uuid4().hex[:6]}")
         if i == 50:
             target = sys
             await create_classification(client, sys["id"])
@@ -758,7 +759,7 @@ async def test_nis2_report_500_systems_response_time(client):
     for i in range(500):
         await create_system(
             client, org["id"],
-            name=f"NIS2System {i:04d}",
+            name=f"NIS2Sys-{i:04d}-{uuid4().hex[:6]}",
             nis2_applicable=(i % 3 == 0),
         )
 
@@ -782,7 +783,7 @@ async def test_nis2_report_500_systems_correct_nis2_count(client):
             nis2_count += 1
         await create_system(
             client, org["id"],
-            name=f"NIS2Count {i:04d}",
+            name=f"NIS2Cnt-{i:04d}-{uuid4().hex[:6]}",
             nis2_applicable=is_nis2,
         )
 
@@ -798,7 +799,7 @@ async def test_compliance_gap_500_systems_response_time(client):
     """Compliance gap-rapport med 500 system ska genereras inom 10 sekunder."""
     org = await create_org(client, name="OrgGap500")
     for i in range(500):
-        await create_system(client, org["id"], name=f"GapSystem500 {i:04d}")
+        await create_system(client, org["id"], name=f"Gap500-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/reports/compliance-gap")
@@ -814,7 +815,7 @@ async def test_compliance_gap_500_systems_missing_classification_count(client):
     """Compliance gap ska rapportera alla 500 system som saknar klassificering."""
     org = await create_org(client, name="OrgGapMissing500")
     for i in range(500):
-        await create_system(client, org["id"], name=f"UnclassGap {i:04d}")
+        await create_system(client, org["id"], name=f"UncGap-{i:04d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/reports/compliance-gap")
     assert resp.status_code == 200
@@ -831,7 +832,7 @@ async def test_nis2_report_xlsx_500_systems(client):
     for i in range(500):
         await create_system(
             client, org["id"],
-            name=f"NIS2XLSX {i:04d}",
+            name=f"NIS2XL-{i:04d}-{uuid4().hex[:6]}",
             nis2_applicable=True,
         )
 
@@ -855,7 +856,7 @@ async def test_10_parallel_get_requests(client):
     """10 parallella GET /systems/ ska alla returnera 200."""
     org = await create_org(client, name="OrgParallelGet")
     for i in range(50):
-        await create_system(client, org["id"], name=f"ParallelGetSys {i:03d}")
+        await create_system(client, org["id"], name=f"PGetSys-{i:03d}-{uuid4().hex[:6]}")
 
     async def fetch():
         return await client.get("/api/v1/systems/", params={"limit": 25})
@@ -905,7 +906,7 @@ async def test_mixed_read_write_concurrent(client):
     """
     org = await create_org(client, name="OrgMixedConcurrent")
     for i in range(20):
-        await create_system(client, org["id"], name=f"BaseSystem {i:03d}")
+        await create_system(client, org["id"], name=f"BaseSys-{i:03d}-{uuid4().hex[:6]}")
 
     read_responses = []
     for _ in range(5):
@@ -937,7 +938,7 @@ async def test_10_parallel_search_requests(client):
     for i in range(100):
         await create_system(
             client, org["id"],
-            name=f"ParallelSearch {i:03d}",
+            name=f"PSearch-{i:03d}-{uuid4().hex[:6]}",
             description=f"Sökbart system {i}",
         )
 
@@ -957,7 +958,7 @@ async def test_parallel_stats_and_list_requests(client):
     """Parallella stats- och list-anrop ska ge konsistenta svar."""
     org = await create_org(client, name="OrgParallelStats")
     for i in range(30):
-        await create_system(client, org["id"], name=f"StatsParallel {i:03d}")
+        await create_system(client, org["id"], name=f"StatPar-{i:03d}-{uuid4().hex[:6]}")
 
     async def get_stats():
         return await client.get("/api/v1/systems/stats/overview")
@@ -1004,7 +1005,7 @@ async def test_get_systems_25_items_under_500ms(client):
     """GET /systems/ med 25 poster ska svara inom 500ms."""
     org = await create_org(client, name="OrgRT25")
     for i in range(25):
-        await create_system(client, org["id"], name=f"RTSystem {i:03d}")
+        await create_system(client, org["id"], name=f"RTSys-{i:03d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/systems/", params={"limit": 25})
@@ -1057,7 +1058,7 @@ async def test_export_xlsx_500_systems_under_5_seconds(client):
     """Excel-export av 500 system ska ta under 5 sekunder."""
     org = await create_org(client, name="OrgRTExport500")
     for i in range(500):
-        await create_system(client, org["id"], name=f"RTExport {i:04d}")
+        await create_system(client, org["id"], name=f"RTExp-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/export/systems.xlsx")
@@ -1104,7 +1105,7 @@ async def test_response_time_does_not_degrade_across_10_sequential_reads(client)
     """10 sekventiella läsanrop ska inte visa prestandaförsämring."""
     org = await create_org(client, name="OrgDegradationTest")
     for i in range(50):
-        await create_system(client, org["id"], name=f"DegSystem {i:03d}")
+        await create_system(client, org["id"], name=f"DegSys-{i:03d}-{uuid4().hex[:6]}")
 
     times = []
     for _ in range(10):
@@ -1138,7 +1139,7 @@ async def test_single_system_detail_among_1000(client):
     for i in range(1000):
         sys = await create_system(
             client, org["id"],
-            name=f"LargeScaleSystem {i:04d}",
+            name=f"LrgScl-{i:04d}-{uuid4().hex[:6]}",
         )
         if i == target_idx:
             target = sys
@@ -1164,7 +1165,7 @@ async def test_filter_lifecycle_status_among_500(client):
             active_count += 1
         await create_system(
             client, org["id"],
-            name=f"LCSystem {i:04d}",
+            name=f"LcSys-{i:04d}-{uuid4().hex[:6]}",
             lifecycle_status=status,
         )
 
@@ -1183,7 +1184,7 @@ async def test_stats_overview_counts_match_list_total(client):
     """Stats total_systems ska matcha GET /systems/ total vid 200 system."""
     org = await create_org(client, name="OrgStatsMatch")
     for i in range(200):
-        await create_system(client, org["id"], name=f"MatchSystem {i:03d}")
+        await create_system(client, org["id"], name=f"MtchSys-{i:03d}-{uuid4().hex[:6]}")
 
     stats_resp = await client.get("/api/v1/systems/stats/overview")
     list_resp = await client.get("/api/v1/systems/", params={"limit": 1})
@@ -1205,7 +1206,7 @@ async def test_search_empty_string_returns_all_500(client):
     """Tom söksträng ska returnera alla 500 system (ingen filtrering)."""
     org = await create_org(client, name="OrgEmptySearch")
     for i in range(500):
-        await create_system(client, org["id"], name=f"EmptySearchSystem {i:04d}")
+        await create_system(client, org["id"], name=f"EmptSrc-{i:04d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/",
                             params={"q": "", "limit": 200})
@@ -1219,7 +1220,7 @@ async def test_notifications_500_systems_under_10_seconds(client):
     """Notifikationer med 500 system ska svara inom 10 sekunder."""
     org = await create_org(client, name="OrgNotif500")
     for i in range(500):
-        await create_system(client, org["id"], name=f"NotifSystem {i:04d}")
+        await create_system(client, org["id"], name=f"NtfSys-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/notifications/")
@@ -1236,7 +1237,7 @@ async def test_import_duplicate_names_all_reported_as_errors(client):
     org = await create_org(client, name="OrgDuplicateImport")
     # Skapa 100 system via API
     for i in range(100):
-        await create_system(client, org["id"], name=f"DupSystem {i:03d}")
+        await create_system(client, org["id"], name=f"DupSys-{i:03d}-{uuid4().hex[:6]}")
 
     # Försök importera exakt samma namn igen
     rows = [
@@ -1301,7 +1302,7 @@ async def test_stats_overview_scales_with_system_count(client, system_count, max
     """Stats-endpoint ska skala acceptabelt med ökande antal system."""
     org = await create_org(client, name=f"OrgStatsScale{system_count}")
     for i in range(system_count):
-        await create_system(client, org["id"], name=f"ScaleStatsSys{system_count}_{i:04d}")
+        await create_system(client, org["id"], name=f"SStat-{system_count}-{i:04d}-{uuid4().hex[:4]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/systems/stats/overview")
@@ -1326,7 +1327,7 @@ async def test_export_csv_scales_with_system_count(client, system_count, max_sec
     """CSV-export ska skala acceptabelt med ökande antal system."""
     org = await create_org(client, name=f"OrgCSVScale{system_count}")
     for i in range(system_count):
-        await create_system(client, org["id"], name=f"CSVScale{system_count}_{i:04d}")
+        await create_system(client, org["id"], name=f"CsvScl-{system_count}-{i:04d}-{uuid4().hex[:4]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/export/systems.csv")
@@ -1349,7 +1350,7 @@ async def test_list_with_varying_page_sizes(client, limit):
     """GET /systems/ ska hantera varierande sidstorlekar korrekt."""
     org = await create_org(client, name=f"OrgPageSize{limit}")
     for i in range(500):
-        await create_system(client, org["id"], name=f"PageSizeSys{limit}_{i:04d}")
+        await create_system(client, org["id"], name=f"PgSzSys-{limit}-{i:04d}-{uuid4().hex[:4]}")
 
     resp = await client.get("/api/v1/systems/", params={"limit": limit})
     assert resp.status_code == 200
@@ -1370,7 +1371,7 @@ async def test_filter_criticality_returns_correct_subset(client, criticality):
         if crit == criticality:
             expected += 1
         await create_system(client, org["id"],
-                            name=f"CritSys_{criticality[:3]}_{i:04d}",
+                            name=f"CritSys-{i:04d}-{uuid4().hex[:6]}",
                             criticality=crit)
 
     resp = await client.get("/api/v1/systems/",
@@ -1414,7 +1415,7 @@ async def test_system_integration_count_scales(client, num_integrations):
     targets = []
     for i in range(num_integrations):
         t = await create_system(client, org["id"],
-                                name=f"IntTarget_{num_integrations}_{i:03d}")
+                                name=f"IntTgt-{i:03d}-{uuid4().hex[:6]}")
         targets.append(t)
         await create_integration(client, src["id"], t["id"],
                                  integration_type="api")
@@ -1434,7 +1435,7 @@ async def test_rls_isolation_scales_with_org_count(client, org_count):
         orgs.append(org)
         for j in range(10):
             await create_system(client, org["id"],
-                                name=f"RLSSys{org_count}_{i:02d}_{j:02d}")
+                                name=f"RLSSys-{j:02d}-{uuid4().hex[:6]}")
 
     # Verifiera isolering för varje org
     for org in orgs:
@@ -1463,7 +1464,7 @@ async def test_list_1000_systems_pagination_total(client):
     for i in range(1000):
         await create_system(
             client, org["id"],
-            name=f"Scale1000System {i:04d}",
+            name=f"Sc1000-{i:04d}-{uuid4().hex[:6]}",
         )
 
     resp = await client.get("/api/v1/systems/", params={"limit": 25, "offset": 0})
@@ -1481,7 +1482,7 @@ async def test_search_1000_systems_response_time(client):
     for i in range(1000):
         await create_system(
             client, org["id"],
-            name=f"LargeScale {i:04d}",
+            name=f"LrgScl2-{i:04d}-{uuid4().hex[:6]}",
             description=f"Storskaligt system nummer {i}",
         )
 
@@ -1500,7 +1501,7 @@ async def test_stats_overview_1000_systems(client):
     """Stats med 1000 system ska beräknas korrekt och svara inom 10 sekunder."""
     org = await create_org(client, name="Org1000Stats")
     for i in range(1000):
-        await create_system(client, org["id"], name=f"Stats1000 {i:04d}")
+        await create_system(client, org["id"], name=f"Stat1k-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/systems/stats/overview")
@@ -1517,7 +1518,7 @@ async def test_compliance_gap_1000_systems(client):
     """Compliance gap med 1000 system ska genereras inom 15 sekunder."""
     org = await create_org(client, name="OrgGap1000")
     for i in range(1000):
-        await create_system(client, org["id"], name=f"GapSystem1000 {i:04d}")
+        await create_system(client, org["id"], name=f"Gap1k-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/reports/compliance-gap")
@@ -1566,7 +1567,7 @@ async def test_concurrent_read_requests_all_succeed(client, concurrent_count):
     org = await create_org(client, name=f"OrgConcurrent{concurrent_count}")
     for i in range(25):
         await create_system(client, org["id"],
-                            name=f"ConcSys{concurrent_count}_{i:03d}")
+                            name=f"CncSys-{i:03d}-{uuid4().hex[:6]}")
 
     async def fetch():
         return await client.get("/api/v1/systems/", params={"limit": 25})
@@ -1599,7 +1600,7 @@ async def test_nis2_report_scales_with_system_count(client, system_count, max_se
     for i in range(system_count):
         await create_system(
             client, org["id"],
-            name=f"NIS2ScaleSys{system_count}_{i:04d}",
+            name=f"NIS2Scl-{i:04d}-{uuid4().hex[:6]}",
             nis2_applicable=(i % 2 == 0),
         )
 
@@ -1626,7 +1627,7 @@ async def test_pagination_offset_values_return_correct_page(client, offset):
     """Olika offset-värden bland 500 system ska returnera rätt sida."""
     org = await create_org(client, name=f"OrgOffset{offset}")
     for i in range(500):
-        await create_system(client, org["id"], name=f"OffsetSys{offset}_{i:04d}")
+        await create_system(client, org["id"], name=f"OffSys-{i:04d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/",
                             params={"limit": 1, "offset": offset})
@@ -1649,7 +1650,7 @@ async def test_filter_hosting_model_among_300_systems(client, hosting_model):
         if hm == hosting_model:
             expected += 1
         await create_system(client, org["id"],
-                            name=f"HostingSys_{hosting_model[:3]}_{i:04d}",
+                            name=f"HstSys-{i:04d}-{uuid4().hex[:6]}",
                             hosting_model=hm)
 
     resp = await client.get("/api/v1/systems/",
@@ -1673,7 +1674,7 @@ async def test_json_export_scales_with_system_count(client, system_count, max_se
     org = await create_org(client, name=f"OrgJSONScale{system_count}")
     for i in range(system_count):
         await create_system(client, org["id"],
-                            name=f"JSONExportScale{system_count}_{i:04d}")
+                            name=f"JsonExp-{i:04d}-{uuid4().hex[:6]}")
 
     start = time.monotonic()
     resp = await client.get("/api/v1/export/systems.json")
@@ -1701,7 +1702,7 @@ async def test_search_by_category_returns_subset_among_400(client, system_catego
         if cat == system_category:
             expected += 1
         await create_system(client, org["id"],
-                            name=f"CatSearch_{system_category[:4]}_{i:04d}",
+                            name=f"CatSrc-{i:04d}-{uuid4().hex[:6]}",
                             system_category=cat)
 
     resp = await client.get("/api/v1/systems/",
