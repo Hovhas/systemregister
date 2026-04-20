@@ -14,6 +14,15 @@ frontend/dist/
 .env.local
 .env.production
 
+# Credentials / tokens (defense-in-depth — globala ignores finns också)
+*.token
+gh-token
+.gh/
+credentials
+credentials.json
+*.pem
+*.key
+
 # IDE
 .vscode/
 .idea/
