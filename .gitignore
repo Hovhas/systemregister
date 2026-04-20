@@ -38,3 +38,6 @@ pgdata/
 
 # SOPS
 *.dec
+
+# Claude Code hook state (quality-guard edit-count)
+.claude/hooks/state/
