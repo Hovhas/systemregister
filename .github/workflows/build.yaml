@@ -38,7 +38,7 @@ jobs:
       - name: Ruff lint
         run: cd backend && ruff check .
       - name: Security scan (pip-audit)
-        run: cd backend && pip-audit --requirement pyproject.toml
+        run: cd backend && pip-audit
       - name: Run backend tests (per file for session isolation)
         env:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test
