@@ -1,0 +1,27 @@
+# Gitleaks-konfiguration för systemregister
+# https://github.com/gitleaks/gitleaks
+
+title = "systemregister gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Tillåtna mönster och filer"
+
+# Filer som alltid ska ignoreras
+paths = [
+    # Testfiler och fixtures
+    '''.*test.*\.py$''',
+    '''.*test.*\.ts$''',
+    '''.*fixture.*''',
+
+    # Dokumentation (kan innehålla exempel-nycklar)
+    '''.*\.md$''',
+
+    # Lock-filer
+    '''package-lock\.json$''',
+    '''yarn\.lock$''',
+    '''poetry\.lock$''',
+    '''uv\.lock$''',
+]
