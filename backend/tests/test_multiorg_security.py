@@ -525,9 +525,9 @@ async def test_iso_integration_types_isolated(client, integration_type):
     org_a = await create_org(client, name=f"IntegTypeOrgA_{integration_type}", org_type="kommun")
     org_b = await create_org(client, name=f"IntegTypeOrgB_{integration_type}", org_type="bolag")
 
-    sys_a1 = await create_system(client, org_a["id"], name=f"IntTypeSysA1_{integration_type}")
-    sys_a2 = await create_system(client, org_a["id"], name=f"IntTypeSysA2_{integration_type}")
-    await create_system(client, org_b["id"], name=f"IntTypeSysB_{integration_type}")
+    sys_a1 = await create_system(client, org_a["id"], name=f"Alfa-{integration_type}-{uuid4().hex[:6]}")
+    sys_a2 = await create_system(client, org_a["id"], name=f"Gamma-{integration_type}-{uuid4().hex[:6]}")
+    await create_system(client, org_b["id"], name=f"Omega-{integration_type}-{uuid4().hex[:6]}")
 
     integ = await create_integration(
         client, sys_a1["id"], sys_a2["id"],
@@ -990,7 +990,7 @@ async def test_multitenant_stats_counts_isolated(client, org_system_counts):
             client, name=f"StatCountOrg_{i}_{count}", org_type="kommun"
         )
         for j in range(count):
-            await create_system(client, org["id"], name=f"StatCountSys_{i}_{j}")
+            await create_system(client, org["id"], name=f"StatCount-{i}-{j}-{uuid4().hex[:6]}")
         orgs.append((org, count))
 
     for org, expected_count in orgs:
@@ -1963,11 +1963,11 @@ async def test_edge_org_sees_exact_system_count(client, n_systems):
     decoy_org = await create_org(client, name=f"DecoyOrg_{n_systems}", org_type="bolag")
 
     for i in range(n_systems):
-        await create_system(client, org["id"], name=f"ExactSys_{n_systems}_{i}")
+        await create_system(client, org["id"], name=f"ExactSys-{n_systems}-{i}-{uuid4().hex[:6]}")
 
     # Skapa brus från annan org
     for i in range(3):
-        await create_system(client, decoy_org["id"], name=f"DecoyBrusSys_{n_systems}_{i}")
+        await create_system(client, decoy_org["id"], name=f"DecoyBrus-{n_systems}-{i}-{uuid4().hex[:6]}")
 
     resp = await get_with_org(client, "/api/v1/systems/", org["id"])
     assert resp.status_code == 200

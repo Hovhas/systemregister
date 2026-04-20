@@ -150,7 +150,7 @@ async def test_search_50_systems_under_2_seconds(client):
     """Search across 50 systems should respond within 2 seconds."""
     org = await create_org(client)
     for i in range(50):
-        await create_system(client, org["id"], name=f"Srchsys-{i:03d}-{uuid4().hex[:6]}",
+        await create_system(client, org["id"], name=f"SearchSystem-{i:03d}-{uuid4().hex[:6]}",
                            description=f"Beschrivning för system nummer {i}")
 
     start = time.monotonic()
