@@ -126,7 +126,7 @@ async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_d
         System.organization_id == data.organization_id,
         or_(
             System.name.ilike(data.name),
-            func.similarity(System.name, data.name) > 0.4,
+            func.similarity(System.name, data.name) > 0.85,
         ),
     ).limit(5)
     try:
