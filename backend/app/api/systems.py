@@ -119,20 +119,21 @@ async def get_system(system_id: UUID, db: AsyncSession = Depends(get_rls_db)):
 
 @router.post("/", response_model=SystemResponse, status_code=status.HTTP_201_CREATED)
 async def create_system(data: SystemCreate, db: AsyncSession = Depends(get_rls_db)):
-    # FK-14: Dubbletthantering — varna vid liknande systemnamn
+    # FK-14: Dubbletthantering — varna vid liknande systemnamn.
+    # Kör i SAVEPOINT så att en saknad pg_trgm-extension bara rullar tillbaka
+    # savepoint, inte hela den yttre transaktionen.
     similar_stmt = select(System.id, System.name).where(
         System.organization_id == data.organization_id,
         or_(
             System.name.ilike(data.name),
             func.similarity(System.name, data.name) > 0.4,
-        ) if hasattr(func, 'similarity') else System.name.ilike(data.name),
+        ),
     ).limit(5)
     try:
-        similar_result = await db.execute(similar_stmt)
-        duplicates = [{"id": str(row.id), "name": row.name} for row in similar_result.all()]
+        async with db.begin_nested():
+            similar_result = await db.execute(similar_stmt)
+            duplicates = [{"id": str(row.id), "name": row.name} for row in similar_result.all()]
     except ProgrammingError:
-        # pg_trgm inte installerad — fallback till exakt match
-        await db.rollback()
         exact_stmt = select(System.id, System.name).where(
             System.organization_id == data.organization_id,
             System.name.ilike(data.name),
