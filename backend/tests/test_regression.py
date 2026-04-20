@@ -12,8 +12,7 @@ Dokumenterade buggar:
 
 import pytest
 from tests.factories import (
-    create_org, create_system, create_owner, create_classification,
-    create_gdpr_treatment, create_contract,
+    create_org, create_system, create_owner,
 )
 
 
@@ -235,7 +234,7 @@ async def test_regression_nis2_system_created_via_api_in_report(client):
     assert nis2_resp.status_code == 200
     system_ids = [s["id"] for s in nis2_resp.json()["systems"]]
     assert system_id in system_ids, (
-        f"REGRESSION #3: API-skapat NIS2-system saknas i rapporten"
+        "REGRESSION #3: API-skapat NIS2-system saknas i rapporten"
     )
 
 

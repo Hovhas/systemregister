@@ -46,3 +46,13 @@ addopts = "-m 'not slow'"
 markers = [
     "slow: markerar tester som långsamma (kör med '-m slow' för att inkludera)",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tester skapar ofta objekt vars side-effects är poängen (inte returvärdet)
+"tests/**/*.py" = ["F841"]
+# Alembic-migrationer har idiomatiska mönster (bind = op.get_bind() för framtida debug)
+"alembic/versions/*.py" = ["F841"]
+# main.py har en import efter app-konstruktion (middleware kräver settings-kontext)
+"app/main.py" = ["E402"]
+# report_service.py har ett mellanberäknings-dict som dokumenterar buckets
+"app/services/report_service.py" = ["F841"]

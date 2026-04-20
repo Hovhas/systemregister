@@ -283,7 +283,8 @@ async def test_rls_export_json_filtered_by_org_header(client):
 @pytest.mark.asyncio
 async def test_rls_export_csv_filtered_by_org(client):
     """CSV-export med organization_id param returnerar enbart org:s system."""
-    import csv, io
+    import csv
+    import io
 
     org_a = await create_org(client, name="CSVExportOrgA", org_type="kommun")
     org_b = await create_org(client, name="CSVExportOrgB", org_type="bolag")

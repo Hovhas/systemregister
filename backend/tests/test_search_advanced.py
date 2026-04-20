@@ -21,8 +21,7 @@ Täcker resterande sök/filter-scenarion som inte täcks av test_systems_search.
 import pytest
 from datetime import date, timedelta
 from tests.factories import (
-    create_org, create_system, create_classification,
-    create_owner, create_contract, create_integration,
+    create_org, create_system, create_owner, create_contract, create_integration,
     create_gdpr_treatment,
 )
 

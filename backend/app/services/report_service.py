@@ -3,11 +3,11 @@
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Contract, Module, System, SystemClassification
+from app.models import Contract, Module, System
 
 
 class ReportService:

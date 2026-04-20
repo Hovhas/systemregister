@@ -5,7 +5,7 @@ All factories return the JSON response dict from the API.
 Use `**overrides` to customize specific fields.
 """
 
-from datetime import date, timedelta
+from datetime import date
 from uuid import UUID
 
 from httpx import AsyncClient

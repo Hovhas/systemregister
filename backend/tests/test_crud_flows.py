@@ -15,8 +15,6 @@ from tests.factories import (
     create_system,
     create_classification,
     create_owner,
-    create_integration,
-    create_gdpr_treatment,
     create_contract,
     create_full_system,
 )

@@ -4,7 +4,6 @@ Tests for /api/v1/export endpoints (JSON, CSV, XLSX).
 
 import csv
 import io
-import json
 
 import pytest
 

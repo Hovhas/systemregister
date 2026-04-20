@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import System
 from app.models.enums import OwnerRole
-from app.models import Organization, SystemClassification, SystemOwner
+from app.models import SystemClassification, SystemOwner
 from app.schemas import SystemCreate
 
 SUPPORTED_CONTENT_TYPES = {

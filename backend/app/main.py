@@ -1,10 +1,9 @@
-import os
 import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -15,7 +14,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import get_settings
 from app.core.audit import register_audit_listeners
 from app.core.events import register_listener
-from app.core.logging_config import configure_logging, request_id_var, user_id_var, org_id_var
+from app.core.logging_config import configure_logging, request_id_var, org_id_var
 from app.services.metakatalog_service import sync_to_metakatalog
 from app.api.organizations import router as org_router
 from app.api.systems import router as sys_router

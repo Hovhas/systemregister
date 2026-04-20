@@ -8,10 +8,8 @@ felaktiga UUID:n, mime-type manipulation, m.m.
 """
 
 import pytest
-import string
 from tests.factories import (
-    create_org, create_system, create_classification,
-    create_owner, create_contract, create_gdpr_treatment,
+    create_org, create_system,
 )
 
 FAKE_UUID = "00000000-0000-0000-0000-000000000000"

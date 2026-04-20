@@ -22,7 +22,6 @@ from tests.factories import (
     create_classification,
     create_owner,
     create_integration,
-    create_gdpr_treatment,
     create_contract,
 )
 

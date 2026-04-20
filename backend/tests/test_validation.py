@@ -15,10 +15,7 @@ import pytest
 from tests.factories import (
     create_org,
     create_system,
-    create_classification,
     create_owner,
-    create_integration,
-    create_gdpr_treatment,
     create_contract,
 )
 
@@ -56,7 +53,7 @@ async def test_org_name_max_length_exceeded(client):
     """POST organization with name > 255 chars returns 422."""
     long_name = "A" * 256
     resp = await client.post("/api/v1/organizations/", json={"name": long_name, "org_type": "kommun"})
-    assert resp.status_code == 422, f"Expected 422 for name > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for name > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -75,7 +72,7 @@ async def test_org_number_max_length_exceeded(client):
         "org_type": "kommun",
         "org_number": "1" * 21,
     })
-    assert resp.status_code == 422, f"Expected 422 for org_number > 20 chars"
+    assert resp.status_code == 422, "Expected 422 for org_number > 20 chars"
 
 
 @pytest.mark.asyncio
@@ -134,7 +131,7 @@ async def test_system_name_required(client):
         "description": "Test",
         "system_category": "verksamhetssystem",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing name"
+    assert resp.status_code == 422, "Expected 422 for missing name"
 
 
 @pytest.mark.asyncio
@@ -145,7 +142,7 @@ async def test_system_organization_id_required(client):
         "description": "Test",
         "system_category": "verksamhetssystem",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing organization_id"
+    assert resp.status_code == 422, "Expected 422 for missing organization_id"
 
 
 @pytest.mark.asyncio
@@ -157,7 +154,7 @@ async def test_system_description_required(client):
         "organization_id": org["id"],
         "system_category": "verksamhetssystem",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing description"
+    assert resp.status_code == 422, "Expected 422 for missing description"
 
 
 @pytest.mark.asyncio
@@ -169,7 +166,7 @@ async def test_system_category_required(client):
         "organization_id": org["id"],
         "description": "Test",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing system_category"
+    assert resp.status_code == 422, "Expected 422 for missing system_category"
 
 
 @pytest.mark.asyncio
@@ -182,7 +179,7 @@ async def test_system_name_max_length_exceeded(client):
         "description": "Test",
         "system_category": "verksamhetssystem",
     })
-    assert resp.status_code == 422, f"Expected 422 for name > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for name > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -327,7 +324,7 @@ async def test_system_organization_id_not_valid_uuid(client):
         "description": "Test",
         "system_category": "verksamhetssystem",
     })
-    assert resp.status_code == 422, f"Expected 422 for invalid UUID"
+    assert resp.status_code == 422, "Expected 422 for invalid UUID"
 
 
 # ===========================================================================
@@ -475,7 +472,7 @@ async def test_classification_traceability_invalid_rejected(client):
         "traceability": 5,
         "classified_by": "test@test.se",
     })
-    assert resp.status_code == 422, f"Expected 422 for traceability=5"
+    assert resp.status_code == 422, "Expected 422 for traceability=5"
 
 
 @pytest.mark.asyncio
@@ -508,7 +505,7 @@ async def test_classification_classified_by_max_length_exceeded(client):
         "availability": 2,
         "classified_by": "X" * 256,
     })
-    assert resp.status_code == 422, f"Expected 422 for classified_by > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for classified_by > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -524,7 +521,7 @@ async def test_classification_string_value_for_integer_field_rejected(client):
         "availability": 2,
         "classified_by": "test@test.se",
     })
-    assert resp.status_code == 422, f"Expected 422 for string confidentiality value"
+    assert resp.status_code == 422, "Expected 422 for string confidentiality value"
 
 
 # ===========================================================================
@@ -563,7 +560,7 @@ async def test_owner_name_required(client):
         "organization_id": org["id"],
         "role": "systemägare",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing name"
+    assert resp.status_code == 422, "Expected 422 for missing name"
 
 
 @pytest.mark.asyncio
@@ -577,7 +574,7 @@ async def test_owner_role_required(client):
         "organization_id": org["id"],
         "name": "Test Person",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing role"
+    assert resp.status_code == 422, "Expected 422 for missing role"
 
 
 @pytest.mark.asyncio
@@ -592,7 +589,7 @@ async def test_owner_name_max_length_exceeded(client):
         "role": "it_kontakt",
         "name": "N" * 256,
     })
-    assert resp.status_code == 422, f"Expected 422 for name > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for name > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -608,7 +605,7 @@ async def test_owner_email_max_length_exceeded(client):
         "name": "Test",
         "email": "a" * 256,
     })
-    assert resp.status_code == 422, f"Expected 422 for email > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for email > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -624,7 +621,7 @@ async def test_owner_phone_max_length_exceeded(client):
         "name": "Test",
         "phone": "0" * 51,
     })
-    assert resp.status_code == 422, f"Expected 422 for phone > 50 chars"
+    assert resp.status_code == 422, "Expected 422 for phone > 50 chars"
 
 
 @pytest.mark.asyncio
@@ -692,7 +689,7 @@ async def test_integration_source_system_required(client):
         "target_system_id": target["id"],
         "integration_type": "api",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing source_system_id"
+    assert resp.status_code == 422, "Expected 422 for missing source_system_id"
 
 
 @pytest.mark.asyncio
@@ -705,7 +702,7 @@ async def test_integration_target_system_required(client):
         "source_system_id": source["id"],
         "integration_type": "api",
     })
-    assert resp.status_code == 422, f"Expected 422 for missing target_system_id"
+    assert resp.status_code == 422, "Expected 422 for missing target_system_id"
 
 
 @pytest.mark.asyncio
@@ -740,7 +737,7 @@ async def test_integration_frequency_max_length_exceeded(client):
         "integration_type": "api",
         "frequency": "X" * 101,
     })
-    assert resp.status_code == 422, f"Expected 422 for frequency > 100 chars"
+    assert resp.status_code == 422, "Expected 422 for frequency > 100 chars"
 
 
 @pytest.mark.asyncio
@@ -757,7 +754,7 @@ async def test_integration_external_party_max_length_exceeded(client):
         "is_external": True,
         "external_party": "P" * 256,
     })
-    assert resp.status_code == 422, f"Expected 422 for external_party > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for external_party > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -771,7 +768,7 @@ async def test_integration_invalid_source_uuid(client):
         "target_system_id": target["id"],
         "integration_type": "api",
     })
-    assert resp.status_code == 422, f"Expected 422 for invalid source UUID"
+    assert resp.status_code == 422, "Expected 422 for invalid source UUID"
 
 
 @pytest.mark.asyncio
@@ -787,7 +784,7 @@ async def test_integration_invalid_criticality(client):
         "integration_type": "api",
         "criticality": "superbrå",
     })
-    assert resp.status_code == 422, f"Expected 422 for invalid criticality"
+    assert resp.status_code == 422, "Expected 422 for invalid criticality"
 
 
 # ===========================================================================
@@ -804,7 +801,7 @@ async def test_gdpr_ropa_reference_max_length_exceeded(client):
     resp = await client.post(f"/api/v1/systems/{system['id']}/gdpr", json={
         "ropa_reference_id": "R" * 101,
     })
-    assert resp.status_code == 422, f"Expected 422 for ropa_reference_id > 100 chars"
+    assert resp.status_code == 422, "Expected 422 for ropa_reference_id > 100 chars"
 
 
 @pytest.mark.asyncio
@@ -816,7 +813,7 @@ async def test_gdpr_legal_basis_max_length_exceeded(client):
     resp = await client.post(f"/api/v1/systems/{system['id']}/gdpr", json={
         "legal_basis": "L" * 256,
     })
-    assert resp.status_code == 422, f"Expected 422 for legal_basis > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for legal_basis > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -828,7 +825,7 @@ async def test_gdpr_data_processor_max_length_exceeded(client):
     resp = await client.post(f"/api/v1/systems/{system['id']}/gdpr", json={
         "data_processor": "D" * 256,
     })
-    assert resp.status_code == 422, f"Expected 422 for data_processor > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for data_processor > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -884,7 +881,7 @@ async def test_gdpr_dpia_date_invalid_format(client):
         "dpia_conducted": True,
         "dpia_date": "not-a-date",
     })
-    assert resp.status_code == 422, f"Expected 422 for invalid dpia_date format"
+    assert resp.status_code == 422, "Expected 422 for invalid dpia_date format"
 
 
 @pytest.mark.asyncio
@@ -912,7 +909,7 @@ async def test_contract_supplier_name_required(client):
     resp = await client.post(f"/api/v1/systems/{system['id']}/contracts", json={
         "annual_license_cost": 100000,
     })
-    assert resp.status_code == 422, f"Expected 422 for missing supplier_name"
+    assert resp.status_code == 422, "Expected 422 for missing supplier_name"
 
 
 @pytest.mark.asyncio
@@ -924,7 +921,7 @@ async def test_contract_supplier_name_max_length_exceeded(client):
     resp = await client.post(f"/api/v1/systems/{system['id']}/contracts", json={
         "supplier_name": "S" * 256,
     })
-    assert resp.status_code == 422, f"Expected 422 for supplier_name > 255 chars"
+    assert resp.status_code == 422, "Expected 422 for supplier_name > 255 chars"
 
 
 @pytest.mark.asyncio
@@ -937,7 +934,7 @@ async def test_contract_supplier_org_number_max_length_exceeded(client):
         "supplier_name": "Test AB",
         "supplier_org_number": "1" * 21,
     })
-    assert resp.status_code == 422, f"Expected 422 for supplier_org_number > 20 chars"
+    assert resp.status_code == 422, "Expected 422 for supplier_org_number > 20 chars"
 
 
 @pytest.mark.asyncio
@@ -950,7 +947,7 @@ async def test_contract_contract_id_external_max_length_exceeded(client):
         "supplier_name": "Test AB",
         "contract_id_external": "K" * 101,
     })
-    assert resp.status_code == 422, f"Expected 422 for contract_id_external > 100 chars"
+    assert resp.status_code == 422, "Expected 422 for contract_id_external > 100 chars"
 
 
 @pytest.mark.asyncio
@@ -963,7 +960,7 @@ async def test_contract_license_model_max_length_exceeded(client):
         "supplier_name": "Test AB",
         "license_model": "M" * 101,
     })
-    assert resp.status_code == 422, f"Expected 422 for license_model > 100 chars"
+    assert resp.status_code == 422, "Expected 422 for license_model > 100 chars"
 
 
 @pytest.mark.asyncio
@@ -989,7 +986,7 @@ async def test_contract_date_invalid_format(client):
         "supplier_name": "Test AB",
         "contract_start": "inte-ett-datum",
     })
-    assert resp.status_code == 422, f"Expected 422 for invalid date format"
+    assert resp.status_code == 422, "Expected 422 for invalid date format"
 
 
 @pytest.mark.asyncio
@@ -1002,7 +999,7 @@ async def test_contract_end_date_invalid_format(client):
         "supplier_name": "Test AB",
         "contract_end": "2025/12/31",
     })
-    assert resp.status_code == 422, f"Expected 422 for invalid date format"
+    assert resp.status_code == 422, "Expected 422 for invalid date format"
 
 
 @pytest.mark.asyncio

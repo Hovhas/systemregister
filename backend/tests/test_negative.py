@@ -5,11 +5,8 @@ Kategori 15: Negativa tester (~50 testfall)
 """
 
 import pytest
-from datetime import date, timedelta
 from tests.factories import (
-    create_org, create_system, create_classification,
-    create_owner, create_contract, create_gdpr_treatment,
-    create_integration,
+    create_org, create_system,
 )
 
 FAKE_UUID = "00000000-0000-0000-0000-000000000000"

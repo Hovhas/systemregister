@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 from sqlalchemy import (
     String, Text, Boolean, Integer, Date, DateTime,
-    ForeignKey, Enum as SAEnum, JSON, UniqueConstraint, Index,
+    ForeignKey, Enum as SAEnum, UniqueConstraint, Index,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB

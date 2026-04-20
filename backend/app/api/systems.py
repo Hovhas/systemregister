@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.rls import get_rls_db
-from app.models import System, SystemClassification, SystemOwner, GDPRTreatment, Objekt, Module, Component, InformationAsset, Approval
-from app.models.enums import SystemCategory, LifecycleStatus, Criticality, AIRiskClass, ApprovalStatus
+from app.models import System, SystemClassification, GDPRTreatment, Objekt, Module, Component, InformationAsset, Approval
+from app.models.enums import SystemCategory, LifecycleStatus, Criticality, ApprovalStatus
 from app.schemas import (
     SystemCreate, SystemUpdate, SystemResponse, SystemDetailResponse,
     PaginatedResponse,
@@ -218,7 +218,7 @@ async def system_stats(
     # NIS2-flaggade
     nis2_count = await db.scalar(
         select(func.count()).select_from(System).where(
-            System.nis2_applicable == True,
+            System.nis2_applicable.is_(True),
             *([System.organization_id == organization_id] if organization_id else [])
         )
     ) or 0
@@ -226,7 +226,7 @@ async def system_stats(
     # Personuppgifter
     gdpr_count = await db.scalar(
         select(func.count()).select_from(System).where(
-            System.treats_personal_data == True,
+            System.treats_personal_data.is_(True),
             *([System.organization_id == organization_id] if organization_id else [])
         )
     ) or 0
@@ -234,7 +234,7 @@ async def system_stats(
     # AI-användning
     uses_ai_count = await db.scalar(
         select(func.count()).select_from(System).where(
-            System.uses_ai == True,
+            System.uses_ai.is_(True),
             *([System.organization_id == organization_id] if organization_id else [])
         )
     ) or 0

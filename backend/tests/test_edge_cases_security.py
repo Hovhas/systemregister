@@ -18,17 +18,11 @@ import asyncio
 import csv
 import io
 import json
-import os
 
 import pytest
 
 from tests.factories import (
-    create_classification,
-    create_contract,
-    create_gdpr_treatment,
-    create_integration,
     create_org,
-    create_owner,
     create_system,
 )
 

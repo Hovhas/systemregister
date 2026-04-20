@@ -448,7 +448,7 @@ async def test_iso_contracts_license_models_isolated(client, license_model):
     )
     assert resp.status_code == 200
     # Org B:s system har inga kontrakt i detta test
-    assert resp.json() == [], f"Org B:s system borde ha tomt kontraktslista"
+    assert resp.json() == [], "Org B:s system borde ha tomt kontraktslista"
 
 
 # ---------------------------------------------------------------------------
@@ -567,7 +567,7 @@ async def test_iso_audit_log_org_filter(client):
     # sys_b:s poster skall inte blandas in
     for item in items:
         assert item["record_id"] != sys_b["id"], (
-            f"Audit-post för Org B:s system hittades i Org A:s audit-filtrering"
+            "Audit-post för Org B:s system hittades i Org A:s audit-filtrering"
         )
 
 

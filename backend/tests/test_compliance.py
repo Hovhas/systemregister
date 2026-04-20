@@ -21,8 +21,7 @@ Täcker:
 import pytest
 from datetime import date, timedelta
 from tests.factories import (
-    create_org, create_system, create_classification,
-    create_owner, create_integration, create_gdpr_treatment,
+    create_org, create_system, create_integration, create_gdpr_treatment,
     create_contract,
 )
 

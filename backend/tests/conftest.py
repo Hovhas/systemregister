@@ -18,14 +18,13 @@ Setup (one-time):
 """
 
 import os
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 from fastapi import Header
-from app.core.database import Base, get_db
+from app.core.database import get_db
 from app.core.rls import get_rls_db
 from app.core.audit import register_audit_listeners
 from app.main import app as fastapi_app
