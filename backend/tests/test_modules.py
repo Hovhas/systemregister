@@ -39,14 +39,14 @@ async def test_create_module_with_ai(client):
         "organization_id": org["id"],
         "name": "AI-analysmodul",
         "uses_ai": True,
-        "ai_risk_class": "hog_risk",
+        "ai_risk_class": "hög_risk",
     }
     resp = await client.post("/api/v1/modules/", json=payload)
 
     assert resp.status_code == 201, f"Expected 201: {resp.text}"
     body = resp.json()
     assert body["uses_ai"] is True
-    assert body["ai_risk_class"] == "hog_risk"
+    assert body["ai_risk_class"] == "hög_risk"
 
 
 @pytest.mark.asyncio

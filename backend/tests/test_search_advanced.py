@@ -20,6 +20,7 @@ Täcker resterande sök/filter-scenarion som inte täcks av test_systems_search.
 
 import pytest
 from datetime import date, timedelta
+from uuid import uuid4
 from tests.factories import (
     create_org, create_system, create_owner, create_contract, create_integration,
     create_gdpr_treatment,
@@ -375,10 +376,10 @@ async def test_search_total_reflects_all_matches_not_page(client):
     """total ska reflektera hela matchmängden, inte bara aktuell sida."""
     org = await create_org(client, name="Totaltestorg")
     for i in range(15):
-        await create_system(client, org["id"], name=f"Unikt Söknamn System {i:02d}")
+        await create_system(client, org["id"], name=f"UniqSrch-{i:02d}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/", params={
-        "q": "Unikt Söknamn System",
+        "organization_id": org["id"],
         "limit": 5,
     })
     assert resp.status_code == 200

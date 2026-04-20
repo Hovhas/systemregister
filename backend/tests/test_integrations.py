@@ -3,6 +3,7 @@ Tests for /api/v1/integrations and /api/v1/systems/{id}/integrations endpoints.
 """
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import create_org, create_system, create_integration
 
@@ -55,9 +56,9 @@ async def test_create_integration(client):
 async def test_list_integrations(client):
     """GET /api/v1/integrations/ returns all integrations."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
-    sys_c = await create_system(client, org["id"], name="System C")
+    sys_a = await create_system(client, org["id"], name=f"Alfa-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"Beta-{uuid4().hex[:6]}")
+    sys_c = await create_system(client, org["id"], name=f"Gamma-{uuid4().hex[:6]}")
 
     await create_integration(client, sys_a["id"], sys_b["id"])
     await create_integration(client, sys_b["id"], sys_c["id"])
@@ -83,9 +84,9 @@ async def test_list_integrations_empty(client):
 async def test_filter_integrations_by_system(client):
     """GET /api/v1/integrations/?system_id=... returns only integrations involving that system."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
-    sys_c = await create_system(client, org["id"], name="System C")
+    sys_a = await create_system(client, org["id"], name=f"Filterkälla-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"Brygga-{uuid4().hex[:6]}")
+    sys_c = await create_system(client, org["id"], name=f"Destination-{uuid4().hex[:6]}")
 
     # A -> B (involves A)
     await create_integration(client, sys_a["id"], sys_b["id"])
@@ -110,8 +111,8 @@ async def test_filter_integrations_by_system(client):
 async def test_get_integration(client):
     """GET /api/v1/integrations/{id} returns the correct integration."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
+    sys_a = await create_system(client, org["id"], name=f"GetSrc-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"GetTgt-{uuid4().hex[:6]}")
     created = await create_integration(client, sys_a["id"], sys_b["id"])
 
     resp = await client.get(f"/api/v1/integrations/{created['id']}")
@@ -136,8 +137,8 @@ async def test_get_integration_not_found(client):
 async def test_update_integration(client):
     """PATCH /api/v1/integrations/{id} updates fields without touching others."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
+    sys_a = await create_system(client, org["id"], name=f"PatchSrc-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"PatchTgt-{uuid4().hex[:6]}")
     created = await create_integration(client, sys_a["id"], sys_b["id"])
 
     patch = {
@@ -170,8 +171,8 @@ async def test_update_integration_not_found(client):
 async def test_delete_integration(client):
     """DELETE /api/v1/integrations/{id} removes the integration and returns 204."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
+    sys_a = await create_system(client, org["id"], name=f"DelSrc-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"DelTgt-{uuid4().hex[:6]}")
     created = await create_integration(client, sys_a["id"], sys_b["id"])
     integration_id = created["id"]
 
@@ -195,9 +196,9 @@ async def test_delete_integration_not_found(client):
 async def test_list_system_integrations(client):
     """GET /api/v1/systems/{id}/integrations returns both inbound and outbound integrations."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
-    sys_c = await create_system(client, org["id"], name="System C")
+    sys_a = await create_system(client, org["id"], name=f"ListSysA-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"ListSysB-{uuid4().hex[:6]}")
+    sys_c = await create_system(client, org["id"], name=f"ListSysC-{uuid4().hex[:6]}")
 
     # A -> B (outbound from A)
     await create_integration(client, sys_a["id"], sys_b["id"])
@@ -234,8 +235,8 @@ async def test_list_system_integrations_invalid_system(client):
 async def test_create_integration_invalid_type(client):
     """POST integration with unknown integration_type returns 422."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
+    sys_a = await create_system(client, org["id"], name=f"InvTypeSrc-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"InvTypeTgt-{uuid4().hex[:6]}")
 
     payload = {
         **INTEGRATION_BASE,
@@ -269,9 +270,9 @@ async def test_create_integration_invalid_source_system(client):
 async def test_filter_integrations_by_type(client):
     """GET /api/v1/integrations/?integration_type=... filters by type."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
-    sys_c = await create_system(client, org["id"], name="System C")
+    sys_a = await create_system(client, org["id"], name=f"FltTypSrc-{uuid4().hex[:6]}")
+    sys_b = await create_system(client, org["id"], name=f"FltTypMid-{uuid4().hex[:6]}")
+    sys_c = await create_system(client, org["id"], name=f"FltTypTgt-{uuid4().hex[:6]}")
 
     await create_integration(client, sys_a["id"], sys_b["id"], integration_type="api")
     await create_integration(client, sys_b["id"], sys_c["id"], integration_type="filöverföring")

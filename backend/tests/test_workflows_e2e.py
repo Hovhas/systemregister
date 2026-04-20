@@ -23,6 +23,8 @@ import json
 import pytest
 from datetime import date, timedelta
 
+from uuid import uuid4
+
 from tests.factories import (
     create_org,
     create_system,
@@ -374,8 +376,8 @@ async def test_registration_multiple_orgs_independent_inventories(client):
     org_b = await create_org(client, name="Org Beta")
 
     for i in range(3):
-        await create_system(client, org_a["id"], name=f"Alpha System {i}")
-        await create_system(client, org_b["id"], name=f"Beta System {i}")
+        await create_system(client, org_a["id"], name=f"AlphaSys-{i}-{uuid4().hex[:6]}")
+        await create_system(client, org_b["id"], name=f"BetaSys-{i}-{uuid4().hex[:6]}")
 
     resp_a = await client.get("/api/v1/systems/", params={"organization_id": org_a["id"]})
     resp_b = await client.get("/api/v1/systems/", params={"organization_id": org_b["id"]})
@@ -904,7 +906,7 @@ async def test_integration_flow_map_dependencies_10_systems(client):
     org = await create_org(client)
     systems = []
     for i in range(10):
-        sys = await create_system(client, org["id"], name=f"Integrationssystem {i}")
+        sys = await create_system(client, org["id"], name=f"Integrsys-{i}-{uuid4().hex[:6]}")
         systems.append(sys)
 
     integrations = []
@@ -930,8 +932,8 @@ async def test_integration_flow_identify_critical_dependencies(client):
     """Identifiera kritiska beroenden baserat på criticality."""
     org = await create_org(client)
     src = await create_system(client, org["id"], name="Kärnssystem", criticality="kritisk")
-    dep1 = await create_system(client, org["id"], name="Beroende 1")
-    dep2 = await create_system(client, org["id"], name="Beroende 2")
+    dep1 = await create_system(client, org["id"], name="Primärberoende")
+    dep2 = await create_system(client, org["id"], name="Sekundärstöd")
 
     intg1 = await create_integration(client, src["id"], dep1["id"],
                                       criticality="hög",
@@ -947,8 +949,8 @@ async def test_integration_flow_identify_critical_dependencies(client):
 async def test_integration_flow_external_dependency(client):
     """Externa beroenden dokumenteras med external_party."""
     org = await create_org(client)
-    internal = await create_system(client, org["id"], name="Internt System")
-    external = await create_system(client, org["id"], name="Externt System")
+    internal = await create_system(client, org["id"], name="Internt Kärnapp")
+    external = await create_system(client, org["id"], name="Utomstående Tjänst")
 
     intg = await create_integration(client, internal["id"], external["id"],
                                      is_external=True,
@@ -964,7 +966,7 @@ async def test_integration_flow_all_types(client):
     org = await create_org(client)
     src = await create_system(client, org["id"], name="Källsystem")
     for itype in ["api", "filöverföring", "databasreplikering", "event", "manuell"]:
-        tgt = await create_system(client, org["id"], name=f"Mål {itype}")
+        tgt = await create_system(client, org["id"], name=f"Mottagare-{itype}")
         intg = await create_integration(client, src["id"], tgt["id"],
                                          integration_type=itype)
         assert intg["integration_type"] == itype
@@ -974,8 +976,8 @@ async def test_integration_flow_all_types(client):
 async def test_integration_flow_bidirectional(client):
     """Dubbelriktad integration kan dokumenteras som två separata."""
     org = await create_org(client)
-    sys_a = await create_system(client, org["id"], name="System A")
-    sys_b = await create_system(client, org["id"], name="System B")
+    sys_a = await create_system(client, org["id"], name="Avsändare")
+    sys_b = await create_system(client, org["id"], name="Mottagare")
 
     a_to_b = await create_integration(client, sys_a["id"], sys_b["id"],
                                        description="A skickar till B")
@@ -991,7 +993,7 @@ async def test_integration_flow_list_by_source(client):
     """Lista integrationer per källsystem."""
     org = await create_org(client)
     src = await create_system(client, org["id"], name="Masterkälla")
-    targets = [await create_system(client, org["id"], name=f"Mål {i}") for i in range(3)]
+    targets = [await create_system(client, org["id"], name=f"Mottagarsys-{i}-{uuid4().hex[:6]}") for i in range(3)]
 
     created_ids = []
     for tgt in targets:
@@ -1230,7 +1232,7 @@ async def test_report_nis2_summary_counts_correct(client):
     created_ids = []
     for i in range(3):
         sys = await create_system(client, org["id"],
-                                   name=f"NIS2 Count System {i}",
+                                   name=f"NIS2Cnt-{i}-{uuid4().hex[:6]}",
                                    nis2_applicable=True,
                                    nis2_classification="viktig")
         created_ids.append(sys["id"])
@@ -1564,7 +1566,7 @@ async def test_e2e_nis2_compliance_full_workflow(client):
     org = await create_org(client)
 
     systems = []
-    for name, cls in [("Driftsystem 1", "väsentlig"), ("Driftsystem 2", "viktig")]:
+    for name, cls in [("Väsentligsystem", "väsentlig"), ("Viktigtsystem", "viktig")]:
         sys = await create_system(client, org["id"],
                                    name=name,
                                    criticality="kritisk",
@@ -2066,7 +2068,7 @@ async def test_notification_contract_expiry_no_false_positives(client):
 
     systems_and_contracts = []
     for days in [7, 30, 60, 89, 91, 180, 365]:
-        sys = await create_system(client, org["id"], name=f"Notif System {days}d")
+        sys = await create_system(client, org["id"], name=f"Kontrakt-{days}d-{uuid4().hex[:6]}")
         contract = await create_contract(client, sys["id"],
                                           contract_end=str(today + timedelta(days=days)))
         systems_and_contracts.append((days, contract["id"]))
@@ -2089,7 +2091,7 @@ async def test_notification_nis2_report_without_risk_assessment_count(client):
     no_risk_systems = []
     for i in range(3):
         sys = await create_system(client, org["id"],
-                                   name=f"Ej Riskbedömd {i}",
+                                   name=f"IngenRisk-{i}-{uuid4().hex[:6]}",
                                    nis2_applicable=True,
                                    nis2_classification="viktig")
         no_risk_systems.append(sys["id"])
@@ -2175,15 +2177,15 @@ async def test_search_flow_filter_combines_correctly(client):
     """Kombinerade filter: NIS2 + status fungerar tillsammans."""
     org = await create_org(client)
     target = await create_system(client, org["id"],
-                                  name="Mål System",
+                                  name="Träffsystem",
                                   nis2_applicable=True,
                                   lifecycle_status="i_drift")
     noise1 = await create_system(client, org["id"],
-                                  name="Brus 1",
+                                  name="Ickenis2drift",
                                   nis2_applicable=False,
                                   lifecycle_status="i_drift")
     noise2 = await create_system(client, org["id"],
-                                  name="Brus 2",
+                                  name="Avvecklatnis2",
                                   nis2_applicable=True,
                                   lifecycle_status="avvecklad")
 
@@ -2207,7 +2209,7 @@ async def test_search_flow_stats_overview_reflects_data(client):
     initial_total = initial_resp.json()["total_systems"]
 
     for i in range(5):
-        await create_system(client, org["id"], name=f"Stats System {i}")
+        await create_system(client, org["id"], name=f"Statsobj-{i}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/stats/overview")
     assert resp.status_code == 200

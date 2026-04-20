@@ -5,6 +5,7 @@ Kategori 10: Audit trail (~30 testfall)
 """
 
 import pytest
+from uuid import uuid4
 from tests.factories import (
     create_org, create_system, create_classification,
     create_owner, create_contract, create_gdpr_treatment,
@@ -169,7 +170,7 @@ async def test_audit_pagination_limit(client):
     """GET /api/v1/audit/?limit=2 returns at most 2 items."""
     org = await create_org(client)
     for i in range(5):
-        await create_system(client, org["id"], name=f"System {i}")
+        await create_system(client, org["id"], name=f"AuditSys-{i}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/audit/", params={"limit": 2})
     assert resp.status_code == 200
@@ -182,7 +183,7 @@ async def test_audit_pagination_offset(client):
     """Offset-based pagination returns different results."""
     org = await create_org(client)
     for i in range(5):
-        await create_system(client, org["id"], name=f"OffsetSystem {i}")
+        await create_system(client, org["id"], name=f"OffSys-{i}-{uuid4().hex[:6]}")
 
     resp_p1 = await client.get("/api/v1/audit/", params={"limit": 2, "offset": 0})
     resp_p2 = await client.get("/api/v1/audit/", params={"limit": 2, "offset": 2})

@@ -5,6 +5,7 @@ lifecycle filtering, NIS2, org-scoping, and ordering.
 """
 
 import pytest
+from uuid import uuid4
 from tests.factories import create_org, create_system
 
 
@@ -67,7 +68,7 @@ async def test_systems_pagination_default_limit(client):
     """GET /api/v1/systems/ without limit returns items (default limit applied)."""
     org = await create_org(client)
     for i in range(5):
-        await create_system(client, org["id"], name=f"System {i}")
+        await create_system(client, org["id"], name=f"Paginrsys-{i}-{uuid4().hex[:6]}")
 
     resp = await client.get("/api/v1/systems/")
     assert resp.status_code == 200

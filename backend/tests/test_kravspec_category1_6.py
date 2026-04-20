@@ -14,6 +14,7 @@ Alla testfall använder pytest.mark.parametrize för bred täckning (~300 fall).
 
 import pytest
 from datetime import date, timedelta
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -66,10 +67,10 @@ async def test_cat1_system_category_create_and_read(client, category):
 async def test_cat1_system_category_filter(client, category):
     """Filter på system_category returnerar bara system med rätt kategori."""
     org = await create_org(client)
-    await create_system(client, org["id"], system_category=category, name=f"Filter {category}")
+    await create_system(client, org["id"], system_category=category, name=f"Målkat-{uuid4().hex[:8]}")
     # Skapa ett system med annan kategori för att kontrollera filtrering
     other_cat = "plattform" if category != "plattform" else "infrastruktur"
-    await create_system(client, org["id"], system_category=other_cat, name=f"Other {category}")
+    await create_system(client, org["id"], system_category=other_cat, name=f"Andrakar-{uuid4().hex[:8]}")
 
     resp = await client.get(
         "/api/v1/systems/",

@@ -49,7 +49,13 @@ jobs:
           FAILED=""
           for f in tests/test_*.py; do
             echo "=== Running $f ==="
-            pytest "$f" -v || FAILED="$FAILED $f"
+            # GitHub Actions kör med set -e, så fånga exit-koden utan att skriptet dör.
+            # Exit 5 = inga tester samlade (t.ex. alla markerade @pytest.mark.slow).
+            RC=0
+            pytest "$f" -v || RC=$?
+            if [ "$RC" -ne 0 ] && [ "$RC" -ne 5 ]; then
+              FAILED="$FAILED $f"
+            fi
           done
           if [ -n "$FAILED" ]; then
             echo "Failed test files:$FAILED"

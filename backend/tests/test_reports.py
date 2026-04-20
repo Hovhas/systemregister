@@ -8,6 +8,7 @@ The import exists (line 17) but app.include_router(reports_router, ...) is missi
 
 import pytest
 from datetime import date, timedelta
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -102,8 +103,8 @@ async def test_nis2_report_has_gdpr_treatment_flag(client):
     """NIS2 report should correctly indicate has_gdpr_treatment."""
     org = await create_org(client)
 
-    system_with_gdpr = await create_system(client, org["id"], name="SystemWithGDPR", nis2_applicable=True)
-    system_without_gdpr = await create_system(client, org["id"], name="SystemWithoutGDPR", nis2_applicable=True)
+    system_with_gdpr = await create_system(client, org["id"], name=f"MedGDPR-{uuid4().hex[:6]}", nis2_applicable=True)
+    system_without_gdpr = await create_system(client, org["id"], name=f"UtanGDPR-{uuid4().hex[:6]}", nis2_applicable=True)
 
     await create_gdpr_treatment(client, system_with_gdpr["id"])
 

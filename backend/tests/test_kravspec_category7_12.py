@@ -13,6 +13,7 @@ Målet är ~300 testfall med flitigt pytest.mark.parametrize.
 
 import pytest
 from datetime import date, timedelta
+from uuid import uuid4
 
 from tests.factories import (
     create_org,
@@ -72,8 +73,8 @@ async def test_kat7_integration_type_accepted(client, itype):
 async def test_kat7_integration_type_invalid_rejected(client, itype):
     """Ogiltiga integration_type-värden ska avvisas med 422."""
     org = await create_org(client)
-    src = await create_system(client, org["id"], name="SrcInvalid")
-    tgt = await create_system(client, org["id"], name="TgtInvalid")
+    src = await create_system(client, org["id"], name=f"OgSource-{uuid4().hex[:6]}")
+    tgt = await create_system(client, org["id"], name=f"OgTarget-{uuid4().hex[:6]}")
 
     resp = await client.post("/api/v1/integrations/", json={
         "source_system_id": src["id"],
@@ -123,8 +124,8 @@ async def test_kat7_integration_criticality_null_allowed(client):
 async def test_kat7_integration_patch_criticality(client, crit):
     """PATCH integration: criticality kan uppdateras till alla nivåer."""
     org = await create_org(client)
-    src = await create_system(client, org["id"], name=f"PatchCritSrc-{crit}")
-    tgt = await create_system(client, org["id"], name=f"PatchCritTgt-{crit}")
+    src = await create_system(client, org["id"], name=f"PatchSrc-{crit}-{uuid4().hex[:6]}")
+    tgt = await create_system(client, org["id"], name=f"PatchTgt-{crit}-{uuid4().hex[:6]}")
     integ = await create_integration(client, src["id"], tgt["id"])
 
     resp = await client.patch(f"/api/v1/integrations/{integ['id']}", json={
@@ -150,8 +151,8 @@ async def test_kat7_integration_patch_criticality(client, crit):
 async def test_kat7_integration_external_party_variants(client, external_party):
     """is_external=True med olika external_party-värden ska sparas korrekt."""
     org = await create_org(client)
-    src = await create_system(client, org["id"], name=f"ExtSrc-{external_party[:10]}")
-    tgt = await create_system(client, org["id"], name=f"ExtTgt-{external_party[:10]}")
+    src = await create_system(client, org["id"], name=f"Källa-{uuid4().hex[:8]}")
+    tgt = await create_system(client, org["id"], name=f"Mottagare-{uuid4().hex[:8]}")
 
     resp = await client.post("/api/v1/integrations/", json={
         "source_system_id": src["id"],
@@ -353,7 +354,7 @@ async def test_kat7_circular_dependency_four_systems(client):
     """A→B→C→D→A (längre cirkel) ska kunna skapas korrekt."""
     org = await create_org(client)
     systems = [
-        await create_system(client, org["id"], name=f"Circ4-{i}")
+        await create_system(client, org["id"], name=f"Circ4-{i}-{uuid4().hex[:6]}")
         for i in range(4)
     ]
     for i in range(4):
@@ -532,7 +533,7 @@ async def test_kat7_hub_pattern_multiple_sources(client, num_spokes):
     hub = await create_system(client, org["id"], name=f"Hub-{num_spokes}")
 
     for i in range(num_spokes):
-        spoke = await create_system(client, org["id"], name=f"Spoke-{num_spokes}-{i}")
+        spoke = await create_system(client, org["id"], name=f"Spoke-{num_spokes}-{i}-{uuid4().hex[:6]}")
         await create_integration(client, spoke["id"], hub["id"])
 
     resp = await client.get(f"/api/v1/systems/{hub['id']}/integrations")

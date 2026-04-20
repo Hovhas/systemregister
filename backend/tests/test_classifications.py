@@ -3,6 +3,7 @@ Tests for /api/v1/systems/{id}/classifications endpoints.
 """
 
 import pytest
+from uuid import uuid4
 
 from tests.factories import create_org, create_system, create_classification
 
@@ -196,8 +197,8 @@ async def test_classification_boundary_values_valid(client):
 async def test_list_classifications_scoped_to_system(client):
     """Classifications of system A should not appear when listing system B's classifications."""
     org = await create_org(client)
-    system_a = await create_system(client, org["id"], name="System A")
-    system_b = await create_system(client, org["id"], name="System B")
+    system_a = await create_system(client, org["id"], name=f"KlassSysA-{uuid4().hex[:6]}")
+    system_b = await create_system(client, org["id"], name=f"KlassSysB-{uuid4().hex[:6]}")
 
     # Add classification to system A only
     await create_classification(client, system_a["id"])
