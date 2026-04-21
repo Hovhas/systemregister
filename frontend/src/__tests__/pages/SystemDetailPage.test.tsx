@@ -136,7 +136,7 @@ const mockSystem = {
       created_at: "2020-01-01T00:00:00Z",
     },
   ],
-  integrations: [
+  integrations_out: [
     {
       id: "int-1",
       source_system_id: "sys-1",
@@ -151,6 +151,7 @@ const mockSystem = {
       created_at: "2020-01-01T00:00:00Z",
     },
   ],
+  integrations_in: [],
   gdpr_treatments: [],
   contracts: [],
 }

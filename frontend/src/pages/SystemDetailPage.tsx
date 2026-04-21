@@ -243,7 +243,10 @@ export default function SystemDetailPage() {
         </TabsContent>
 
         <TabsContent value="integrationer" className="mt-6">
-          <IntegrationerTab integrations={system.integrations ?? []} systemId={system.id} />
+          <IntegrationerTab
+            integrations={[...(system.integrations_out ?? []), ...(system.integrations_in ?? [])]}
+            systemId={system.id}
+          />
         </TabsContent>
 
         <TabsContent value="gdpr" className="mt-6">
