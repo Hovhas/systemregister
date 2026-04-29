@@ -370,7 +370,11 @@ export default function EmploymentTemplatesPage() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {form.organization_id
+                      ? (orgs ?? []).find((o) => o.id === form.organization_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(orgs ?? []).map((org) => (
@@ -390,7 +394,11 @@ export default function EmploymentTemplatesPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj befattning (valfritt)" />
+                  <SelectValue placeholder="Välj befattning (valfritt)">
+                    {form.position_id
+                      ? (positions?.items ?? []).find((p) => p.id === form.position_id)?.title
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Ingen</SelectItem>

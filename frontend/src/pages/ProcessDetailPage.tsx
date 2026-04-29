@@ -348,7 +348,7 @@ export default function ProcessDetailPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Kritikalitet</label>
               <Select value={editForm.criticality} onValueChange={(val) => setEditForm({ ...editForm, criticality: val ?? "" })}>
-                <SelectTrigger><SelectValue placeholder="Välj kritikalitet" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Välj kritikalitet">{editForm.criticality ? criticalityLabels[editForm.criticality as Criticality] : undefined}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Ingen</SelectItem>
                   {Object.values(Criticality).map((v) => (

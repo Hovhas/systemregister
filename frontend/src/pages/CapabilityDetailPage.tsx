@@ -249,7 +249,7 @@ export default function CapabilityDetailPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Mognadsnivå (1–5)</label>
               <Select value={editForm.maturity_level ?? ""} onValueChange={(val) => setEditForm({ ...editForm, maturity_level: val ?? "" })}>
-                <SelectTrigger><SelectValue placeholder="Välj nivå" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Välj nivå">{editForm.maturity_level !== "" ? String(editForm.maturity_level) : undefined}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Ingen</SelectItem>
                   {[1, 2, 3, 4, 5].map((v) => <SelectItem key={v} value={String(v)}>{v}</SelectItem>)}

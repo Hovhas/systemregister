@@ -75,6 +75,20 @@ Sundsvalls kommuns grafiska identitet: blå primärfärg (`#0057A8`), svenska gr
 - **Etiketter (frontend):** Centraliserade i `frontend/src/lib/labels.ts`. Importera därifrån — lägg aldrig etiketter direkt i komponenter.
 - **FormField:** Använd alltid `components/FormField.tsx` (har korrekt htmlFor/useId). Tre lokala kopior finns kvar i äldre kod — migrera vid refactoring.
 
+### shadcn/ui Select-komponenter
+
+`<SelectValue placeholder="..." />` (self-closing) kan inte slå upp visningsnamn från portlade `SelectItem` i Base UI — efter val visas råvärdet (UUID, enum-key, siffra) i triggern istället för det visade namnet. **Lägg alltid till children med namn-lookup**:
+
+```tsx
+<SelectValue placeholder="Välj organisation">
+  {value
+    ? list.find((item) => item.id === value)?.name
+    : undefined}
+</SelectValue>
+```
+
+Återkommande regression — fixad i `589f719` och `2953ea4`. Lägg inte till nya `<SelectValue ... />` utan children.
+
 ## Datamodell — kärntabeller
 
 ### organizations

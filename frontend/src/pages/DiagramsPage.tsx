@@ -190,7 +190,9 @@ export default function DiagramsPage() {
           onValueChange={(v) => handleTypeChange(v as DiagramType)}
         >
           <SelectTrigger className="w-52" aria-label="Välj diagramtyp">
-            <SelectValue placeholder="Diagramtyp" />
+            <SelectValue placeholder="Diagramtyp">
+              {diagramType ? DIAGRAM_LABELS[diagramType] : undefined}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {(Object.keys(DIAGRAM_LABELS) as DiagramType[]).map((t) => (
@@ -229,7 +231,11 @@ export default function DiagramsPage() {
             onValueChange={(v) => setSubId(v ?? "")}
           >
             <SelectTrigger className="w-64" aria-label="Välj process">
-              <SelectValue placeholder="Välj process" />
+              <SelectValue placeholder="Välj process">
+                {subId
+                  ? (processes?.items ?? []).find((p) => p.id === subId)?.name
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {(processes?.items ?? []).map((p) => (
@@ -247,7 +253,11 @@ export default function DiagramsPage() {
             onValueChange={(v) => setSubId(v ?? "")}
           >
             <SelectTrigger className="w-64" aria-label="Välj värdeström">
-              <SelectValue placeholder="Välj värdeström" />
+              <SelectValue placeholder="Välj värdeström">
+                {subId
+                  ? (valueStreams?.items ?? []).find((vs) => vs.id === subId)?.name
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {(valueStreams?.items ?? []).map((vs) => (
@@ -265,7 +275,11 @@ export default function DiagramsPage() {
             onValueChange={(v) => setSubId(v ?? "")}
           >
             <SelectTrigger className="w-64" aria-label="Välj system">
-              <SelectValue placeholder="Välj system" />
+              <SelectValue placeholder="Välj system">
+                {subId
+                  ? (systems?.items ?? []).find((s) => s.id === subId)?.name
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {(systems?.items ?? []).map((s) => (

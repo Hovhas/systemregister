@@ -248,7 +248,7 @@ export default function ProcessesPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Kritikalitet</label>
               <Select value={form.criticality ?? ""} onValueChange={(val) => setForm({ ...form, criticality: val ? (val as Criticality) : null })}>
-                <SelectTrigger><SelectValue placeholder="Välj kritikalitet" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Välj kritikalitet">{form.criticality ? criticalityLabels[form.criticality] : undefined}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Ingen</SelectItem>
                   {Object.values(Criticality).map((v) => (

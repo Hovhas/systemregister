@@ -405,7 +405,11 @@ export default function EmploymentTemplateDetailPage() {
                 onValueChange={(v) => setAddRoleId(v ?? "")}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj roll" />
+                  <SelectValue placeholder="Välj roll">
+                    {addRoleId
+                      ? (allRoles?.items ?? []).find((r) => r.id === addRoleId)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(allRoles?.items ?? [])

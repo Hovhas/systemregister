@@ -342,7 +342,11 @@ export default function BusinessRoleDetailPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj system" />
+                  <SelectValue placeholder="Välj system">
+                    {accessForm.system_id
+                      ? (allSystems?.items ?? []).find((s) => s.id === accessForm.system_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(allSystems?.items ?? [])

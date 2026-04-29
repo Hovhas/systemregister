@@ -408,7 +408,11 @@ export default function InformationAssetsPage() {
                   onValueChange={(val) => setNewAsset({ ...newAsset, confidentiality: val ? Number(val) : undefined })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="K" />
+                    <SelectValue placeholder="K">
+                      {newAsset.confidentiality != null
+                        ? String(newAsset.confidentiality)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Ingen</SelectItem>
@@ -425,7 +429,11 @@ export default function InformationAssetsPage() {
                   onValueChange={(val) => setNewAsset({ ...newAsset, integrity: val ? Number(val) : undefined })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="R" />
+                    <SelectValue placeholder="R">
+                      {newAsset.integrity != null
+                        ? String(newAsset.integrity)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Ingen</SelectItem>
@@ -442,7 +450,11 @@ export default function InformationAssetsPage() {
                   onValueChange={(val) => setNewAsset({ ...newAsset, availability: val ? Number(val) : undefined })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="T" />
+                    <SelectValue placeholder="T">
+                      {newAsset.availability != null
+                        ? String(newAsset.availability)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Ingen</SelectItem>

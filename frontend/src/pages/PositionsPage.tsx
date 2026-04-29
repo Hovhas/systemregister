@@ -375,7 +375,11 @@ export default function PositionsPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Välj organisation" />
+                  <SelectValue placeholder="Välj organisation">
+                    {form.organization_id
+                      ? (orgs ?? []).find((o) => o.id === form.organization_id)?.name
+                      : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(orgs ?? []).map((org) => (
