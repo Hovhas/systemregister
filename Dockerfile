@@ -38,6 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY scripts/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
+# Kopiera seed/admin-scripts som ett paket sa de gar att kora som
+# `python -m scripts.seed_sundsvall` mot prod-DB:n via Dokploy-terminalen
+COPY scripts/__init__.py scripts/seed.py scripts/seed_sundsvall.py /app/scripts/
+
 # Non-root user
 RUN useradd -r -s /bin/bash appuser && chown -R appuser:appuser /app
 USER appuser
