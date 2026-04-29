@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
-    BusinessCapability, BusinessProcess, InformationAsset,
+    BusinessCapability, BusinessProcess,
     System, SystemIntegration, ValueStream,
 )
 

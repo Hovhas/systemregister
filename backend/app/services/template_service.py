@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
-    BusinessRole, EmploymentTemplate, RoleSystemAccess, System,
+    BusinessRole, EmploymentTemplate, System,
     template_role_link,
 )
 from app.models.enums import AccessLevel, AccessType
