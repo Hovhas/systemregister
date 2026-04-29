@@ -61,7 +61,19 @@ Som prompten sa: jag noterade detta i `BACKLOG.md` (skapar inte själva pluginet
 
 `uq_role_system` på `(business_role_id, system_id)` betyder att en roll bara kan ha **en** access-tripel mot ett system. Vid försök att skapa en till — `409 Conflict` (via `IntegrityError`-handler i main.py). Detta verifieras i `test_role_system_access.py::test_unique_constraint_role_system`.
 
-## 9. Påverkan på befintliga tester
+## 9. Lärdom: alembic-revisionkollision
+
+Min ursprungliga PR fick `revision = "0010"` eftersom jag bara såg de
+nio första migrationerna i pre-flight-listingen. Master hade redan
+0010–0014. Resulterade i Bad Gateway i prod (`Multiple head revisions`
+vid container-start).
+
+**Fixat via** commit `ec45819` (revision 0015, down_revision 0014).
+
+**För framtiden**: alltid kör `ls backend/alembic/versions/ | sort -V | tail -3`
+i pre-flight, eller `alembic heads` om docker är tillgängligt.
+
+## 10. Påverkan på befintliga tester
 
 Jag har **inte** ändrat någon befintlig kod utöver:
 - `app/models/__init__.py` (tillägg)
