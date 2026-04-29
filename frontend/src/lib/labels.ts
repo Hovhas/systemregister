@@ -10,6 +10,9 @@ import {
   ApprovalStatus,
   ApprovalType,
   OrganizationType,
+  OrgUnitType,
+  AccessLevel,
+  AccessType,
 } from "@/types"
 
 // --- Centrala etiketter för enums ---
@@ -139,4 +142,25 @@ export const criticalityColor: Record<Criticality, string> = {
   [Criticality.MEDIUM]: "#fcd34d",
   [Criticality.HIGH]: "#fb923c",
   [Criticality.CRITICAL]: "#f87171",
+}
+
+export const orgUnitTypeLabels: Record<OrgUnitType, string> = {
+  [OrgUnitType.FORVALTNING]: "Förvaltning",
+  [OrgUnitType.AVDELNING]: "Avdelning",
+  [OrgUnitType.ENHET]: "Enhet",
+  [OrgUnitType.SEKTION]: "Sektion",
+  [OrgUnitType.BOLAG]: "Bolag",
+}
+
+// IGA — åtkomstnivåer och typer
+export const accessLevelLabels: Record<AccessLevel, string> = {
+  [AccessLevel.READ]: "Läs",
+  [AccessLevel.WRITE]: "Skriv",
+  [AccessLevel.ADMIN]: "Administratör",
+}
+
+export const accessTypeLabels: Record<AccessType, string> = {
+  [AccessType.BIRTHRIGHT]: "Grundbehörighet",
+  [AccessType.CONDITIONAL]: "Villkorad",
+  [AccessType.MANUAL]: "Manuell",
 }

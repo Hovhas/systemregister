@@ -25,6 +25,14 @@ import {
   PackageIcon,
   DatabaseIcon,
   CheckSquareIcon,
+  LayersIcon,
+  WorkflowIcon,
+  GitBranchIcon,
+  Building2Icon,
+  NetworkIcon,
+  UserCogIcon,
+  BriefcaseIcon,
+  ClipboardCheckIcon,
 } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { getNotifications } from "@/lib/api"
@@ -61,6 +69,19 @@ const ObjektDetailPage = lazy(() => import("@/pages/ObjektDetailPage"))
 const ModuleDetailPage = lazy(() => import("@/pages/ModuleDetailPage"))
 const InformationAssetDetailPage = lazy(() => import("@/pages/InformationAssetDetailPage"))
 const ApprovalDetailPage = lazy(() => import("@/pages/ApprovalDetailPage"))
+const CapabilitiesPage = lazy(() => import("@/pages/CapabilitiesPage"))
+const CapabilityDetailPage = lazy(() => import("@/pages/CapabilityDetailPage"))
+const ProcessesPage = lazy(() => import("@/pages/ProcessesPage"))
+const ProcessDetailPage = lazy(() => import("@/pages/ProcessDetailPage"))
+const ValueStreamsPage = lazy(() => import("@/pages/ValueStreamsPage"))
+const ValueStreamDetailPage = lazy(() => import("@/pages/ValueStreamDetailPage"))
+const OrgUnitsPage = lazy(() => import("@/pages/OrgUnitsPage"))
+const DiagramsPage = lazy(() => import("@/pages/DiagramsPage"))
+const BusinessRolesPage = lazy(() => import("@/pages/BusinessRolesPage"))
+const BusinessRoleDetailPage = lazy(() => import("@/pages/BusinessRoleDetailPage"))
+const PositionsPage = lazy(() => import("@/pages/PositionsPage"))
+const EmploymentTemplatesPage = lazy(() => import("@/pages/EmploymentTemplatesPage"))
+const EmploymentTemplateDetailPage = lazy(() => import("@/pages/EmploymentTemplateDetailPage"))
 
 // --- Dark mode ---
 
@@ -104,6 +125,14 @@ const ROUTE_TITLES: Record<string, string> = {
   "/modules": "Moduler",
   "/information-assets": "Informationsmängder",
   "/approvals": "Godkännanden",
+  "/capabilities": "Förmågor",
+  "/processes": "Processer",
+  "/value-streams": "Värdeströmmar",
+  "/org-units": "Organisationsenheter",
+  "/diagrams": "Diagram",
+  "/business-roles": "Verksamhetsroller",
+  "/positions": "Befattningar",
+  "/employment-templates": "Anställningsmallar",
 }
 
 function usePageTitle() {
@@ -177,6 +206,24 @@ const navGroups: NavGroup[] = [
       { to: "/components", label: "Komponenter", icon: PuzzleIcon },
       { to: "/modules", label: "Moduler", icon: PackageIcon },
       { to: "/information-assets", label: "Informationsmängder", icon: DatabaseIcon },
+    ],
+  },
+  {
+    label: "Verksamhet",
+    items: [
+      { to: "/capabilities", label: "Förmågor", icon: LayersIcon },
+      { to: "/processes", label: "Processer", icon: WorkflowIcon },
+      { to: "/value-streams", label: "Värdeströmmar", icon: GitBranchIcon },
+      { to: "/org-units", label: "Org-enheter", icon: Building2Icon },
+      { to: "/diagrams", label: "Diagram", icon: NetworkIcon },
+    ],
+  },
+  {
+    label: "Roller och åtkomst",
+    items: [
+      { to: "/business-roles", label: "Verksamhetsroller", icon: UserCogIcon },
+      { to: "/positions", label: "Befattningar", icon: BriefcaseIcon },
+      { to: "/employment-templates", label: "Anställningsmallar", icon: ClipboardCheckIcon },
     ],
   },
   {
@@ -424,6 +471,19 @@ const router = createBrowserRouter([
       { path: "/modules/:id", element: <ModuleDetailPage /> },
       { path: "/information-assets/:id", element: <InformationAssetDetailPage /> },
       { path: "/approvals/:id", element: <ApprovalDetailPage /> },
+      { path: "/capabilities", element: <CapabilitiesPage /> },
+      { path: "/capabilities/:id", element: <CapabilityDetailPage /> },
+      { path: "/processes", element: <ProcessesPage /> },
+      { path: "/processes/:id", element: <ProcessDetailPage /> },
+      { path: "/value-streams", element: <ValueStreamsPage /> },
+      { path: "/value-streams/:id", element: <ValueStreamDetailPage /> },
+      { path: "/org-units", element: <OrgUnitsPage /> },
+      { path: "/diagrams", element: <DiagramsPage /> },
+      { path: "/business-roles", element: <BusinessRolesPage /> },
+      { path: "/business-roles/:id", element: <BusinessRoleDetailPage /> },
+      { path: "/positions", element: <PositionsPage /> },
+      { path: "/employment-templates", element: <EmploymentTemplatesPage /> },
+      { path: "/employment-templates/:id", element: <EmploymentTemplateDetailPage /> },
     ],
   },
 ])

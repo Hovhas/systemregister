@@ -745,3 +745,255 @@ export interface InformationAssetCreate {
   long_term_format?: string
   last_ihp_review?: string
 }
+
+export enum OrgUnitType {
+  FORVALTNING = "förvaltning",
+  AVDELNING = "avdelning",
+  ENHET = "enhet",
+  SEKTION = "sektion",
+  BOLAG = "bolag",
+}
+
+export interface BusinessCapability {
+  id: string
+  organization_id: string
+  name: string
+  description: string | null
+  parent_capability_id: string | null
+  capability_owner: string | null
+  maturity_level: number | null
+  created_at: string
+  updated_at: string
+  system_count?: number
+  process_count?: number
+  children_count?: number
+}
+
+export interface CapabilityCreate {
+  organization_id: string
+  name: string
+  description?: string | null
+  parent_capability_id?: string | null
+  capability_owner?: string | null
+  maturity_level?: number | null
+}
+
+export type CapabilityUpdate = Partial<Omit<CapabilityCreate, "organization_id">>
+
+export interface BusinessProcess {
+  id: string
+  organization_id: string
+  name: string
+  description: string | null
+  parent_process_id: string | null
+  process_owner: string | null
+  criticality: Criticality | null
+  created_at: string
+  updated_at: string
+  system_count?: number
+  capability_count?: number
+  information_asset_count?: number
+  children_count?: number
+}
+
+export interface ProcessCreate {
+  organization_id: string
+  name: string
+  description?: string | null
+  parent_process_id?: string | null
+  process_owner?: string | null
+  criticality?: Criticality | null
+}
+
+export type ProcessUpdate = Partial<Omit<ProcessCreate, "organization_id">>
+
+export interface ValueStreamStage {
+  name: string
+  description?: string | null
+  order: number
+}
+
+export interface ValueStream {
+  id: string
+  organization_id: string
+  name: string
+  description: string | null
+  stages: ValueStreamStage[] | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ValueStreamCreate {
+  organization_id: string
+  name: string
+  description?: string | null
+  stages?: ValueStreamStage[]
+}
+
+export type ValueStreamUpdate = Partial<Omit<ValueStreamCreate, "organization_id">>
+
+export interface OrgUnit {
+  id: string
+  organization_id: string
+  name: string
+  parent_unit_id: string | null
+  unit_type: OrgUnitType
+  manager_name: string | null
+  cost_center: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface OrgUnitCreate {
+  organization_id: string
+  name: string
+  parent_unit_id?: string | null
+  unit_type: OrgUnitType
+  manager_name?: string | null
+  cost_center?: string | null
+}
+
+export type OrgUnitUpdate = Partial<Omit<OrgUnitCreate, "organization_id">>
+
+export interface OrgUnitTreeNode {
+  id: string
+  name: string
+  unit_type: OrgUnitType
+  manager_name: string | null
+  cost_center: string | null
+  children: OrgUnitTreeNode[]
+}
+
+// --- IGA (Paket C) ---
+
+export enum AccessLevel {
+  READ = "läs",
+  WRITE = "skriv",
+  ADMIN = "administratör",
+}
+
+export enum AccessType {
+  BIRTHRIGHT = "grundbehörighet",
+  CONDITIONAL = "villkorad",
+  MANUAL = "manuell",
+}
+
+export interface BusinessRole {
+  id: string
+  organization_id: string
+  name: string
+  description: string | null
+  role_owner: string | null
+  valid_from: string | null
+  valid_until: string | null
+  created_at: string
+  updated_at: string
+  system_access_count?: number
+}
+
+export interface BusinessRoleCreate {
+  organization_id: string
+  name: string
+  description?: string | null
+  role_owner?: string | null
+  valid_from?: string | null
+  valid_until?: string | null
+}
+
+export type BusinessRoleUpdate = Partial<Omit<BusinessRoleCreate, "organization_id">>
+
+export interface Position {
+  id: string
+  organization_id: string
+  org_unit_id: string | null
+  title: string
+  position_code: string | null
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PositionCreate {
+  organization_id: string
+  org_unit_id?: string | null
+  title: string
+  position_code?: string | null
+  description?: string | null
+}
+
+export type PositionUpdate = Partial<Omit<PositionCreate, "organization_id">>
+
+export interface RoleSystemAccess {
+  id: string
+  business_role_id: string
+  system_id: string
+  access_level: AccessLevel
+  access_type: AccessType
+  justification: string | null
+  approver_name: string | null
+  approved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RoleSystemAccessCreate {
+  business_role_id: string
+  system_id: string
+  access_level: AccessLevel
+  access_type?: AccessType
+  justification?: string | null
+  approver_name?: string | null
+}
+
+export type RoleSystemAccessUpdate = Partial<Omit<RoleSystemAccessCreate, "business_role_id" | "system_id">>
+
+export interface RoleSystemAccessRow {
+  access_id: string
+  system_id: string
+  system_name: string
+  access_level: AccessLevel
+  access_type: AccessType
+  justification: string | null
+}
+
+export interface EmploymentTemplate {
+  id: string
+  organization_id: string
+  position_id: string | null
+  name: string
+  version: number
+  is_active: boolean
+  approved_by: string | null
+  approved_at: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  role_ids: string[]
+}
+
+export interface EmploymentTemplateCreate {
+  organization_id: string
+  position_id?: string | null
+  name: string
+  version?: number
+  is_active?: boolean
+  notes?: string | null
+  role_ids?: string[]
+}
+
+export type EmploymentTemplateUpdate = Partial<Omit<EmploymentTemplateCreate, "organization_id">>
+
+export interface ResolvedAccessEntry {
+  system_id: string
+  system_name: string
+  access_level: AccessLevel
+  access_type: AccessType
+  contributing_role_names: string[]
+}
+
+export interface ResolvedAccessResponse {
+  template_id: string
+  template_name: string
+  is_active: boolean
+  entries: ResolvedAccessEntry[]
+}
