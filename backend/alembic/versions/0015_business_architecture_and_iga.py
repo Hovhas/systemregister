@@ -1,7 +1,7 @@
 """Paket A + C: business architecture + IGA (rollkatalog).
 
-Revision ID: 0010
-Revises: 0009
+Revision ID: 0015
+Revises: 0014
 Create Date: 2026-04-29
 
 Lägger till:
@@ -21,8 +21,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0010"
-down_revision = "0009"
+revision = "0015"
+down_revision = "0014"
 branch_labels = None
 depends_on = None
 
