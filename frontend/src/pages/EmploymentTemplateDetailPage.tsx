@@ -97,13 +97,13 @@ export default function EmploymentTemplateDetailPage() {
   })
 
   const { data: allRoles } = useQuery({
-    queryKey: ["business-roles", "dialog", tmpl?.organization_id],
+    queryKey: ["business-roles", "for-template", tmpl?.organization_id],
     queryFn: () =>
       getBusinessRoles({
         organization_id: tmpl?.organization_id || undefined,
         limit: 200,
       }),
-    enabled: addRoleOpen,
+    enabled: !!tmpl,
   })
 
   const deleteMut = useMutation({
