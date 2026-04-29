@@ -39,6 +39,20 @@ from app.api.webhooks import router as webhooks_router
 from app.api.health import router as health_router
 from app.api.metrics import router as metrics_router
 from app.api.metrics import http_requests_total, http_request_duration_seconds
+# Paket A — verksamhetsskikt
+from app.api.capabilities import router as capabilities_router
+from app.api.processes import router as processes_router
+from app.api.value_streams import router as value_streams_router
+from app.api.org_units import router as org_units_router
+# Paket B — diagram + exporter
+from app.api.diagrams import router as diagrams_router
+from app.api.archimate import router as archimate_router
+from app.api.twoseight_export import router as twoseight_router
+# Paket C — IGA / rollkatalog
+from app.api.business_roles import router as business_roles_router
+from app.api.positions import router as positions_router
+from app.api.role_system_access import router as role_access_router
+from app.api.employment_templates import router as employment_templates_router
 
 settings = get_settings()
 
@@ -214,6 +228,20 @@ app.include_router(approvals_router, prefix="/api/v1")
 app.include_router(sbom_router, prefix="/api/v1")
 app.include_router(me_router, prefix="/api/v1")
 app.include_router(webhooks_router, prefix="/api/v1")
+# Paket A — verksamhetsskikt
+app.include_router(capabilities_router, prefix="/api/v1")
+app.include_router(processes_router, prefix="/api/v1")
+app.include_router(value_streams_router, prefix="/api/v1")
+app.include_router(org_units_router, prefix="/api/v1")
+# Paket B — diagram + exporter
+app.include_router(diagrams_router, prefix="/api/v1")
+app.include_router(archimate_router, prefix="/api/v1")
+app.include_router(twoseight_router, prefix="/api/v1")
+# Paket C — IGA / rollkatalog
+app.include_router(business_roles_router, prefix="/api/v1")
+app.include_router(positions_router, prefix="/api/v1")
+app.include_router(role_access_router, prefix="/api/v1")
+app.include_router(employment_templates_router, prefix="/api/v1")
 
 # --- Deprecated flat routes → 308 Permanent Redirect to nested ---
 # Kept for one release cycle so existing API clients that follow redirects

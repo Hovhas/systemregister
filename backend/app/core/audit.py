@@ -29,7 +29,11 @@ _EXCLUDE_COLS: frozenset[str] = frozenset({"created_at", "updated_at"})
 _AUDITED_TABLES: frozenset[str] = frozenset(
     {"organizations", "systems", "system_classifications", "system_owners",
      "gdpr_treatments", "contracts", "system_integrations",
-     "objekt", "components", "modules", "information_assets", "approvals"}
+     "objekt", "components", "modules", "information_assets", "approvals",
+     # Paket A — verksamhetsskikt
+     "business_capabilities", "business_processes", "value_streams", "org_units",
+     # Paket C — IGA
+     "business_roles", "positions", "role_system_access", "employment_templates"}
 )
 
 

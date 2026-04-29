@@ -109,3 +109,41 @@ from app.schemas.entities import (  # noqa: F401
     InformationAssetResponse,
     InformationAssetLinkRequest,
 )
+
+from app.schemas.business_architecture import (  # noqa: F401
+    CapabilityCreate,
+    CapabilityUpdate,
+    CapabilityResponse,
+    ProcessCreate,
+    ProcessUpdate,
+    ProcessResponse,
+    ValueStreamStage,
+    ValueStreamCreate,
+    ValueStreamUpdate,
+    ValueStreamResponse,
+    OrgUnitCreate,
+    OrgUnitUpdate,
+    OrgUnitResponse,
+    OrgUnitTreeNode,
+    SystemLinkRequest,
+    CapabilityLinkRequest,
+    InformationAssetLinkBody,
+)
+
+from app.schemas.iga import (  # noqa: F401
+    BusinessRoleCreate,
+    BusinessRoleUpdate,
+    BusinessRoleResponse,
+    PositionCreate,
+    PositionUpdate,
+    PositionResponse,
+    RoleSystemAccessCreate,
+    RoleSystemAccessUpdate,
+    RoleSystemAccessResponse,
+    EmploymentTemplateCreate,
+    EmploymentTemplateUpdate,
+    EmploymentTemplateResponse,
+    TemplateRoleLinkRequest,
+    ResolvedAccessEntry,
+    ResolvedAccessResponse,
+)

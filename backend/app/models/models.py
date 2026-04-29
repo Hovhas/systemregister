@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 from sqlalchemy import (
     String, Text, Boolean, Integer, Date, DateTime,
-    ForeignKey, Enum as SAEnum, UniqueConstraint, Index,
+    ForeignKey, Enum as SAEnum, UniqueConstraint, Index, CheckConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -14,7 +14,7 @@ from app.models.enums import (
     OrganizationType, SystemCategory, LifecycleStatus, Criticality,
     OwnerRole, IntegrationType, ProcessorAgreementStatus,
     NIS2Classification, AuditAction, AIRiskClass, FRIAStatus,
-    ApprovalStatus, ApprovalType,
+    ApprovalStatus, ApprovalType, OrgUnitType, AccessLevel, AccessType,
 )
 
 
@@ -169,6 +169,15 @@ class System(Base):
     modules_used: Mapped[list["Module"]] = relationship(secondary="module_system_link", back_populates="systems")
     information_assets: Mapped[list["InformationAsset"]] = relationship(
         secondary="information_asset_system_link", back_populates="systems"
+    )
+    capabilities: Mapped[list["BusinessCapability"]] = relationship(
+        secondary="capability_system_link", back_populates="systems"
+    )
+    processes: Mapped[list["BusinessProcess"]] = relationship(
+        secondary="process_system_link", back_populates="systems"
+    )
+    role_accesses: Mapped[list["RoleSystemAccess"]] = relationship(
+        back_populates="system", passive_deletes=True,
     )
 
     __table_args__ = (
@@ -457,6 +466,9 @@ class InformationAsset(Base):
     systems: Mapped[list["System"]] = relationship(
         secondary="information_asset_system_link", back_populates="information_assets"
     )
+    processes: Mapped[list["BusinessProcess"]] = relationship(
+        secondary="process_information_link", back_populates="information_assets"
+    )
 
 
 # Junction table for InformationAsset ↔ System (N:M)
@@ -465,4 +477,361 @@ information_asset_system_link = Table(
     Base.metadata,
     Column("information_asset_id", UUID(as_uuid=True), ForeignKey("information_assets.id", ondelete="CASCADE"), primary_key=True),
     Column("system_id", UUID(as_uuid=True), ForeignKey("systems.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+# ============================================================
+# Paket A — Verksamhetsskikt
+# ============================================================
+
+
+class BusinessCapability(Base):
+    """Verksamhetsförmåga (ArchiMate Capability). Hierarkisk."""
+    __tablename__ = "business_capabilities"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    parent_capability_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("business_capabilities.id", ondelete="SET NULL"), index=True,
+    )
+    capability_owner: Mapped[str | None] = mapped_column(String(255))
+    maturity_level: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    parent: Mapped["BusinessCapability | None"] = relationship(
+        back_populates="children", remote_side=[id],
+    )
+    children: Mapped[list["BusinessCapability"]] = relationship(back_populates="parent")
+    systems: Mapped[list["System"]] = relationship(
+        secondary="capability_system_link", back_populates="capabilities",
+    )
+    processes: Mapped[list["BusinessProcess"]] = relationship(
+        secondary="process_capability_link", back_populates="capabilities",
+    )
+    organization: Mapped["Organization"] = relationship()
+
+    __table_args__ = (
+        Index("ix_capabilities_org_name", "organization_id", "name"),
+        CheckConstraint(
+            "maturity_level IS NULL OR (maturity_level BETWEEN 0 AND 5)",
+            name="ck_capability_maturity_range",
+        ),
+    )
+
+
+class BusinessProcess(Base):
+    """Verksamhetsprocess. Hierarkisk (huvud-/delprocess)."""
+    __tablename__ = "business_processes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    parent_process_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("business_processes.id", ondelete="SET NULL"), index=True,
+    )
+    process_owner: Mapped[str | None] = mapped_column(String(255))
+    criticality: Mapped[Criticality | None] = mapped_column(_enum(Criticality))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    parent: Mapped["BusinessProcess | None"] = relationship(
+        back_populates="children", remote_side=[id],
+    )
+    children: Mapped[list["BusinessProcess"]] = relationship(back_populates="parent")
+    systems: Mapped[list["System"]] = relationship(
+        secondary="process_system_link", back_populates="processes",
+    )
+    capabilities: Mapped[list["BusinessCapability"]] = relationship(
+        secondary="process_capability_link", back_populates="processes",
+    )
+    information_assets: Mapped[list["InformationAsset"]] = relationship(
+        secondary="process_information_link", back_populates="processes",
+    )
+    organization: Mapped["Organization"] = relationship()
+
+    __table_args__ = (
+        Index("ix_processes_org_name", "organization_id", "name"),
+    )
+
+
+class ValueStream(Base):
+    """Värdeström. Stages som JSONB-lista av {name, description, order}."""
+    __tablename__ = "value_streams"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    stages: Mapped[list | None] = mapped_column(JSONB, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    organization: Mapped["Organization"] = relationship()
+
+    __table_args__ = (
+        Index("ix_value_streams_org_name", "organization_id", "name"),
+    )
+
+
+class OrgUnit(Base):
+    """Organisationsenhet inom en organisation (förvaltning/avdelning/enhet/sektion)."""
+    __tablename__ = "org_units"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    parent_unit_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("org_units.id", ondelete="SET NULL"), index=True,
+    )
+    unit_type: Mapped[OrgUnitType] = mapped_column(_enum(OrgUnitType), nullable=False)
+    manager_name: Mapped[str | None] = mapped_column(String(255))
+    cost_center: Mapped[str | None] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    parent: Mapped["OrgUnit | None"] = relationship(
+        back_populates="children", remote_side=[id],
+    )
+    children: Mapped[list["OrgUnit"]] = relationship(back_populates="parent")
+    capabilities_owned: Mapped[list["BusinessCapability"]] = relationship(
+        secondary="unit_capability_link",
+    )
+    organization: Mapped["Organization"] = relationship()
+
+    __table_args__ = (
+        Index("ix_org_units_org_name", "organization_id", "name"),
+    )
+
+
+# --- Paket A länktabeller ---
+
+capability_system_link = Table(
+    "capability_system_link", Base.metadata,
+    Column(
+        "capability_id", UUID(as_uuid=True),
+        ForeignKey("business_capabilities.id", ondelete="CASCADE"), primary_key=True,
+    ),
+    Column(
+        "system_id", UUID(as_uuid=True),
+        ForeignKey("systems.id", ondelete="CASCADE"), primary_key=True,
+    ),
+)
+
+process_system_link = Table(
+    "process_system_link", Base.metadata,
+    Column(
+        "process_id", UUID(as_uuid=True),
+        ForeignKey("business_processes.id", ondelete="CASCADE"), primary_key=True,
+    ),
+    Column(
+        "system_id", UUID(as_uuid=True),
+        ForeignKey("systems.id", ondelete="CASCADE"), primary_key=True,
+    ),
+)
+
+process_capability_link = Table(
+    "process_capability_link", Base.metadata,
+    Column(
+        "process_id", UUID(as_uuid=True),
+        ForeignKey("business_processes.id", ondelete="CASCADE"), primary_key=True,
+    ),
+    Column(
+        "capability_id", UUID(as_uuid=True),
+        ForeignKey("business_capabilities.id", ondelete="CASCADE"), primary_key=True,
+    ),
+)
+
+process_information_link = Table(
+    "process_information_link", Base.metadata,
+    Column(
+        "process_id", UUID(as_uuid=True),
+        ForeignKey("business_processes.id", ondelete="CASCADE"), primary_key=True,
+    ),
+    Column(
+        "information_asset_id", UUID(as_uuid=True),
+        ForeignKey("information_assets.id", ondelete="CASCADE"), primary_key=True,
+    ),
+)
+
+unit_capability_link = Table(
+    "unit_capability_link", Base.metadata,
+    Column(
+        "unit_id", UUID(as_uuid=True),
+        ForeignKey("org_units.id", ondelete="CASCADE"), primary_key=True,
+    ),
+    Column(
+        "capability_id", UUID(as_uuid=True),
+        ForeignKey("business_capabilities.id", ondelete="CASCADE"), primary_key=True,
+    ),
+)
+
+
+# ============================================================
+# Paket C — Rollkatalog och anställningsmallar (IGA)
+# ============================================================
+
+
+class BusinessRole(Base):
+    """Verksamhetsroll — semantisk roll, ej AD-grupp."""
+    __tablename__ = "business_roles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    role_owner: Mapped[str | None] = mapped_column(String(255))
+    valid_from: Mapped[date | None] = mapped_column(Date)
+    valid_until: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    system_accesses: Mapped[list["RoleSystemAccess"]] = relationship(
+        back_populates="business_role", cascade="all, delete-orphan",
+    )
+    organization: Mapped["Organization"] = relationship()
+
+    __table_args__ = (
+        Index("ix_business_roles_org_name", "organization_id", "name"),
+    )
+
+
+class Position(Base):
+    """Befattning — kopplad till en organisationsenhet och 0..N verksamhetsroller via mall."""
+    __tablename__ = "positions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True,
+    )
+    org_unit_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("org_units.id", ondelete="SET NULL"), index=True,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    position_code: Mapped[str | None] = mapped_column(String(100))
+    description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    org_unit: Mapped["OrgUnit | None"] = relationship()
+    organization: Mapped["Organization"] = relationship()
+
+    __table_args__ = (
+        Index("ix_positions_org_title", "organization_id", "title"),
+    )
+
+
+class RoleSystemAccess(Base):
+    """Vilka system en verksamhetsroll behöver och med vilken nivå."""
+    __tablename__ = "role_system_access"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    business_role_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("business_roles.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    system_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("systems.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    access_level: Mapped[AccessLevel] = mapped_column(_enum(AccessLevel), nullable=False)
+    access_type: Mapped[AccessType] = mapped_column(
+        _enum(AccessType), nullable=False, default=AccessType.BIRTHRIGHT,
+    )
+    justification: Mapped[str | None] = mapped_column(Text)
+    approver_name: Mapped[str | None] = mapped_column(String(255))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    business_role: Mapped["BusinessRole"] = relationship(back_populates="system_accesses")
+    system: Mapped["System"] = relationship(back_populates="role_accesses")
+
+    __table_args__ = (
+        UniqueConstraint("business_role_id", "system_id", name="uq_role_system"),
+    )
+
+
+class EmploymentTemplate(Base):
+    """IT-samordnarens 'anställningsmall' — paket av roller per befattning."""
+    __tablename__ = "employment_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organizations.id"), nullable=False, index=True,
+    )
+    position_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("positions.id", ondelete="SET NULL"), index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    approved_by: Mapped[str | None] = mapped_column(String(255))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),
+    )
+
+    position: Mapped["Position | None"] = relationship()
+    organization: Mapped["Organization"] = relationship()
+    roles: Mapped[list["BusinessRole"]] = relationship(secondary="template_role_link")
+
+    __table_args__ = (
+        Index("ix_employment_templates_org_name", "organization_id", "name"),
+    )
+
+
+template_role_link = Table(
+    "template_role_link", Base.metadata,
+    Column(
+        "template_id", UUID(as_uuid=True),
+        ForeignKey("employment_templates.id", ondelete="CASCADE"), primary_key=True,
+    ),
+    Column(
+        "role_id", UUID(as_uuid=True),
+        ForeignKey("business_roles.id", ondelete="CASCADE"), primary_key=True,
+    ),
 )

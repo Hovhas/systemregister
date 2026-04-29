@@ -39,6 +39,33 @@ import type {
   ApprovalCreate,
   ApprovalReview,
   ApprovalStatus,
+  BusinessCapability,
+  CapabilityCreate,
+  CapabilityUpdate,
+  BusinessProcess,
+  ProcessCreate,
+  ProcessUpdate,
+  ValueStream,
+  ValueStreamCreate,
+  ValueStreamUpdate,
+  OrgUnit,
+  OrgUnitCreate,
+  OrgUnitUpdate,
+  OrgUnitTreeNode,
+  BusinessRole,
+  BusinessRoleCreate,
+  BusinessRoleUpdate,
+  RoleSystemAccess,
+  RoleSystemAccessCreate,
+  RoleSystemAccessUpdate,
+  RoleSystemAccessRow,
+  Position,
+  PositionCreate,
+  PositionUpdate,
+  EmploymentTemplate,
+  EmploymentTemplateCreate,
+  EmploymentTemplateUpdate,
+  ResolvedAccessResponse,
 } from "@/types"
 
 const api = axios.create({
@@ -468,5 +495,310 @@ export async function getApproval(id: string): Promise<Approval> {
 export async function deleteApproval(id: string): Promise<void> {
   await api.delete(`/approvals/${id}`)
 }
+
+// --- Förmågor ---
+
+export async function getCapabilities(params?: { organization_id?: string; q?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<BusinessCapability>> {
+  const res = await api.get<PaginatedResponse<BusinessCapability>>("/capabilities/", { params })
+  return res.data
+}
+
+export async function getCapability(id: string): Promise<BusinessCapability> {
+  const res = await api.get<BusinessCapability>(`/capabilities/${id}`)
+  return res.data
+}
+
+export async function createCapability(data: CapabilityCreate): Promise<BusinessCapability> {
+  const res = await api.post<BusinessCapability>("/capabilities/", data)
+  return res.data
+}
+
+export async function updateCapability(id: string, data: CapabilityUpdate): Promise<BusinessCapability> {
+  const res = await api.patch<BusinessCapability>(`/capabilities/${id}`, data)
+  return res.data
+}
+
+export async function deleteCapability(id: string): Promise<void> {
+  await api.delete(`/capabilities/${id}`)
+}
+
+export async function getCapabilitySystems(id: string): Promise<Array<{ id: string; name: string; system_category: string }>> {
+  const res = await api.get<Array<{ id: string; name: string; system_category: string }>>(`/capabilities/${id}/systems`)
+  return res.data
+}
+
+export async function linkCapabilityToSystem(capId: string, systemId: string): Promise<void> {
+  await api.post(`/capabilities/${capId}/systems`, { system_id: systemId })
+}
+
+export async function unlinkCapabilityFromSystem(capId: string, systemId: string): Promise<void> {
+  await api.delete(`/capabilities/${capId}/systems/${systemId}`)
+}
+
+// --- Processer ---
+
+export async function getProcesses(params?: { organization_id?: string; q?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<BusinessProcess>> {
+  const res = await api.get<PaginatedResponse<BusinessProcess>>("/processes/", { params })
+  return res.data
+}
+
+export async function getProcess(id: string): Promise<BusinessProcess> {
+  const res = await api.get<BusinessProcess>(`/processes/${id}`)
+  return res.data
+}
+
+export async function createProcess(data: ProcessCreate): Promise<BusinessProcess> {
+  const res = await api.post<BusinessProcess>("/processes/", data)
+  return res.data
+}
+
+export async function updateProcess(id: string, data: ProcessUpdate): Promise<BusinessProcess> {
+  const res = await api.patch<BusinessProcess>(`/processes/${id}`, data)
+  return res.data
+}
+
+export async function deleteProcess(id: string): Promise<void> {
+  await api.delete(`/processes/${id}`)
+}
+
+export async function getProcessSystems(id: string): Promise<Array<{ id: string; name: string; system_category: string }>> {
+  const res = await api.get<Array<{ id: string; name: string; system_category: string }>>(`/processes/${id}/systems`)
+  return res.data
+}
+
+export async function getProcessCapabilities(id: string): Promise<Array<{ id: string; name: string }>> {
+  const res = await api.get<Array<{ id: string; name: string }>>(`/processes/${id}/capabilities`)
+  return res.data
+}
+
+export async function getProcessInformationAssets(id: string): Promise<Array<{ id: string; name: string }>> {
+  const res = await api.get<Array<{ id: string; name: string }>>(`/processes/${id}/information-assets`)
+  return res.data
+}
+
+export async function linkProcessToSystem(processId: string, systemId: string): Promise<void> {
+  await api.post(`/processes/${processId}/systems`, { system_id: systemId })
+}
+
+export async function unlinkProcessFromSystem(processId: string, systemId: string): Promise<void> {
+  await api.delete(`/processes/${processId}/systems/${systemId}`)
+}
+
+export async function linkProcessToCapability(processId: string, capabilityId: string): Promise<void> {
+  await api.post(`/processes/${processId}/capabilities`, { capability_id: capabilityId })
+}
+
+export async function unlinkProcessFromCapability(processId: string, capabilityId: string): Promise<void> {
+  await api.delete(`/processes/${processId}/capabilities/${capabilityId}`)
+}
+
+export async function linkProcessToInformationAsset(processId: string, assetId: string): Promise<void> {
+  await api.post(`/processes/${processId}/information-assets`, { information_asset_id: assetId })
+}
+
+export async function unlinkProcessFromInformationAsset(processId: string, assetId: string): Promise<void> {
+  await api.delete(`/processes/${processId}/information-assets/${assetId}`)
+}
+
+// --- Värdeströmmar ---
+
+export async function getValueStreams(params?: { organization_id?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<ValueStream>> {
+  const res = await api.get<PaginatedResponse<ValueStream>>("/value-streams/", { params })
+  return res.data
+}
+
+export async function getValueStream(id: string): Promise<ValueStream> {
+  const res = await api.get<ValueStream>(`/value-streams/${id}`)
+  return res.data
+}
+
+export async function createValueStream(data: ValueStreamCreate): Promise<ValueStream> {
+  const res = await api.post<ValueStream>("/value-streams/", data)
+  return res.data
+}
+
+export async function updateValueStream(id: string, data: ValueStreamUpdate): Promise<ValueStream> {
+  const res = await api.patch<ValueStream>(`/value-streams/${id}`, data)
+  return res.data
+}
+
+export async function deleteValueStream(id: string): Promise<void> {
+  await api.delete(`/value-streams/${id}`)
+}
+
+// --- Organisationsenheter ---
+
+export async function getOrgUnits(params?: { organization_id?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<OrgUnit>> {
+  const res = await api.get<PaginatedResponse<OrgUnit>>("/org-units/", { params })
+  return res.data
+}
+
+export async function getOrgUnit(id: string): Promise<OrgUnit> {
+  const res = await api.get<OrgUnit>(`/org-units/${id}`)
+  return res.data
+}
+
+export async function createOrgUnit(data: OrgUnitCreate): Promise<OrgUnit> {
+  const res = await api.post<OrgUnit>("/org-units/", data)
+  return res.data
+}
+
+export async function updateOrgUnit(id: string, data: OrgUnitUpdate): Promise<OrgUnit> {
+  const res = await api.patch<OrgUnit>(`/org-units/${id}`, data)
+  return res.data
+}
+
+export async function deleteOrgUnit(id: string): Promise<void> {
+  await api.delete(`/org-units/${id}`)
+}
+
+export async function getOrgUnitTree(organization_id: string): Promise<OrgUnitTreeNode[]> {
+  const res = await api.get<OrgUnitTreeNode[]>("/org-units/tree", { params: { organization_id } })
+  return res.data
+}
+
+// --- Diagram (Paket B) ---
+
+export async function getMermaidDiagram(path: string): Promise<string> {
+  const res = await api.get<string>(path, { responseType: "text" })
+  return res.data
+}
+
+export const archimateExportUrl = (organizationId: string) =>
+  `/api/v1/export/archimate.xml?organization_id=${organizationId}`
+
+export const twoseightPackageUrl = (organizationId: string) =>
+  `/api/v1/export/2c8/full-package.zip?organization_id=${organizationId}`
+
+// --- Verksamhetsroller (Paket C) ---
+
+export async function getBusinessRoles(params?: {
+  organization_id?: string
+  q?: string
+  include_counts?: boolean
+  limit?: number
+  offset?: number
+}): Promise<PaginatedResponse<BusinessRole>> {
+  const res = await api.get<PaginatedResponse<BusinessRole>>("/business-roles/", { params })
+  return res.data
+}
+
+export async function getBusinessRole(id: string): Promise<BusinessRole> {
+  const res = await api.get<BusinessRole>(`/business-roles/${id}`)
+  return res.data
+}
+
+export async function createBusinessRole(data: BusinessRoleCreate): Promise<BusinessRole> {
+  const res = await api.post<BusinessRole>("/business-roles/", data)
+  return res.data
+}
+
+export async function updateBusinessRole(id: string, data: BusinessRoleUpdate): Promise<BusinessRole> {
+  const res = await api.patch<BusinessRole>(`/business-roles/${id}`, data)
+  return res.data
+}
+
+export async function deleteBusinessRole(id: string): Promise<void> {
+  await api.delete(`/business-roles/${id}`)
+}
+
+export async function getRoleSystems(roleId: string): Promise<RoleSystemAccessRow[]> {
+  const res = await api.get<RoleSystemAccessRow[]>(`/business-roles/${roleId}/systems`)
+  return res.data
+}
+
+// --- Rollåtkomst ---
+
+export async function createRoleAccess(data: RoleSystemAccessCreate): Promise<RoleSystemAccess> {
+  const res = await api.post<RoleSystemAccess>("/role-access/", data)
+  return res.data
+}
+
+export async function updateRoleAccess(id: string, data: RoleSystemAccessUpdate): Promise<RoleSystemAccess> {
+  const res = await api.patch<RoleSystemAccess>(`/role-access/${id}`, data)
+  return res.data
+}
+
+export async function deleteRoleAccess(id: string): Promise<void> {
+  await api.delete(`/role-access/${id}`)
+}
+
+// --- Befattningar ---
+
+export async function getPositions(params?: {
+  organization_id?: string
+  q?: string
+  limit?: number
+  offset?: number
+}): Promise<PaginatedResponse<Position>> {
+  const res = await api.get<PaginatedResponse<Position>>("/positions/", { params })
+  return res.data
+}
+
+export async function getPosition(id: string): Promise<Position> {
+  const res = await api.get<Position>(`/positions/${id}`)
+  return res.data
+}
+
+export async function createPosition(data: PositionCreate): Promise<Position> {
+  const res = await api.post<Position>("/positions/", data)
+  return res.data
+}
+
+export async function updatePosition(id: string, data: PositionUpdate): Promise<Position> {
+  const res = await api.patch<Position>(`/positions/${id}`, data)
+  return res.data
+}
+
+export async function deletePosition(id: string): Promise<void> {
+  await api.delete(`/positions/${id}`)
+}
+
+// --- Anställningsmallar ---
+
+export async function getEmploymentTemplates(params?: {
+  organization_id?: string
+  q?: string
+  limit?: number
+  offset?: number
+}): Promise<PaginatedResponse<EmploymentTemplate>> {
+  const res = await api.get<PaginatedResponse<EmploymentTemplate>>("/employment-templates/", { params })
+  return res.data
+}
+
+export async function getEmploymentTemplate(id: string): Promise<EmploymentTemplate> {
+  const res = await api.get<EmploymentTemplate>(`/employment-templates/${id}`)
+  return res.data
+}
+
+export async function createEmploymentTemplate(data: EmploymentTemplateCreate): Promise<EmploymentTemplate> {
+  const res = await api.post<EmploymentTemplate>("/employment-templates/", data)
+  return res.data
+}
+
+export async function updateEmploymentTemplate(id: string, data: EmploymentTemplateUpdate): Promise<EmploymentTemplate> {
+  const res = await api.patch<EmploymentTemplate>(`/employment-templates/${id}`, data)
+  return res.data
+}
+
+export async function deleteEmploymentTemplate(id: string): Promise<void> {
+  await api.delete(`/employment-templates/${id}`)
+}
+
+export async function addRoleToTemplate(templateId: string, roleId: string): Promise<void> {
+  await api.post(`/employment-templates/${templateId}/roles`, { business_role_id: roleId })
+}
+
+export async function removeRoleFromTemplate(templateId: string, roleId: string): Promise<void> {
+  await api.delete(`/employment-templates/${templateId}/roles/${roleId}`)
+}
+
+export async function getResolvedAccess(templateId: string): Promise<ResolvedAccessResponse> {
+  const res = await api.get<ResolvedAccessResponse>(`/employment-templates/${templateId}/resolved-access`)
+  return res.data
+}
+
+export const resolvedAccessCsvUrl = (templateId: string) =>
+  `/api/v1/employment-templates/${templateId}/resolved-access.csv`
 
 export default api

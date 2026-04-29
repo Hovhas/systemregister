@@ -111,3 +111,30 @@ class ApprovalType(str, enum.Enum):
     CLASSIFICATION_CHANGE = "klassningsändring"
     GDPR_TREATMENT = "gdpr_behandling"
     DATA_CHANGE = "dataändring"
+
+
+# --- Verksamhetsskikt (Paket A) ---
+
+class OrgUnitType(str, enum.Enum):
+    """Typ av organisationsenhet inom en organisation."""
+    FORVALTNING = "förvaltning"
+    AVDELNING = "avdelning"
+    ENHET = "enhet"
+    SEKTION = "sektion"
+    BOLAG = "bolag"
+
+
+# --- Rollkatalog/IGA (Paket C) ---
+
+class AccessLevel(str, enum.Enum):
+    """Behörighetsnivå för en roll mot ett system."""
+    READ = "läs"
+    WRITE = "skriv"
+    ADMIN = "administratör"
+
+
+class AccessType(str, enum.Enum):
+    """Typ av åtkomst — styr om den ges automatiskt eller kräver beslut."""
+    BIRTHRIGHT = "grundbehörighet"
+    CONDITIONAL = "villkorad"
+    MANUAL = "manuell"
