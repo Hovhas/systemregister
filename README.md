@@ -3,6 +3,11 @@
 IT-systemregister med stöd för NIS2/CSL, ISO 27001, MSB/MCF och GDPR.  
 Multi-org-stöd för DigIT (13+ politiskt styrda organisationer).
 
+## Produktion — engångs-setup av databasen
+
+Innan första deployen mot en ny Postgres-instans måste extensions och
+superadmin-rollen sättas upp manuellt. Se [`docs/DATABASE_SETUP.md`](docs/DATABASE_SETUP.md).
+
 ## Snabbstart (lokal utveckling)
 
 ```bash
